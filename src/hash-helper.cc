@@ -97,9 +97,10 @@ operator << (std::ostream &os, const Hash &hash)
 
   ostreambuf_iterator<char> out_it (os); // ostream iterator
   // need to encode to base64
-  copy (string_from_binary (reinterpret_cast<const char*> (hash.m_buf)),
-        string_from_binary (reinterpret_cast<const char*> (hash.m_buf+hash.m_length)),
-        out_it);
+//  copy (string_from_binary (reinterpret_cast<const char*> (hash.m_buf)),
+//        string_from_binary (reinterpret_cast<const char*> (hash.m_buf+hash.m_length)),
+//        out_it);
+// TODO
 
   return os;
 }
@@ -117,7 +118,7 @@ HashPtr Hash::Origin(new Hash(&Hash::_origin, sizeof(unsigned char)));
 HashPtr
 Hash::FromString (const std::string &hashInTextEncoding)
 {
-  HashPtr retval = make_shared<Hash> (reinterpret_cast<void*> (0), 0);
+  HashPtr retval = boost::make_shared<Hash> (reinterpret_cast<void*> (0), 0);
 
   if (hashInTextEncoding.size () == 0)
     {
@@ -144,7 +145,7 @@ Hash::FromString (const std::string &hashInTextEncoding)
 HashPtr
 Hash::FromFileContent (const fs::path &filename)
 {
-  HashPtr retval = make_shared<Hash> (reinterpret_cast<void*> (0), 0);
+  HashPtr retval = boost::make_shared<Hash> (reinterpret_cast<void*> (0), 0);
   retval->m_buf = new unsigned char [EVP_MAX_MD_SIZE];
 
   EVP_MD_CTX *hash_context = EVP_MD_CTX_create ();
@@ -169,16 +170,16 @@ Hash::FromFileContent (const fs::path &filename)
 }
 
 HashPtr
-Hash::FromBytes (const Ccnx::Bytes &bytes)
+Hash::FromBytes (const ndn::Buffer &bytes)
 {
-  HashPtr retval = make_shared<Hash> (reinterpret_cast<void*> (0), 0);
+  HashPtr retval = boost::make_shared<Hash> (reinterpret_cast<void*> (0), 0);
   retval->m_buf = new unsigned char [EVP_MAX_MD_SIZE];
 
   EVP_MD_CTX *hash_context = EVP_MD_CTX_create ();
   EVP_DigestInit_ex (hash_context, HASH_FUNCTION (), 0);
 
   // not sure whether it's bad to do so if bytes.size is huge
-  EVP_DigestUpdate(hash_context, Ccnx::head(bytes), bytes.size());
+  EVP_DigestUpdate(hash_context, bytes.buf(), bytes.size());
 
   retval->m_buf = new unsigned char [EVP_MAX_MD_SIZE];
 

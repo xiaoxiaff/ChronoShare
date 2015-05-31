@@ -156,7 +156,7 @@ TaskPtr
 Scheduler::scheduleOneTimeTask (SchedulerPtr scheduler, double delay,
                                 const Task::Callback &callback, const Task::Tag &tag)
 {
-  TaskPtr task = make_shared<OneTimeTask> (callback, tag, scheduler, delay);
+  TaskPtr task = boost::make_shared<OneTimeTask> (callback, tag, scheduler, delay);
   if (scheduler->addTask (task))
     return task;
   else
@@ -167,7 +167,7 @@ TaskPtr
 Scheduler::schedulePeriodicTask (SchedulerPtr scheduler, IntervalGeneratorPtr delayGenerator,
                                  const Task::Callback &callback, const Task::Tag &tag)
 {
-  TaskPtr task = make_shared<PeriodicTask> (callback, tag, scheduler, delayGenerator);
+  TaskPtr task = boost::make_shared<PeriodicTask> (callback, tag, scheduler, delayGenerator);
 
   if (scheduler->addTask (task))
     return task;
