@@ -27,21 +27,23 @@
 #include "periodic-task.h"
 #include "simple-interval-generator.h"
 #include <boost/lexical_cast.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <ndn-cxx/face.hpp>
 
 INIT_LOGGER ("ContentServer");
 
-using namespace Ccnx;
+using namespace ndn;
 using namespace std;
 using namespace boost;
 
 static const int DB_CACHE_LIFETIME = 60;
 
-ContentServer::ContentServer(CcnxWrapperPtr ccnx, ActionLogPtr actionLog,
+ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
                              const boost::filesystem::path &rootDir,
-                             const Ccnx::Name &userName, const std::string &sharedFolderName,
+                             const ndn::Name &userName, const std::string &sharedFolderName,
                              const std::string &appName,
                              int freshness)
-  : m_ccnx(ccnx)
+  : m_face(face)
   , m_actionLog(actionLog)
   , m_dbFolder(rootDir / ".chronoshare")
   , m_freshness(freshness)
@@ -60,12 +62,12 @@ ContentServer::~ContentServer()
   m_scheduler->shutdown ();
 
   ScopedLock lock (m_mutex);
-  for (PrefixIt forwardingHint = m_prefixes.begin(); forwardingHint != m_prefixes.end(); ++forwardingHint)
+  for (FilterIdIt it = m_interestFilterIds.begin(); it != m_interestFilterIds.end(); ++it)
   {
-    m_ccnx->clearInterestFilter (*forwardingHint);
+    m_face->unsetInterestFilter(it->second);
   }
 
-  m_prefixes.clear ();
+  m_interestFilterIds.clear ();
 }
 
 void
@@ -76,20 +78,19 @@ ContentServer::registerPrefix(const Name &forwardingHint)
 
   _LOG_DEBUG (">> content server: register " << forwardingHint);
 
-  m_ccnx->setInterestFilter (forwardingHint, bind(&ContentServer::filterAndServe, this, forwardingHint, _1));
-
   ScopedLock lock (m_mutex);
-  m_prefixes.insert(forwardingHint);
+  m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), bind(&ContentServer::filterAndServe, this, forwardingHint, _1));
+
 }
 
 void
 ContentServer::deregisterPrefix (const Name &forwardingHint)
 {
   _LOG_DEBUG ("<< content server: deregister " << forwardingHint);
-  m_ccnx->clearInterestFilter(forwardingHint);
+  m_face->unsetInterestFilter(m_interestFilterIds[forwardingHint]);
 
   ScopedLock lock (m_mutex);
-  m_prefixes.erase (forwardingHint);
+  m_interestFilterIds.erase(forwardingHint);
 }
 
 
@@ -102,51 +103,38 @@ ContentServer::filterAndServeImpl (const Name &forwardingHint, const Name &name,
   // name for files:   /<device_name>/<appname>/file/<hash>/<segment>
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
-  try
-    {
-      if (name.size() >= 4 && name.getCompFromBackAsString (3) == m_appName)
+  if (name.size() >= 4 && name.get (-4).toUri () == m_appName)
+  {
+     string type = name.get (-3).toUri ();
+     if (type == "file")
+     {
+        serve_File (forwardingHint, name, interest);
+     }
+     else if (type == "action")
+     {
+        string folder = name.get (-2).toUri ();
+        if (folder == m_sharedFolderName)
         {
-          string type = name.getCompFromBackAsString (2);
-          if (type == "file")
-            {
-              serve_File (forwardingHint, name, interest);
-            }
-          else if (type == "action")
-            {
-              string folder = name.getCompFromBackAsString (1);
-              if (folder == m_sharedFolderName)
-              {
-                serve_Action (forwardingHint, name, interest);
-              }
-            }
+           serve_Action (forwardingHint, name, interest);
         }
-    }
-  catch (Ccnx::NameException &ne)
-    {
-      // ignore any unexpected interests and errors
-      _LOG_ERROR(boost::get_error_info<Ccnx::error_info_str>(ne));
-    }
+     }
+  }
+
 }
 
 void
 ContentServer::filterAndServe (Name forwardingHint, const Name &interest)
 {
-  try
-    {
-      if (forwardingHint.size () > 0 &&
-          m_userName.size () >= forwardingHint.size () &&
-          m_userName.getPartialName (0, forwardingHint.size ()) == forwardingHint)
-        {
-          filterAndServeImpl (Name ("/"), interest, interest); // try without forwarding hints
-        }
 
-      filterAndServeImpl (forwardingHint, interest.getPartialName (forwardingHint.size()), interest); // always try with hint... :( have to
-    }
-  catch (Ccnx::NameException &ne)
+  if (forwardingHint.size () > 0 &&
+      m_userName.size () >= forwardingHint.size () &&
+      m_userName.getSubName (0, forwardingHint.size ()) == forwardingHint)
     {
-      // ignore any unexpected interests and errors
-      _LOG_ERROR(boost::get_error_info<Ccnx::error_info_str>(ne));
+      filterAndServeImpl (Name ("/"), interest, interest); // try without forwarding hints
     }
+
+  filterAndServeImpl (forwardingHint, interest.getSubName(forwardingHint.size()), interest); // always try with hint... :( have to
+
 }
 
 void
@@ -173,9 +161,9 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
   // interest:       /<forwarding-hint>/<device_name>/<appname>/file/<hash>/<segment>
   // name:           /<device_name>/<appname>/file/<hash>/<segment>
 
-  int64_t segment = name.getCompFromBackAsInt (0);
-  Name deviceName = name.getPartialName (0, name.size () - 4);
-  Hash hash (head(name.getCompFromBack (1)), name.getCompFromBack (1).size());
+  int64_t segment = name.get (-1).toNumber ();
+  ndn::Name deviceName = name.getSubName (0, name.size () - 4);
+  Hash hash (reinterpret_cast<const void*>(name.get (-2).wireEncode ().value ()), name.get (-2).size ());
 
   _LOG_DEBUG (" server FILE for device: " << deviceName << ", file_hash: " << hash.shortHash () << " segment: " << segment);
 
@@ -206,24 +194,28 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
 
   if (db)
   {
-    BytesPtr co = db->fetchSegment (deviceName, segment);
+    ndn::BufferPtr co = db->fetchSegment (deviceName, segment);
     if (co)
       {
         if (forwardingHint.size () == 0)
           {
-            _LOG_DEBUG (ParsedContentObject (*co).name ());
-            m_ccnx->putToCcnd (*co);
+            _LOG_DEBUG (Name(reinterpret_cast<const char*>(co->buf())));
+
+            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          	data->setName(Name(reinterpret_cast<const char*>(co->buf())));
+          	data->setContent(co->buf(), co->size());
+          	m_face->put(*data);
           }
         else
           {
+            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+            data->setName(interest);
             if (m_freshness > 0)
               {
-                m_ccnx->publishData(interest, *co, m_freshness);
+              	data->setFreshnessPeriod(time::seconds(m_freshness));
               }
-            else
-              {
-                m_ccnx->publishData(interest, *co);
-              }
+           	data->setContent(co->buf(), co->size());
+            m_face->put(*data);
           }
 
       }
@@ -242,29 +234,29 @@ ContentServer::serve_Action_Execute (const Name &forwardingHint, const Name &nam
   // interest:       /<forwarding-hint>/<device_name>/<appname>/action/<shared-folder>/<action-seq>
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
-  int64_t seqno = name.getCompFromBackAsInt (0);
-  Name deviceName = name.getPartialName (0, name.size () - 4);
+  int64_t seqno = name.get (-1).toNumber ();
+  ndn::Name deviceName = name.getSubName (0, name.size () - 4);
 
   _LOG_DEBUG (" server ACTION for device: " << deviceName << " and seqno: " << seqno);
 
-  PcoPtr pco = m_actionLog->LookupActionPco (deviceName, seqno);
-  if (pco)
+  boost::shared_ptr<ndn::Data> dataObject = m_actionLog->LookupActionPco (deviceName, seqno);
+  if (dataObject)
     {
       if (forwardingHint.size () == 0)
         {
-          m_ccnx->putToCcnd (pco->buf ());
+          m_face->put (*dataObject);
         }
       else
         {
-          const Bytes &content = pco->buf ();
+          const Block &block = dataObject->getContent ();
+          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          data->setName(interest);
           if (m_freshness > 0)
-            {
-              m_ccnx->publishData(interest, content, m_freshness);
-            }
-          else
-            {
-              m_ccnx->publishData(interest, content);
-            }
+          {
+        	  data->setFreshnessPeriod(time::seconds(m_freshness));
+          }
+          data->setContent(block.value(), block.value_size());
+          m_face->put(*data);
         }
     }
   else

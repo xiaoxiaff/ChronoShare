@@ -1,6 +1,6 @@
 # -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
-VERSION='1.0'
-APPNAME='ChronoShare'
+VERSION='0.4'
+APPNAME='chronoshare'
 
 from waflib import Build, Logs, Utils, Task, TaskGen, Configure
 
@@ -13,13 +13,11 @@ def options(opt):
     if Utils.unversioned_sys_platform () == "darwin":
         opt.add_option('--auto-update', action='store_true',default=False,dest='autoupdate',help='''(OSX) Download sparkle framework and enable autoupdate feature''')
 
-    opt.load('compiler_c compiler_cxx qt4 gnu_dirs')
-    opt.load(['default-compiler-flags', 'boost', 'protoc', 'tinyxml'], tooldir=['waf-tools'])
+    opt.load('compiler_c compiler_cxx boost ccnx protoc qt4 gnu_dirs')
+    opt.load('tinyxml', tooldir=['waf-tools'])
 
 def configure(conf):
-    conf.load("compiler_c compiler_cxx default-compiler-flags gnu_dirs")
-    conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
-               uselib_store='NDN_CXX', mandatory=True)
+    conf.load("compiler_c compiler_cxx gnu_dirs")
 
     if conf.options.debug:
         conf.define ('_DEBUG', 1)
@@ -33,6 +31,17 @@ def configure(conf):
                                                  ])
     else:
         conf.add_supported_cxxflags (cxxflags = ['-O3', '-g'])
+
+    # I wish I could use it, but there is some weirdness with boost tests. Give up for now
+    # try:
+    #     conf.check(features='cxx cxxprogram', cxxflags="-std=c++11")
+    #     conf.env.append_value ('CXXFLAGS', ["-std=c++11"])
+    # except:
+    #     try:
+    #         conf.check(features='cxx cxxprogram', cxxflags="-std=c++0x")
+    #         conf.env.append_value ('CXXFLAGS', ["-std=c++0x"])
+    #     except:
+    #         conf.fatal ("You compiler doesn't support C++11. You can try GCC >= 4.4 or recent version of Clang.")
 
     conf.define ("CHRONOSHARE_VERSION", VERSION)
 
@@ -110,6 +119,7 @@ def configure(conf):
         conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
         conf.define ("HAVE_LOG4CXX", 1)
 
+#    conf.load ('ccnx')
 
     conf.load('protoc')
 
@@ -117,13 +127,15 @@ def configure(conf):
 
     conf.load('boost')
 
-
     conf.check_boost(lib='system test iostreams filesystem regex thread date_time')
 
     boost_version = conf.env.BOOST_VERSION.split('_')
     if int(boost_version[0]) < 1 or int(boost_version[1]) < 46:
         Logs.error ("Minumum required boost version is 1.46")
         return
+
+#    conf.check_ccnx (path=conf.options.ccnx_dir)
+#    conf.define ('CCNX_PATH', conf.env.CCNX_ROOT)
 
     if conf.options._test:
         conf.define ('_TESTS', 1)
@@ -148,10 +160,18 @@ def build (bld):
         includes = "scheduler executor src",
         )
 
+    libccnx = bld (
+        target="ccnx",
+        features=['cxx'],
+        source = bld.path.ant_glob(['ccnx/**/*.cc', 'ccnx/**/*.cpp']),
+        use = 'TINYXML BOOST BOOST_THREAD SSL CCNX LOG4CXX scheduler executor',
+        includes = "ccnx src scheduler executor",
+        )
+
     adhoc = bld (
         target = "adhoc",
         features=['cxx'],
-        includes = "src",
+        includes = "ccnx src",
     )
     if Utils.unversioned_sys_platform () == "darwin":
         adhoc.mac_app = True
@@ -162,8 +182,8 @@ def build (bld):
         target="chronoshare",
         features=['cxx'],
         source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.cpp', 'src/**/*.proto']),
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML",
-        includes = "scheduler src executor",
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler ccnx",
+        includes = "ccnx scheduler src executor",
         )
 
     fs_watcher = bld (
@@ -172,7 +192,7 @@ def build (bld):
         defines = "WAF",
         source = bld.path.ant_glob(['fs-watcher/*.cc']),
         use = "SQLITE3 LOG4CXX scheduler executor QTCORE",
-        includes = "fs-watcher scheduler executor src",
+        includes = "fs-watcher scheduler executor src ccnx",
         )
 
     # Unit tests
@@ -182,8 +202,8 @@ def build (bld):
           features = "qt4 cxx cxxprogram",
           defines = "WAF",
           source = bld.path.ant_glob(['test/*.cc']),
-          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
-          includes = "scheduler src executor gui fs-watcher",
+          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI ccnx database fs_watcher chronoshare',
+          includes = "ccnx scheduler src executor gui fs-watcher",
           install_prefix = None,
           )
 
@@ -200,8 +220,8 @@ def build (bld):
         features = "qt4 cxx cxxprogram html_resources",
         defines = "WAF",
         source = bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
-        includes = "scheduler executor fs-watcher gui src adhoc server . ",
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server SSL TINYXML",
+        includes = "ccnx scheduler executor fs-watcher gui src adhoc server . ",
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher ccnx database chronoshare http_server",
 
         html_resources = bld.path.find_dir ("gui/html").ant_glob([
                 '**/*.js', '**/*.png', '**/*.css',
@@ -263,16 +283,16 @@ def build (bld):
 	features = "qt4 cxx cxxprogram",
 	defines = "WAF",
 	source = "cmd/csd.cc",
-	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
+	includes = "ccnx scheduler executor gui fs-watcher src . ",
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher ccnx database chronoshare"
 	)
 
     dump_db = bld (
         target = "dump-db",
         features = "cxx cxxprogram",
 	source = "cmd/dump-db.cc",
-	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
+	includes = "ccnx scheduler executor gui fs-watcher src . ",
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher ccnx database chronoshare"
         )
 
 from waflib import TaskGen
@@ -337,4 +357,3 @@ def add_supported_cxxflags(self, cxxflags):
 
     self.end_msg (' '.join (supportedFlags))
     self.env.CXXFLAGS += supportedFlags
-

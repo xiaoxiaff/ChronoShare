@@ -24,12 +24,11 @@
 
 #include <string>
 #include <sqlite3.h>
-#include <ccnx-common.h>
-#include <ccnx-name.h>
 #include <boost/filesystem.hpp>
 #include <boost/shared_ptr.hpp>
 #include <ctime>
 #include <vector>
+#include <ndn-cxx/name.hpp>
 
 class ObjectDb
 {
@@ -39,19 +38,19 @@ public:
   ~ObjectDb ();
 
   void
-  saveContentObject (const Ccnx::Name &deviceName, sqlite3_int64 segment, const Ccnx::Bytes &data);
+  saveContentObject (const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Block &data);
 
-  Ccnx::BytesPtr
-  fetchSegment (const Ccnx::Name &deviceName, sqlite3_int64 segment);
+  ndn::BufferPtr
+  fetchSegment (const ndn::Name &deviceName, sqlite3_int64 segment);
 
   // sqlite3_int64
-  // getNumberOfSegments (const Ccnx::Name &deviceName);
+  // getNumberOfSegments (const ndn::Name &deviceName);
 
   time_t
   secondsSinceLastUse();
 
   static bool
-  DoesExist (const boost::filesystem::path &folder, const Ccnx::Name &deviceName, const std::string &hash);
+  DoesExist (const boost::filesystem::path &folder, const ndn::Name &deviceName, const std::string &hash);
 
 private:
   void

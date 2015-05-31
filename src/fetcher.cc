@@ -21,29 +21,29 @@
 
 #include "fetcher.h"
 #include "fetch-manager.h"
-#include "ccnx-pco.h"
 #include "logging.h"
 
 #include <boost/make_shared.hpp>
 #include <boost/ref.hpp>
 #include <boost/throw_exception.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/bind.hpp>
 
 INIT_LOGGER ("Fetcher");
 
 using namespace boost;
 using namespace std;
-using namespace Ccnx;
+using namespace ndn;
 
-Fetcher::Fetcher (Ccnx::CcnxWrapperPtr ccnx,
+Fetcher::Fetcher (boost::shared_ptr<ndn::Face> face,
                   ExecutorPtr executor,
                   const SegmentCallback &segmentCallback,
                   const FinishCallback &finishCallback,
                   OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
-                  const Ccnx::Name &deviceName, const Ccnx::Name &name, int64_t minSeqNo, int64_t maxSeqNo,
+                  const ndn::Name &deviceName, const ndn::Name &name, int64_t minSeqNo, int64_t maxSeqNo,
                   boost::posix_time::time_duration timeout/* = boost::posix_time::seconds (30)*/,
-                  const Ccnx::Name &forwardingHint/* = Ccnx::Name ()*/)
-  : m_ccnx (ccnx)
+                  const ndn::Name &forwardingHint/* = ndn::Name ()*/)
+  : m_face (face)
 
   , m_segmentCallback (segmentCallback)
   , m_onFetchComplete (onFetchComplete)
@@ -82,11 +82,11 @@ Fetcher::RestartPipeline ()
   // cout << "Restart: " << m_minSendSeqNo << endl;
   m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
-  m_executor->execute (bind (&Fetcher::FillPipeline, this));
+  m_executor->execute (boost::bind (&Fetcher::FillPipeline, this));
 }
 
 void
-Fetcher::SetForwardingHint (const Ccnx::Name &forwardingHint)
+Fetcher::SetForwardingHint (const ndn::Name &forwardingHint)
 {
   m_forwardingHint = forwardingHint;
 }
@@ -96,7 +96,7 @@ Fetcher::FillPipeline ()
 {
   for (; m_minSendSeqNo < m_maxSeqNo && m_activePipeline < m_pipeline; m_minSendSeqNo++)
     {
-      unique_lock<mutex> lock (m_seqNoMutex);
+      boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
 
       if (m_outOfOrderRecvSeqNo.find (m_minSendSeqNo+1) != m_outOfOrderRecvSeqNo.end ())
         continue;
@@ -106,43 +106,48 @@ Fetcher::FillPipeline ()
 
       m_inActivePipeline.insert (m_minSendSeqNo+1);
 
-      _LOG_DEBUG (" >>> i " << Name (m_forwardingHint)(m_name) << ", seq = " << (m_minSendSeqNo + 1 ));
+      _LOG_DEBUG (" >>> i " << ndn::Name(m_forwardingHint).append(m_name) << ", seq = " << (m_minSendSeqNo + 1 ));
 
       // cout << ">>> " << m_minSendSeqNo+1 << endl;
-      m_ccnx->sendInterest (Name (m_forwardingHint)(m_name)(m_minSendSeqNo+1),
-                            Closure (bind(&Fetcher::OnData, this, m_minSendSeqNo+1, _1, _2),
-                                     bind(&Fetcher::OnTimeout, this, m_minSendSeqNo+1, _1, _2, _3)),
-                            Selectors().interestLifetime (1)); // Alex: this lifetime should be changed to RTO
+
+      ndn::Interest interest(ndn::Name(m_forwardingHint).append(m_name).appendNumber(m_minSendSeqNo+1)); // Alex: this lifetime should be changed to RTO
+      interest.setInterestLifetime(time::seconds(1));
+      m_face->expressInterest(interest,
+    		  	  	              boost::bind(&Fetcher::OnData, this, m_minSendSeqNo+1, _1, _2),
+    				                  boost::bind(&Fetcher::OnTimeout, this, m_minSendSeqNo+1, _1));
+
       _LOG_DEBUG (" >>> i ok");
 
       m_activePipeline ++;
     }
 }
-
 void
-Fetcher::OnData (uint64_t seqno, const Ccnx::Name &name, PcoPtr data)
+Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data) 
 {
-  m_executor->execute (bind (&Fetcher::OnData_Execute, this, seqno, name, data));
+  m_executor->execute (boost::bind (&Fetcher::OnData_Execute, this, seqno, interest, data));
 }
 
 void
-Fetcher::OnData_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::PcoPtr data)
+Fetcher::OnData_Execute (uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
 {
-  _LOG_DEBUG (" <<< d " << name.getPartialName (0, name.size () - 1) << ", seq = " << seqno);
+  const ndn::Name &name = data.getName();
+  _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
-  if (m_forwardingHint == Name ())
+  boost::shared_ptr<ndn::Data> pco = boost::make_shared<ndn::Data>(data.getContent());
+  
+  if (m_forwardingHint == Name())
   {
     // TODO: check verified!!!!
     if (true)
     {
       if (!m_segmentCallback.empty ())
       {
-        m_segmentCallback (m_deviceName, m_name, seqno, data);
+        m_segmentCallback (m_deviceName, m_name, seqno, pco);
       }
     }
     else
     {
-      _LOG_ERROR("Can not verify signature content. Name = " << data->name());
+      _LOG_ERROR("Can not verify signature content. Name = " << data.getName());
       // probably needs to do more in the future
     }
     // we don't have to tell FetchManager about this
@@ -150,8 +155,6 @@ Fetcher::OnData_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::PcoPtr data)
   else
     {
       // in this case we don't care whether "data" is verified,  in fact, we expect it is unverified
-      try {
-        PcoPtr pco = make_shared<ParsedContentObject> (*data->contentPtr ());
 
         // we need to verify this pco and apply callback only when verified
         // TODO: check verified !!!
@@ -164,15 +167,8 @@ Fetcher::OnData_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::PcoPtr data)
         }
         else
         {
-          _LOG_ERROR("Can not verify signature content. Name = " << pco->name());
+          _LOG_ERROR("Can not verify signature content. Name = " << pco->getName());
           // probably needs to do more in the future
-        }
-      }
-      catch (MisformedContentObjectException &e)
-        {
-          cerr << "MisformedContentObjectException..." << endl;
-          // no idea what should do...
-          // let's ignore for now
         }
     }
 
@@ -180,7 +176,7 @@ Fetcher::OnData_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::PcoPtr data)
   m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
   ////////////////////////////////////////////////////////////////////////////
-  unique_lock<mutex> lock (m_seqNoMutex);
+  boost::unique_lock<boost::mutex> lock (m_seqNoMutex);
 
   m_outOfOrderRecvSeqNo.insert (seqno);
   m_inActivePipeline.erase (seqno);
@@ -223,26 +219,27 @@ Fetcher::OnData_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::PcoPtr data)
       if (!m_onFetchComplete.empty ())
         {
           m_timedwait = true;
-          m_executor->execute (bind (m_onFetchComplete, ref(*this), m_deviceName, m_name));
+          m_executor->execute (boost::bind (m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
         }
     }
   else
     {
-      m_executor->execute (bind (&Fetcher::FillPipeline, this));
+      m_executor->execute (boost::bind (&Fetcher::FillPipeline, this));
     }
 }
 
 void
-Fetcher::OnTimeout (uint64_t seqno, const Ccnx::Name &name, const Closure &closure, Selectors selectors)
+Fetcher::OnTimeout(uint64_t seqno, const ndn::Interest &interest)
 {
   _LOG_DEBUG (this << ", " << m_executor.get ());
-  m_executor->execute (bind (&Fetcher::OnTimeout_Execute, this, seqno, name, closure, selectors));
+  m_executor->execute (boost::bind (&Fetcher::OnTimeout_Execute, this, seqno, interest));
 }
 
 void
-Fetcher::OnTimeout_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::Closure closure, Ccnx::Selectors selectors)
+Fetcher::OnTimeout_Execute (uint64_t seqno, const ndn::Interest &interest)
 {
-  _LOG_DEBUG (" <<< :( timeout " << name.getPartialName (0, name.size () - 1) << ", seq = " << seqno);
+  const ndn::Name name = interest.getName();
+  _LOG_DEBUG (" <<< :( timeout " << name.getSubName (0, name.size () - 1) << ", seq = " << seqno);
 
   // cout << "Fetcher::OnTimeout: " << name << endl;
   // cout << "Last: " << m_lastPositiveActivity << ", config: " << m_maximumNoActivityPeriod
@@ -254,7 +251,7 @@ Fetcher::OnTimeout_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::Closure closu
     {
       bool done = false;
       {
-        unique_lock<mutex> lock (m_seqNoMutex);
+        boost::unique_lock<boost::mutex> lock (m_seqNoMutex);
         m_inActivePipeline.erase (seqno);
         m_activePipeline --;
 
@@ -267,7 +264,7 @@ Fetcher::OnTimeout_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::Closure closu
       if (done)
         {
           {
-            unique_lock<mutex> lock (m_seqNoMutex);
+            boost::unique_lock<boost::mutex> lock (m_seqNoMutex);
             _LOG_DEBUG ("Telling that fetch failed");
             _LOG_DEBUG ("Active pipeline size should be zero: " << m_inActivePipeline.size ());
           }
@@ -275,7 +272,7 @@ Fetcher::OnTimeout_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::Closure closu
           m_active = false;
           if (!m_onFetchFailed.empty ())
             {
-              m_onFetchFailed (ref (*this));
+              m_onFetchFailed (boost::ref (*this));
             }
           // this is not valid anymore, but we still should be able finish work
         }
@@ -283,6 +280,7 @@ Fetcher::OnTimeout_Execute (uint64_t seqno, Ccnx::Name name, Ccnx::Closure closu
   else
     {
       _LOG_DEBUG ("Asking to reexpress seqno: " << seqno);
-      m_ccnx->sendInterest (name, closure, selectors);
+      m_face->expressInterest(interest, boost::bind(&Fetcher::OnData, this, seqno, _1, _2), //TODO: correct? 
+                                       boost::bind(&Fetcher::OnTimeout, this, seqno, _1)); //TODO: correct?
     }
 }

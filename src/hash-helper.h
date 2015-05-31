@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,7 +27,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/exception/all.hpp>
 #include <boost/filesystem.hpp>
-#include "ccnx-common.h"
+#include <ndn-cxx/encoding/buffer.hpp>
 
 // Other options: VP_md2, EVP_md5, EVP_sha, EVP_sha1, EVP_sha256, EVP_dss, EVP_dss1, EVP_mdc2, EVP_ripemd160
 #define HASH_FUNCTION EVP_sha256
@@ -41,49 +41,49 @@ public:
   static unsigned char _origin;
   static HashPtr Origin;
 
-  Hash ()
+  Hash()
     : m_buf(0)
     , m_length(0)
   {
   }
 
-  Hash (const void *buf, unsigned int length)
-    : m_length (length)
+  Hash(const void *buf, unsigned int length)
+    : m_length(length)
   {
     if (m_length != 0)
       {
         m_buf = new unsigned char [length];
-        memcpy (m_buf, buf, length);
+        memcpy(m_buf, buf, length);
       }
   }
 
-  Hash (const Hash &otherHash)
-  : m_length (otherHash.m_length)
+  Hash(const Hash &otherHash)
+  : m_length(otherHash.m_length)
   {
     if (m_length != 0)
       {
         m_buf = new unsigned char [m_length];
-        memcpy (m_buf, otherHash.m_buf, otherHash.m_length);
+        memcpy(m_buf, otherHash.m_buf, otherHash.m_length);
       }
   }
 
   static HashPtr
-  FromString (const std::string &hashInTextEncoding);
+  FromString(const std::string &hashInTextEncoding);
 
   static HashPtr
-  FromFileContent (const boost::filesystem::path &fileName);
+  FromFileContent(const boost::filesystem::path &fileName);
 
   static HashPtr
-  FromBytes (const Ccnx::Bytes &bytes);
+  FromBytes(const ndn::Buffer &bytes);
 
-  ~Hash ()
+  ~Hash()
   {
     if (m_length != 0)
       delete [] m_buf;
   }
 
   Hash &
-  operator = (const Hash &otherHash)
+  operator =(const Hash &otherHash)
   {
     if (m_length != 0)
       delete [] m_buf;
@@ -92,28 +92,28 @@ public:
     if (m_length != 0)
       {
         m_buf = new unsigned char [m_length];
-        memcpy (m_buf, otherHash.m_buf, otherHash.m_length);
+        memcpy(m_buf, otherHash.m_buf, otherHash.m_length);
       }
     return *this;
   }
 
   bool
-  IsZero () const
+  IsZero() const
   {
     return m_length == 0 ||
-      (m_length == 1 && m_buf[0] == 0);
+     (m_length == 1 && m_buf[0] == 0);
   }
 
   bool
-  operator == (const Hash &otherHash) const
+  operator ==(const Hash &otherHash) const
   {
     if (m_length != otherHash.m_length)
       return false;
 
-    return memcmp (m_buf, otherHash.m_buf, m_length) == 0;
+    return memcmp(m_buf, otherHash.m_buf, m_length) == 0;
   }
 
-  bool operator < (const Hash &otherHash) const
+  bool operator <(const Hash &otherHash) const
   {
     if (m_length < otherHash.m_length)
       return true;
@@ -136,26 +136,26 @@ public:
   }
 
   const void *
-  GetHash () const
+  GetHash() const
   {
     return m_buf;
   }
 
   unsigned int
-  GetHashBytes () const
+  GetHashBytes() const
   {
     return m_length;
   }
 
   std::string
-  shortHash () const;
+  shortHash() const;
 
 private:
   unsigned char *m_buf;
   unsigned int m_length;
 
   friend std::ostream &
-  operator << (std::ostream &os, const Hash &digest);
+  operator <<(std::ostream &os, const Hash &digest);
 };
 
 namespace Error {
@@ -164,6 +164,6 @@ struct HashConversion : virtual boost::exception, virtual std::exception { };
 
 
 std::ostream &
-operator << (std::ostream &os, const Hash &digest);
+operator <<(std::ostream &os, const Hash &digest);
 
 #endif // HASH_STRING_CONVERTER_H

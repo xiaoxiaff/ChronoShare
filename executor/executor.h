@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,7 +33,7 @@
 #include "logging.h"
 
 /* A very simple executor to execute submitted tasks immediately or
- * in the future (depending on whether there is idle thread)
+ * in the future(depending on whether there is idle thread)
  * A fixed number of threads are created for executing tasks;
  * The policy is FIFO
  * No cancellation of submitted tasks
@@ -42,7 +42,7 @@
 class Executor
 {
 public:
-  typedef boost::function<void ()> Job;
+  typedef boost::function<void()> Job;
 
   Executor(int poolSize);
   ~Executor();
@@ -59,10 +59,10 @@ public:
   jobQueueSize();
 
   void
-  start ();
+  start();
 
   void
-  shutdown ();
+  shutdown();
 
 private:
   void

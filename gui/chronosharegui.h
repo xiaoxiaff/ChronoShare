@@ -43,8 +43,8 @@
 #include <QMessageBox>
 #include <QApplication>
 
-#include "fs-watcher.h"
 #include "dispatcher.h"
+#include "fs-watcher.h"
 #include "server.hpp"
 #include <boost/thread/thread.hpp>
 

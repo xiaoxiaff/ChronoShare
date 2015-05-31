@@ -21,15 +21,14 @@
 #include <QtCore>
 
 #include "dispatcher.h"
-#include "fs-watcher.h"
 #include "logging.h"
-#include "ccnx-wrapper.h"
+#include "fs-watcher.h"
 
 #include <boost/make_shared.hpp>
 
 using namespace boost;
 using namespace std;
-using namespace Ccnx;
+using namespace ndn;
 
 int main(int argc, char *argv[])
 {
@@ -49,7 +48,7 @@ int main(int argc, char *argv[])
 
   cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder << "] at [" << path << "]" << endl;
 
-  Dispatcher dispatcher (username, sharedFolder, path, make_shared<CcnxWrapper> ());
+  Dispatcher dispatcher (username, sharedFolder, path, boost::make_shared<ndn::Face> ());
 
   FsWatcher watcher (path.c_str (),
                      bind (&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
