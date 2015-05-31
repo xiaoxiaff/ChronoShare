@@ -18,15 +18,10 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHAREGUI_H
-#define CHRONOSHAREGUI_H
+#ifndef CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
+#define CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
 
-#include "adhoc.hpp"
-
-#if __APPLE__ && HAVE_SPARKLE
-#define SPARKLE_SUPPORTED 1
-#include "sparkle-auto-update.hpp"
-#endif
+#include "core/chronoshare-common.hpp"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -38,17 +33,28 @@
 #include <QProcess>
 #include <QSettings>
 #include <QSystemTrayIcon>
-#include <QWidget>
-#include <QtGui>
+#include <QtWidgets>
 
+#ifndef Q_MOC_RUN
+#include "adhoc.hpp"
 #include "dispatcher.hpp"
 #include "fs-watcher.hpp"
 #include "server.hpp"
-#include <boost/thread/thread.hpp>
+#endif // Q_MOC_RUN
+
+#if __APPLE__ && HAVE_SPARKLE
+#define SPARKLE_SUPPORTED 1
+#include "sparkle-auto-update.hpp"
+#endif
+
+#include <thread>
+
+namespace ndn {
+namespace chronoshare {
 
 class ChronoShareGui : public QDialog
 {
-  Q_OBJECT
+  //Q_OBJECT
 
 public:
   // constructor
@@ -152,10 +158,8 @@ private:
   QString m_username;         // username
   QString m_sharedFolderName; // shared folder name
 
-  FsWatcher* m_watcher;
-  Dispatcher* m_dispatcher;
   http::server::server* m_httpServer;
-  boost::thread m_httpServerThread;
+  std::thread m_httpServerThread;
 
   QLabel* labelUsername;
   QPushButton* button;
@@ -176,6 +180,15 @@ private:
 #endif
   // QString m_settingsFilePath; // settings file path
   // QString m_settings;
+
+  std::thread m_chronoshareThread;
+  std::unique_ptr<boost::asio::io_service> m_ioService;
+  std::unique_ptr<Face> m_face;
+  std::unique_ptr<FsWatcher> m_watcher;
+  std::unique_ptr<Dispatcher> m_dispatcher;
 };
 
-#endif // CHRONOSHAREGUI_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
