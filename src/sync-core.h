@@ -23,10 +23,12 @@
 #define SYNC_CORE_H
 
 #include "sync-log.h"
-#include "ccnx-wrapper.h"
-#include "ccnx-selectors.h"
+//#include "ccnx-wrapper.h"
+//#include "ccnx-selectors.h"
 #include "scheduler.h"
 #include "task.h"
+//#include <ndn-cxx/contexts/consumer-context.hpp>
+#include <ndn-cxx/face.hpp>
 
 #include <boost/function.hpp>
 
@@ -42,12 +44,11 @@ public:
 
 public:
   SyncCore(SyncLogPtr syncLog
-           , const Ccnx::Name &userName
-           , const Ccnx::Name &localPrefix      // routable name used by the local user
-           , const Ccnx::Name &syncPrefix       // the prefix for the sync collection
+           , const ndn::Name &userName
+           , const ndn::Name &localPrefix      // routable name used by the local user
+           , const ndn::Name &syncPrefix       // the prefix for the sync collection
            , const StateMsgCallback &callback   // callback when state change is detected
-           , Ccnx::CcnxWrapperPtr ccnx
-           , double syncInterestInterval = -1.0);
+           , long syncInterestInterval = -1);
   ~SyncCore();
 
   void
@@ -71,26 +72,26 @@ public:
   root() const { return m_rootHash; }
 
   sqlite3_int64
-  seq (const Ccnx::Name &name);
+  seq (const ndn::Name &name);
 
 private:
   void
-  handleInterest(const Ccnx::Name &name);
+  handleInterest(const ndn::Name &name);
 
   void
-  handleSyncData(const Ccnx::Name &name, Ccnx::PcoPtr content);
+  handleSyncData(const ndn::Interest &interest, ndn::Data &data);
 
   void
-  handleRecoverData(const Ccnx::Name &name, Ccnx::PcoPtr content);
+  handleRecoverData(const ndn::Interest &interest, ndn::Data &data);
 
   void
-  handleSyncInterestTimeout(const Ccnx::Name &name, const Ccnx::Closure &closure, Ccnx::Selectors selectors);
+  handleSyncInterestTimeout(const ndn::Interest &interest);
 
   void
-  handleRecoverInterestTimeout(const Ccnx::Name &name, const Ccnx::Closure &closure, Ccnx::Selectors selectors);
+  handleRecoverInterestTimeout(const ndn::Interest &interest);
 
   void
-  deregister(const Ccnx::Name &name);
+  deregister(const ndn::Name &name);
 
   void
   recover(HashPtr hash);
@@ -100,29 +101,30 @@ private:
   sendSyncInterest();
 
   void
-  handleSyncInterest(const Ccnx::Name &name);
+  handleSyncInterest(const ndn::Name &name);
 
   void
-  handleRecoverInterest(const Ccnx::Name &name);
+  handleRecoverInterest(const ndn::Name &name);
 
   void
-  handleStateData(const Ccnx::Bytes &content);
+  handleStateData(const ndn::Buffer &content);
 
 private:
-  Ccnx::CcnxWrapperPtr m_ccnx;
+//  ndn::Face m_face;
+  boost::shared_ptr<ndn::Face> m_face;
 
   SyncLogPtr m_log;
   SchedulerPtr m_scheduler;
   StateMsgCallback m_stateMsgCallback;
 
-  Ccnx::Name m_syncPrefix;
+  ndn::Name m_syncPrefix;
   HashPtr m_rootHash;
 
   IntervalGeneratorPtr m_recoverWaitGenerator;
 
   TaskPtr m_sendSyncInterestTask;
 
-  double m_syncInterestInterval;
+  long m_syncInterestInterval;
 };
 
 #endif // SYNC_CORE_H

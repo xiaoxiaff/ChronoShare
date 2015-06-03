@@ -24,12 +24,14 @@
 
 #include "db-helper.h"
 
-#include "ccnx-name.h"
 #include "file-item.pb.h"
 #include "hash-helper.h"
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/function.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <list>
 
@@ -49,7 +51,7 @@ public:
    */
   void
   UpdateFile (const std::string &filename, sqlite3_int64 version,
-              const Hash &hash, const Ccnx::CcnxCharbuf &device_name, sqlite3_int64 seqno,
+              const Hash &hash, const ndn::Buffer &device_name, sqlite3_int64 seqno,
               time_t atime, time_t mtime, time_t ctime, int mode, int seg_num);
 
   /**

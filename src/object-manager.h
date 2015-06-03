@@ -23,17 +23,17 @@
 #define OBJECT_MANAGER_H
 
 #include <string>
-#include <ccnx-wrapper.h>
 #include <hash-helper.h>
 #include <boost/filesystem.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <ndn-cxx/face.hpp>
 
 // everything related to managing object files
 
 class ObjectManager
 {
 public:
-  ObjectManager (Ccnx::CcnxWrapperPtr ccnx, const boost::filesystem::path &folder, const std::string &appName);
+  ObjectManager (boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &folder, const std::string &appName);
   virtual ~ObjectManager ();
 
   /**
@@ -42,13 +42,13 @@ public:
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
   boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
-  localFileToObjects (const boost::filesystem::path &file, const Ccnx::Name &deviceName);
+  localFileToObjects (const boost::filesystem::path &file, const ndn::Name &deviceName);
 
   bool
-  objectsToLocalFile (/*in*/const Ccnx::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
+  objectsToLocalFile (/*in*/const ndn::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
 
 private:
-  Ccnx::CcnxWrapperPtr m_ccnx;
+  boost::shared_ptr<ndn::Face> m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
 };

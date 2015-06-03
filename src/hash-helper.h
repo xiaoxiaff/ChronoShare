@@ -28,7 +28,6 @@
 #include <boost/exception/all.hpp>
 #include <boost/filesystem.hpp>
 #include <ndn-cxx/encoding/buffer.hpp>
-//#include "ndn-common.h"
 
 // Other options: VP_md2, EVP_md5, EVP_sha, EVP_sha1, EVP_sha256, EVP_dss, EVP_dss1, EVP_mdc2, EVP_ripemd160
 #define HASH_FUNCTION EVP_sha256
@@ -76,7 +75,6 @@ public:
 
   static HashPtr
   FromBytes (const ndn::Buffer &bytes);
-//  FromBytes (const ndn::Bytes &bytes);
 
   ~Hash ()
   {
