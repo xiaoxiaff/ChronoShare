@@ -34,6 +34,7 @@
 
 INIT_LOGGER ("Sync.Core");
 
+const int SyncCore::FRESHNESS = 2;
 const string SyncCore::RECOVER = "RECOVER";
 const double SyncCore::WAIT = 0.05;
 const double SyncCore::RANDOM_PERCENT = 0.5;

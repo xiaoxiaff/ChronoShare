@@ -20,10 +20,10 @@
  *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
  */
 
-#include "fs-watcher.h"
 #include "db-helper.h"
 #include "logging.h"
 
+#include "fs-watcher.h"
 #include <boost/bind.hpp>
 
 #include <QDirIterator>

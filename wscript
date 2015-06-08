@@ -17,7 +17,7 @@ def options(opt):
     opt.load(['default-compiler-flags', 'boost', 'protoc', 'tinyxml'], tooldir=['waf-tools'])
 
 def configure(conf):
-    conf.load("compiler_c compiler_cxx gnu_dirs")
+    conf.load("compiler_c compiler_cxx default-compiler-flags gnu_dirs")
     conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
                uselib_store='NDN_CXX', mandatory=True)
 
@@ -117,6 +117,7 @@ def configure(conf):
 
     conf.load('boost')
 
+
     conf.check_boost(lib='system test iostreams filesystem regex thread date_time')
 
     boost_version = conf.env.BOOST_VERSION.split('_')
@@ -161,7 +162,7 @@ def build (bld):
         target="chronoshare",
         features=['cxx'],
         source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.cpp', 'src/**/*.proto']),
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX",
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML",
         includes = "scheduler src executor",
         )
 
@@ -181,7 +182,7 @@ def build (bld):
           features = "qt4 cxx cxxprogram",
           defines = "WAF",
           source = bld.path.ant_glob(['test/*.cc']),
-          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare',
+          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
           includes = "scheduler src executor gui fs-watcher",
           install_prefix = None,
           )
@@ -200,7 +201,7 @@ def build (bld):
         defines = "WAF",
         source = bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
         includes = "scheduler executor fs-watcher gui src adhoc server . ",
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server",
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server SSL TINYXML",
 
         html_resources = bld.path.find_dir ("gui/html").ant_glob([
                 '**/*.js', '**/*.png', '**/*.css',
@@ -263,7 +264,7 @@ def build (bld):
 	defines = "WAF",
 	source = "cmd/csd.cc",
 	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare"
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
 	)
 
     dump_db = bld (
@@ -271,7 +272,7 @@ def build (bld):
         features = "cxx cxxprogram",
 	source = "cmd/dump-db.cc",
 	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare"
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
         )
 
 from waflib import TaskGen

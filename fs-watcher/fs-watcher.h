@@ -24,10 +24,10 @@
 
 #include <vector>
 #include <QFileSystemWatcher>
-#include <boost/filesystem.hpp>
 #include <sqlite3.h>
-
 #include "scheduler.h"
+#include <boost/filesystem.hpp>
+
 
 class FsWatcher : public QObject
 {

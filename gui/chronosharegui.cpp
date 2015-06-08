@@ -25,7 +25,6 @@
 #include "config.h"
 
 #include "logging.h"
-#include "ccnx-wrapper.h"
 #include <QValidator>
 #include <QDir>
 #include <QFileInfo>
@@ -34,7 +33,7 @@
 #include <boost/make_shared.hpp>
 
 using namespace boost;
-using namespace Ccnx;
+using namespace ndn;
 
 static const string HTTP_SERVER_ADDRESS = "localhost";
 static const string HTTP_SERVER_PORT = "9001";
@@ -168,7 +167,7 @@ ChronoShareGui::startBackend (bool restart/*=false*/)
   realPathToFolder /= m_sharedFolderName.toStdString ();
 
   m_dispatcher = new Dispatcher (m_username.toStdString (), m_sharedFolderName.toStdString (),
-                                 realPathToFolder, make_shared<CcnxWrapper> ());
+                                 realPathToFolder, boost::make_shared<ndn::Face> ());
 
   // Alex: this **must** be here, otherwise m_dirPath will be uninitialized
   m_watcher = new FsWatcher (realPathToFolder.string ().c_str (),

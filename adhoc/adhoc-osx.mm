@@ -73,7 +73,8 @@ Adhoc::CreateAdhoc ()
   // should do a better job later, when Ccnx::Control will be implemented
 
   ostringstream cmd;
-  cmd << CCNX_PATH << "/bin/ccndc add / udp 169.254.255.255";
+//  cmd << CCNX_PATH << "/bin/ccndc add / udp 169.254.255.255";
+  cmd << "/bin/ccndc add / udp 169.254.255.255";
   int ret = system (cmd.str ().c_str ());
   if (ret == 0)
     {
