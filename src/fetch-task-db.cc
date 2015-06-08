@@ -21,12 +21,9 @@
 #include "fetch-task-db.h"
 #include "db-helper.h"
 
-using namespace std;
-using namespace boost;
-using namespace Ccnx;
 namespace fs = boost::filesystem;
 
-const string INIT_DATABASE = "\
+const std::string INIT_DATABASE = "\
 CREATE TABLE IF NOT EXISTS                                      \n\
   Task(                                                         \n\
     deviceName  BLOB NOT NULL,                                  \n\
@@ -72,14 +69,16 @@ FetchTaskDb::~FetchTaskDb()
 }
 
 void
-FetchTaskDb::addTask(const Name &deviceName, const Name &baseName, uint64_t minSeqNo, uint64_t maxSeqNo, int priority)
+FetchTaskDb::addTask(const ndn::Name &deviceName, const ndn::Name &baseName, uint64_t minSeqNo, uint64_t maxSeqNo, int priority)
 {
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db, "INSERT OR IGNORE INTO Task (deviceName, baseName, minSeqNo, maxSeqNo, priority) VALUES (?, ?, ?, ?, ?)", -1, &stmt, 0);
-  CcnxCharbufPtr deviceBuf = CcnxCharbufPtr(deviceName);
-  CcnxCharbufPtr baseBuf = CcnxCharbufPtr(baseName);
-  sqlite3_bind_blob(stmt, 1, deviceBuf->buf(), deviceBuf->length(), SQLITE_STATIC);
-  sqlite3_bind_blob(stmt, 2, baseBuf->buf(), baseBuf->length(), SQLITE_STATIC);
+
+  ndn::Block deviceBlock = deviceName.wireEncode();
+  ndn::Block baseBlock = baseName.wireEncode();
+
+  sqlite3_bind_blob(stmt, 1, deviceBlock.value (), deviceBlock.size (), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 2, baseBlock.value (), baseBlock.size (), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 3, minSeqNo);
   sqlite3_bind_int64(stmt, 4, maxSeqNo);
   sqlite3_bind_int(stmt, 5, priority);
@@ -92,14 +91,17 @@ FetchTaskDb::addTask(const Name &deviceName, const Name &baseName, uint64_t minS
 }
 
 void
-FetchTaskDb::deleteTask(const Name &deviceName, const Name &baseName)
+FetchTaskDb::deleteTask(const ndn::Name &deviceName, const ndn::Name &baseName)
 {
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db, "DELETE FROM Task WHERE deviceName = ? AND baseName = ?;", -1, &stmt, 0);
-  CcnxCharbufPtr deviceBuf = CcnxCharbufPtr(deviceName);
-  CcnxCharbufPtr baseBuf = CcnxCharbufPtr(baseName);
-  sqlite3_bind_blob(stmt, 1, deviceBuf->buf(), deviceBuf->length(), SQLITE_STATIC);
-  sqlite3_bind_blob(stmt, 2, baseBuf->buf(), baseBuf->length(), SQLITE_STATIC);
+
+  ndn::Block deviceBlock = deviceName.wireEncode();
+  ndn::Block baseBlock = baseName.wireEncode();
+
+  sqlite3_bind_blob(stmt, 1, deviceBlock.value (), baseBlock.size (), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 2, baseBlock.value (), baseBlock.size (), SQLITE_STATIC);
+
   int res = sqlite3_step(stmt);
   if (res == SQLITE_OK)
   {
@@ -114,8 +116,12 @@ FetchTaskDb::foreachTask(const FetchTaskCallback &callback)
   sqlite3_prepare_v2(m_db, "SELECT * FROM Task;", -1, &stmt, 0);
   while (sqlite3_step(stmt) == SQLITE_ROW)
   {
-     Name deviceName(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0));
-     Name baseName(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1));
+     ndn::Name deviceName(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0)));
+     deviceName.append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0)));
+
+     ndn::Name baseName(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)));
+     baseName.append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 1)));
+
      uint64_t minSeqNo = sqlite3_column_int64(stmt, 2);
      uint64_t maxSeqNo = sqlite3_column_int64(stmt, 3);
      int priority = sqlite3_column_int(stmt, 4);

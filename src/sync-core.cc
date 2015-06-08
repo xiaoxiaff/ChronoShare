@@ -46,9 +46,10 @@ const std::string LOCAL_STATE_CHANGE_DELAYED_TAG = "local-state-changed";
 using namespace boost;
 using namespace ndn;
 
-SyncCore::SyncCore(SyncLogPtr syncLog, const Name &userName, const Name &localPrefix, const Name &syncPrefix,
+SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name &userName, const Name &localPrefix, const Name &syncPrefix,
                    const StateMsgCallback &callback, long syncInterestInterval/*= -1.0*/)
-  : m_log(syncLog)
+  : m_face(face)
+  , m_log(syncLog)
   , m_scheduler(new Scheduler ())
   , m_stateMsgCallback(callback)
   , m_syncPrefix(syncPrefix)
@@ -57,7 +58,7 @@ SyncCore::SyncCore(SyncLogPtr syncLog, const Name &userName, const Name &localPr
 {
   m_rootHash = m_log->RememberStateInStateLog();
 
-  m_face = boost::make_shared<Face>();
+//  m_face = boost::make_shared<Face>();
   m_face->setInterestFilter(m_syncPrefix, boost::bind(&SyncCore::handleInterest, this, _1));
   // m_log->initYP(m_yp);
   m_log->UpdateLocalLocator (localPrefix);

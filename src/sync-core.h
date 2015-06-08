@@ -43,7 +43,8 @@ public:
   static const double RANDOM_PERCENT; // seconds;
 
 public:
-  SyncCore(SyncLogPtr syncLog
+  SyncCore(  boost::shared_ptr<ndn::Face> face
+           , SyncLogPtr syncLog
            , const ndn::Name &userName
            , const ndn::Name &localPrefix      // routable name used by the local user
            , const ndn::Name &syncPrefix       // the prefix for the sync collection

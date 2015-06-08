@@ -101,11 +101,13 @@ def build (bld):
     chornoshare = bld (
         target="mysync",
         features=['cxx'],
-        source = bld.path.ant_glob(['src/object-db.cc', 'src/object-manager.cc',
+        source = bld.path.ant_glob(['src/dispatcher.cc', 'src/fetcher.cc', 'src/fetch-manager.cc', 'src/fetch-task-db.cc',
+                                    'src/state-server.cc', 'src/content-server.cc',
+                                    'src/object-db.cc', 'src/object-manager.cc',
                                     'src/action-log.cc', 'src/file-state.cc',
                                     'src/sync-core.cc', 'src/sync-log.cc', 
                                     'src/db-helper.cc', 'src/hash-helper.cc', 'src/logging.cc', 'src/**/*.proto']),
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX",
+        use = "BOOST SQLITE3 LOG4CXX scheduler NDN_CXX",
         includes = "scheduler src executor",
         )
 
