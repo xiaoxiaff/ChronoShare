@@ -889,7 +889,7 @@ ActionLog::apply_action_xFun (sqlite3_context *context, int argc, sqlite3_value 
   sqlite3_int64 version = sqlite3_value_int64 (argv[4]);
 
   _LOG_TRACE ("apply_function called with " << argc);
-  _LOG_TRACE ("device_name: " << Name (device_name)
+  _LOG_TRACE ("device_name: " << ndn::Name(reinterpret_cast<const char*>(device_name.buf()))
               << ", action: " << action
               << ", file: " << filename);
 

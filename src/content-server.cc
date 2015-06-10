@@ -199,10 +199,10 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
       {
         if (forwardingHint.size () == 0)
           {
-            _LOG_DEBUG (ParsedContentObject (*co).name ());
+            _LOG_DEBUG (Name(reinterpret_cast<const char*>(co->buf())));
 
             boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
-//          	data->setName(ParsedContentObject(*co).name());
+          	data->setName(Name(reinterpret_cast<const char*>(co->buf())));
           	data->setContent(co->buf(), co->size());
           	m_face->put(*data);
           }

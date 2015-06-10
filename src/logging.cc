@@ -55,6 +55,7 @@ INIT_LOGGERS ()
       Logger::getRootLogger()->setLevel (log4cxx::Level::getInfo ());
     }
 
+//  _LOG_DEBUG("Hello World!");    // Debug level
   configured = true;
 }
 

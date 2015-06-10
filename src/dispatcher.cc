@@ -439,11 +439,11 @@ Dispatcher::Did_FetchManager_FileSegmentFetch_Execute (ndn::Name deviceName, ndn
   map<Hash, ObjectDbPtr>::iterator db = m_objectDbMap.find (hash);
   if (db != m_objectDbMap.end())
   {
-    db->second->saveContentObject(deviceName, segment, fileSegmentPco->getContent ());
+    db->second->saveContentObject(deviceName, segment, fileSegmentPco->getContent());
   }
   else
   {
-    _LOG_ERROR ("no db available for this content object: " << fileSegmentBaseName << ", size: " << fileSegmentPco->buf ().size());
+    _LOG_ERROR ("no db available for this content object: " << fileSegmentBaseName << ", size: " << fileSegmentPco->getContent().size());
   }
 
   // ObjectDb objectDb (m_rootDir / ".chronoshare", lexical_cast<string> (hash));

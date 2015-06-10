@@ -37,6 +37,7 @@ const std::string INIT_DATABASE = "\
 
 DbHelper::DbHelper (const fs::path &path, const std::string &dbname)
 {
+//  std::cout << path << std::endl;
   fs::create_directories (path);
 
   int res = sqlite3_open((path / dbname).c_str (), &m_db);

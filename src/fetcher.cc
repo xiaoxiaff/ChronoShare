@@ -131,7 +131,7 @@ void
 Fetcher::OnData_Execute (uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
 {
   const ndn::Name &name = data.getName();
-  _LOG_DEBUG(" <<< d " << name.getPartialName(0, name.size() - 1) << ", seq = " << seqno);
+  _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
   boost::shared_ptr<ndn::Data> pco = boost::make_shared<ndn::Data>(data.getContent());
   
@@ -147,7 +147,7 @@ Fetcher::OnData_Execute (uint64_t seqno, const ndn::Interest& interest, ndn::Dat
     }
     else
     {
-      _LOG_ERROR("Can not verify signature content. Name = " << data->name());
+      _LOG_ERROR("Can not verify signature content. Name = " << data.getName());
       // probably needs to do more in the future
     }
     // we don't have to tell FetchManager about this
@@ -167,7 +167,7 @@ Fetcher::OnData_Execute (uint64_t seqno, const ndn::Interest& interest, ndn::Dat
         }
         else
         {
-          _LOG_ERROR("Can not verify signature content. Name = " << pco->name());
+          _LOG_ERROR("Can not verify signature content. Name = " << pco->getName());
           // probably needs to do more in the future
         }
     }
@@ -239,7 +239,7 @@ void
 Fetcher::OnTimeout_Execute (uint64_t seqno, const ndn::Interest &interest)
 {
   const ndn::Name name = interest.getName();
-  _LOG_DEBUG (" <<< :( timeout " << name.getPartialName (0, name.size () - 1) << ", seq = " << seqno);
+  _LOG_DEBUG (" <<< :( timeout " << name.getSubName (0, name.size () - 1) << ", seq = " << seqno);
 
   // cout << "Fetcher::OnTimeout: " << name << endl;
   // cout << "Last: " << m_lastPositiveActivity << ", config: " << m_maximumNoActivityPeriod

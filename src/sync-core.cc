@@ -273,7 +273,7 @@ SyncCore::handleRecoverInterestTimeout(const Interest &interest)
 void
 SyncCore::handleRecoverData(const Interest &interest, Data &data)
 {
-  _LOG_DEBUG ("[" << m_log->GetLocalName () << "] <<<<< RECOVER DATA with name: " << name);
+  _LOG_DEBUG ("[" << m_log->GetLocalName () << "] <<<<< RECOVER DATA with interest: " << interest.toUri());
   //cout << "handle recover data" << end;
   const Block &content = data.getContent();
   if (content.value() && content.size() > 0)
@@ -295,7 +295,7 @@ SyncCore::handleRecoverData(const Interest &interest, Data &data)
 void
 SyncCore::handleSyncData(const Interest &interest, Data &data)
 {
-  _LOG_DEBUG ("[" << m_log->GetLocalName () << "] <<<<< SYNC DATA with name: " << name);
+  _LOG_DEBUG ("[" << m_log->GetLocalName () << "] <<<<< SYNC DATA with interest: " << interest.toUri());
 
   const Block &content = data.getContent();
   // suppress recover in interest - data out of order case
