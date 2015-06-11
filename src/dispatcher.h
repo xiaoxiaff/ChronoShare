@@ -59,16 +59,16 @@ public:
 
   // callback to process local file change
   void
-  Did_LocalFile_AddOrModify (const boost::filesystem::path &relativeFilepath);
+  Did_LocalFile_AddOrModify(const boost::filesystem::path &relativeFilepath);
 
   void
-  Did_LocalFile_Delete (const boost::filesystem::path &relativeFilepath);
+  Did_LocalFile_Delete(const boost::filesystem::path &relativeFilepath);
 
   /**
    * @brief Invoked when FileState is detected to have a file which does not exist on a file system
    */
   void
-  Restore_LocalFile (FileItemPtr file);
+  Restore_LocalFile(FileItemPtr file);
 
   // for test
   HashPtr
@@ -79,13 +79,13 @@ public:
 
 private:
   void
-  Did_LocalFile_AddOrModify_Execute (boost::filesystem::path relativeFilepath); // cannot be const & for Execute event!!! otherwise there will be segfault
+  Did_LocalFile_AddOrModify_Execute(boost::filesystem::path relativeFilepath); // cannot be const & for Execute event!!! otherwise there will be segfault
 
   void
-  Did_LocalFile_Delete_Execute (boost::filesystem::path relativeFilepath); // cannot be const & for Execute event!!! otherwise there will be segfault
+  Did_LocalFile_Delete_Execute(boost::filesystem::path relativeFilepath); // cannot be const & for Execute event!!! otherwise there will be segfault
 
   void
-  Restore_LocalFile_Execute (FileItemPtr file);
+  Restore_LocalFile_Execute(FileItemPtr file);
 
 private:
   /**
@@ -96,9 +96,9 @@ private:
  x * - from FetchManager/Actions: when action is fetched -> to request a file, specified by the action
    *                                                     -> to add action to the action log
    *
-   * - from ActionLog/Delete:      when action applied (file state changed, file deleted)           -> to delete local file
+   * - from ActionLog/Delete:      when action applied(file state changed, file deleted)           -> to delete local file
    *
-   * - from ActionLog/AddOrUpdate: when action applied (file state changes, file added or modified) -> to assemble the file if file is available in the ObjectDb, otherwise, do nothing
+   * - from ActionLog/AddOrUpdate: when action applied(file state changes, file added or modified) -> to assemble the file if file is available in the ObjectDb, otherwise, do nothing
    *
  x * - from FetchManager/Files: when file segment is retrieved -> save it in ObjectDb
    *                            when file fetch is completed   -> if file belongs to FileState, then assemble it to filesystem. Don't do anything otherwise
@@ -106,42 +106,42 @@ private:
 
   // callback to process remote sync state change
   void
-  Did_SyncLog_StateChange (SyncStateMsgPtr stateMsg);
+  Did_SyncLog_StateChange(SyncStateMsgPtr stateMsg);
 
   void
-  Did_SyncLog_StateChange_Execute (SyncStateMsgPtr stateMsg);
+  Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg);
 
   void
-  Did_FetchManager_ActionFetch (const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionPco);
+  Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionPco);
 
   void
-  Did_ActionLog_ActionApply_Delete (const std::string &filename);
+  Did_ActionLog_ActionApply_Delete(const std::string &filename);
 
   void
-  Did_ActionLog_ActionApply_Delete_Execute (std::string filename);
+  Did_ActionLog_ActionApply_Delete_Execute(std::string filename);
 
   // void
-  // Did_ActionLog_ActionApply_AddOrModify (const std::string &filename, ndn::Name device_name, sqlite3_int64 seq_no,
+  // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, ndn::Name device_name, sqlite3_int64 seq_no,
   //                                        HashPtr hash, time_t m_time, int mode, int seg_num);
 
   void
-  Did_FetchManager_FileSegmentFetch (const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
+  Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
 
   void
-  Did_FetchManager_FileSegmentFetch_Execute (ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
+  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
 
   void
-  Did_FetchManager_FileFetchComplete (const ndn::Name &deviceName, const ndn::Name &fileBaseName);
+  Did_FetchManager_FileFetchComplete(const ndn::Name &deviceName, const ndn::Name &fileBaseName);
 
   void
-  Did_FetchManager_FileFetchComplete_Execute (ndn::Name deviceName, ndn::Name fileBaseName);
+  Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn::Name fileBaseName);
 
   void
-  Did_LocalPrefix_Updated (const ndn::Name &prefix);
+  Did_LocalPrefix_Updated(const ndn::Name &prefix);
 
 private:
   void
-  AssembleFile_Execute (const ndn::Name &deviceName, const Hash &filehash, const boost::filesystem::path &relativeFilepath);
+  AssembleFile_Execute(const ndn::Name &deviceName, const Hash &filehash, const boost::filesystem::path &relativeFilepath);
 
   // void
   // fileChanged(const boost::filesystem::path &relativeFilepath, ActionType type);

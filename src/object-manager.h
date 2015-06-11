@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,8 +33,8 @@
 class ObjectManager
 {
 public:
-  ObjectManager (boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &folder, const std::string &appName);
-  virtual ~ObjectManager ();
+  ObjectManager(boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &folder, const std::string &appName);
+  virtual ~ObjectManager();
 
   /**
    * @brief Creates and saves local file in a local database file
@@ -42,10 +42,10 @@ public:
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
   boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
-  localFileToObjects (const boost::filesystem::path &file, const ndn::Name &deviceName);
+  localFileToObjects(const boost::filesystem::path &file, const ndn::Name &deviceName);
 
   bool
-  objectsToLocalFile (/*in*/const ndn::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
+  objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;

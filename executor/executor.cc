@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,42 +27,42 @@ INIT_MEMBER_LOGGER(Executor,"Executor")
 using namespace std;
 using namespace boost;
 
-Executor::Executor (int poolSize)
-  : m_needStop (true)
-  , m_poolSize (poolSize)
+Executor::Executor(int poolSize)
+  : m_needStop(true)
+  , m_poolSize(poolSize)
 {
 }
 
 Executor::~Executor()
 {
-  _LOG_DEBUG ("Enter destructor");
-  shutdown ();
-  _LOG_DEBUG ("Exit destructor");
+  _LOG_DEBUG("Enter destructor");
+  shutdown();
+  _LOG_DEBUG("Exit destructor");
 }
 
 void
-Executor::start ()
+Executor::start()
 {
   if (m_needStop)
     {
       m_needStop = false;
       for (int i = 0; i < m_poolSize; i++)
         {
-          m_group.create_thread (bind(&Executor::run, this));
+          m_group.create_thread(bind(&Executor::run, this));
         }
     }
 }
 
 void
-Executor::shutdown ()
+Executor::shutdown()
 {
   if (!m_needStop)
     {
       m_needStop = true;
-      _LOG_DEBUG ("Iterrupting all");
-      m_group.interrupt_all ();
-      _LOG_DEBUG ("Join all");
-      m_group.join_all ();
+      _LOG_DEBUG("Iterrupting all");
+      m_group.interrupt_all();
+      _LOG_DEBUG("Join all");
+      m_group.join_all();
     }
 }
 
@@ -70,16 +70,16 @@ Executor::shutdown ()
 void
 Executor::execute(const Job &job)
 {
-  _LOG_DEBUG ("Add to job queue");
+  _LOG_DEBUG("Add to job queue");
 
   Lock lock(m_mutex);
-  bool queueWasEmpty = m_queue.empty ();
+  bool queueWasEmpty = m_queue.empty();
   m_queue.push_back(job);
 
   // notify working threads if the queue was empty
   if (queueWasEmpty)
   {
-    m_cond.notify_one ();
+    m_cond.notify_one();
   }
 }
 
@@ -97,20 +97,20 @@ Executor::jobQueueSize()
 }
 
 void
-Executor::run ()
+Executor::run()
 {
-  _LOG_DEBUG ("Start thread");
+  _LOG_DEBUG("Start thread");
 
-  while(!m_needStop)
+  while (!m_needStop)
   {
     Job job = waitForJob();
 
-    _LOG_DEBUG (">>> enter job");
-    job (); // even if job is "null", nothing bad will happen
-    _LOG_DEBUG ("<<< exit job");
+    _LOG_DEBUG(">>> enter job");
+    job(); // even if job is "null", nothing bad will happen
+    _LOG_DEBUG("<<< exit job");
   }
 
-  _LOG_DEBUG ("Executor thread finished");
+  _LOG_DEBUG("Executor thread finished");
 }
 
 Executor::Job
@@ -121,15 +121,15 @@ Executor::waitForJob()
   // wait until job queue is not empty
   while (m_queue.empty())
   {
-    _LOG_DEBUG ("Unlocking mutex for wait");
+    _LOG_DEBUG("Unlocking mutex for wait");
     m_cond.wait(lock);
-    _LOG_DEBUG ("Re-locking mutex after wait");
+    _LOG_DEBUG("Re-locking mutex after wait");
   }
 
-  _LOG_DEBUG ("Got signal on condition");
+  _LOG_DEBUG("Got signal on condition");
 
   Job job;
-  if (!m_queue.empty ()) // this is not always guaranteed, especially after interruption from destructor
+  if (!m_queue.empty()) // this is not always guaranteed, especially after interruption from destructor
     {
       job = m_queue.front();
       m_queue.pop_front();

@@ -59,7 +59,6 @@ SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name 
 {
   m_rootHash = m_log->RememberStateInStateLog();
 
-//  m_face = boost::make_shared<Face>();
   m_face->setInterestFilter(m_syncPrefix, boost::bind(&SyncCore::handleInterest, this, _1));
   // m_log->initYP(m_yp);
   m_log->UpdateLocalLocator (localPrefix);

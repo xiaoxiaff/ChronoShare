@@ -34,36 +34,36 @@ class FsWatcher : public QObject
   Q_OBJECT
 
 public:
-  typedef boost::function<void (const boost::filesystem::path &)> LocalFile_Change_Callback;
+  typedef boost::function<void(const boost::filesystem::path &)> LocalFile_Change_Callback;
 
   // constructor
-  FsWatcher (QString dirPath,
+  FsWatcher(QString dirPath,
              LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
              QObject* parent = 0);
 
   // destructor
-  ~FsWatcher ();
+  ~FsWatcher();
 
 private slots:
   // handle callback from watcher
   void
-  DidDirectoryChanged (QString dirPath);
+  DidDirectoryChanged(QString dirPath);
 
   /**
    * @brief This even will be triggered either by actual file change or via directory change event
    * (i.e., can happen twice in a row, as well as trigger false alarm)
    */
   void
-  DidFileChanged (QString filePath);
+  DidFileChanged(QString filePath);
 
 private:
   // handle callback from the watcher
   // scan directory and notify callback about any file changes
   void
-  ScanDirectory_NotifyUpdates_Execute (QString dirPath);
+  ScanDirectory_NotifyUpdates_Execute(QString dirPath);
 
   void
-  ScanDirectory_NotifyRemovals_Execute (QString dirPath);
+  ScanDirectory_NotifyRemovals_Execute(QString dirPath);
 
   void
   initFileStateDb();
