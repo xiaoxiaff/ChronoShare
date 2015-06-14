@@ -204,6 +204,7 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
             boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
           	data->setName(Name(reinterpret_cast<const char*>(co->buf())));
           	data->setContent(co->buf(), co->size());
+            m_keyChain.sign(*data);
           	m_face->put(*data);
           }
         else
@@ -215,6 +216,7 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
               	data->setFreshnessPeriod(time::seconds(m_freshness));
               }
            	data->setContent(co->buf(), co->size());
+            m_keyChain.sign(*data);
             m_face->put(*data);
           }
 
@@ -256,6 +258,7 @@ ContentServer::serve_Action_Execute (const Name &forwardingHint, const Name &nam
         	  data->setFreshnessPeriod(time::seconds(m_freshness));
           }
           data->setContent(block.value(), block.value_size());
+          m_keyChain.sign(*data);
           m_face->put(*data);
         }
     }

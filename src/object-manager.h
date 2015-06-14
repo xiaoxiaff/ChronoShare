@@ -23,10 +23,12 @@
 #define OBJECT_MANAGER_H
 
 #include <string>
-#include <hash-helper.h>
+#include "hash-helper.h"
 #include <boost/filesystem.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <ndn-cxx/face.hpp>
+#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/security/key-chain.hpp>
 
 // everything related to managing object files
 
@@ -44,6 +46,9 @@ public:
   boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
   localFileToObjects(const boost::filesystem::path &file, const ndn::Name &deviceName);
 
+  ndn::ConstBufferPtr
+  fromFile(const boost::filesystem::path &filename);
+
   bool
   objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
 
@@ -51,6 +56,8 @@ private:
   boost::shared_ptr<ndn::Face> m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
+  mutable ndn::util::Sha256 m_digest;
+  ndn::KeyChain m_keyChain;
 };
 
 typedef boost::shared_ptr<ObjectManager> ObjectManagerPtr;

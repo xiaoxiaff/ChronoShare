@@ -22,6 +22,7 @@
 #ifndef CONTENT_SERVER_H
 #define CONTENT_SERVER_H
 
+#include <ndn-cxx/security/key-chain.hpp>
 #include "object-db.h"
 #include "action-log.h"
 #include <set>
@@ -90,5 +91,6 @@ private:
   ndn::Name  m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
+  ndn::KeyChain m_keyChain;
 };
 #endif // CONTENT_SERVER_H

@@ -213,5 +213,6 @@ private:
   ndn::Name  m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
+  ndn::KeyChain m_keyChain;
 };
 #endif // CONTENT_SERVER_H

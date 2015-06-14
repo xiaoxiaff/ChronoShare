@@ -98,9 +98,9 @@ operator <<(std::ostream &os, const Hash &hash)
   ostreambuf_iterator<char> out_it(os); // ostream iterator
   std::cout <<"TODO HERE IMPORTANT!!!!!! from LOLI" << std::endl;
   // need to encode to base64
-  copy(string_from_binary(reinterpret_cast<const char*>(hash.m_buf)),
-        string_from_binary(reinterpret_cast<const char*>(hash.m_buf+hash.m_length)),
-        out_it);
+//  copy(string_from_binary(reinterpret_cast<const char*>(hash.m_buf)),
+//        string_from_binary(reinterpret_cast<const char*>(hash.m_buf+hash.m_length)),
+//        out_it);
 // TODO
 
   return os;

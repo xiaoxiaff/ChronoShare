@@ -141,6 +141,7 @@ SyncCore::localStateChanged()
   data->setName(syncName);
   data->setFreshnessPeriod(time::seconds(FRESHNESS));
   data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
+  m_keyChain.sign(*data);
   m_face->put(*data);
 
   _LOG_DEBUG ("[" << m_log->GetLocalName () << "] localStateChanged ");
@@ -201,6 +202,7 @@ SyncCore::handleRecoverInterest(const Name &name)
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
+    m_keyChain.sign(*data);
     m_face->put(*data);
 
     _LOG_TRACE ("[" << m_log->GetLocalName () << "] publishes " << hash.shortHash ());
@@ -236,6 +238,7 @@ SyncCore::handleSyncInterest(const Name &name)
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
+    m_keyChain.sign(*data);
     m_face->put(*data);
 
     _LOG_TRACE (m_log->GetLocalName () << " publishes: " << hash->shortHash ());

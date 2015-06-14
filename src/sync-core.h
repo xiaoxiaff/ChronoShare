@@ -22,6 +22,7 @@
 #ifndef SYNC_CORE_H
 #define SYNC_CORE_H
 
+#include <ndn-cxx/security/key-chain.hpp>
 #include "sync-log.h"
 //#include "ccnx-wrapper.h"
 //#include "ccnx-selectors.h"
@@ -126,6 +127,7 @@ private:
   TaskPtr m_sendSyncInterestTask;
 
   long m_syncInterestInterval;
+  ndn::KeyChain m_keyChain;
 };
 
 #endif // SYNC_CORE_H

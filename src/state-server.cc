@@ -273,6 +273,7 @@ StateServer::info_actions_fileOrFolder_Execute (const ndn::Name &interest, bool 
 	data->setName(interest);
 	data->setFreshnessPeriod(time::seconds(60));
 	data->setContent(reinterpret_cast<const uint8_t*>(os.str ().c_str ()), os.str ().size ());
+  m_keyChain.sign(*data);
 	m_face->put(*data);
 }
 
@@ -404,6 +405,7 @@ StateServer::info_files_folder_Execute (const ndn::Name &interest)
 	data->setName(interest);
 	data->setFreshnessPeriod(time::seconds(60));
 	data->setContent(reinterpret_cast<const uint8_t*>(os.str ().c_str ()), os.str ().size ());
+  m_keyChain.sign(*data);
 	m_face->put(*data);
 
 }
@@ -463,6 +465,7 @@ StateServer::cmd_restore_file_Execute (const ndn::Name &interest)
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: Requested file is not found";
       		data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str ()), msg.size ());
+          m_keyChain.sign(*data);
       		m_face->put(*data);
           return;
         }
@@ -490,6 +493,7 @@ StateServer::cmd_restore_file_Execute (const ndn::Name &interest)
       		    data->setFreshnessPeriod(time::seconds(60));
       		    string msg = "OK: File already exists";
       		    data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str ()), msg.size ());
+              m_keyChain.sign(*data);
       		    m_face->put(*data);
               _LOG_DEBUG ("Asking to assemble a file, but file already exists on a filesystem");
               return;
@@ -502,6 +506,7 @@ StateServer::cmd_restore_file_Execute (const ndn::Name &interest)
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: File operation failed";
       		data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str ()), msg.size ());
+          m_keyChain.sign(*data);
       		m_face->put(*data);
           _LOG_ERROR ("File operations failed on [" << filePath << "] (ignoring)");
         }
@@ -518,6 +523,7 @@ StateServer::cmd_restore_file_Execute (const ndn::Name &interest)
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "OK";
       		data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str ()), msg.size ());
+          m_keyChain.sign(*data);
       		m_face->put(*data);
         }
       else
@@ -527,6 +533,7 @@ StateServer::cmd_restore_file_Execute (const ndn::Name &interest)
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: Unknown error while restoring file";
       		data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str ()), msg.size ());
+          m_keyChain.sign(*data);
       		m_face->put(*data);
         }
 }

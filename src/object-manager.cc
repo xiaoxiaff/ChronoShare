@@ -52,13 +52,29 @@ ObjectManager::~ObjectManager()
 {
 }
 
+ndn::ConstBufferPtr
+ObjectManager::fromFile(const fs::path &filename) 
+{
+  m_digest.reset();
+  fs::ifstream iff(filename, std::ios::in | std::ios::binary);
+  while (iff.good())
+  {
+    char buf[1024];
+    iff.read(buf, 1024);
+    m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
+  }
+  return m_digest.computeDigest();
+}
 // /<devicename>/<appname>/file/<hash>/<segment>
 boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
 ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceName)
 {
+  ConstBufferPtr my_hash = fromFile(file); 
+  _LOG_DEBUG("my_hash size " << my_hash->size() << " my_hash content " << m_digest.toString());
   HashPtr fileHash = Hash::FromFileContent(file);
-  _LOG_DEBUG("fileHash size: " << fileHash->GetHashBytes());
-  ObjectDb fileDb(m_folder, lexical_cast<string>(*fileHash));
+
+  _LOG_DEBUG("file " << file);
+  ObjectDb fileDb(m_folder, m_digest.toString());
 
   fs::ifstream iff(file, std::ios::in | std::ios::binary);
   sqlite3_int64 segment = 0;
@@ -73,7 +89,8 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
         }
 
       ndn::Name name = ndn::Name("/");
-      name.append(deviceName).append(m_appName).append("file").append(reinterpret_cast<const uint8_t*>(fileHash->GetHash()), fileHash->GetHashBytes()).appendNumber(segment);
+//      name.append(deviceName).append(m_appName).append("file").append(reinterpret_cast<const uint8_t*>(fileHash->GetHash()), fileHash->GetHashBytes()).appendNumber(segment);
+      name.append(deviceName).append(m_appName).append("file").append(ndn::name::Component(my_hash)).appendNumber(segment);
 
       // cout << *fileHash << endl;
       // cout << name << endl;
@@ -82,7 +99,8 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       boost::shared_ptr<Data> data = boost::make_shared<Data>();
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(60));
-      data->setContent(reinterpret_cast<const uint8_t*>(&buf), sizeof(buf));
+      data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
+      m_keyChain.sign(*data);
       m_face->put(*data);
 
       fileDb.saveContentObject(deviceName, segment, data->getContent());
@@ -100,6 +118,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(0));
       data->setContent(0, 0);
+      m_keyChain.sign(*data);
       m_face->put(*data);
 
       fileDb.saveContentObject(deviceName, 0, data->getContent());
