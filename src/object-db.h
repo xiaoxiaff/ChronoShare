@@ -29,6 +29,7 @@
 #include <ctime>
 #include <vector>
 #include <ndn-cxx/name.hpp>
+#include <ndn-cxx/face.hpp>
 
 class ObjectDb
 {
@@ -38,7 +39,7 @@ public:
   ~ObjectDb ();
 
   void
-  saveContentObject (const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Block &data);
+  saveContentObject (const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Data &data);
 
   ndn::BufferPtr
   fetchSegment (const ndn::Name &deviceName, sqlite3_int64 segment);

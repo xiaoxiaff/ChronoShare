@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,62 +29,73 @@ using namespace boost;
 using namespace std;
 using namespace ndn;
 
-INIT_LOGGER ("DumpDb");
+INIT_LOGGER("DumpDb");
+
+  std::string
+  hashToString(const ndn::Buffer &digest) {
+    using namespace CryptoPP;
+
+    std::string hash;
+    StringSource(digest.buf(), digest.size(), true,
+                 new HexEncoder(new StringSink(hash), false));
+    return hash;
+  }
 
 class StateLogDumper : public DbHelper
 {
 public:
-  StateLogDumper (const filesystem::path &path)
-  : DbHelper (path / ".chronoshare", "sync-log.db")
+  StateLogDumper(const filesystem::path &path)
+  : DbHelper(path / ".chronoshare", "sync-log.db")
   {
   }
 
+
   void
-  DumpState ()
+  DumpState()
   {
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2 (m_db, "SELECT hash(device_name, seq_no) FROM (SELECT * FROM SyncNodes ORDER BY device_name)", -1, &stmt, 0);
-    sqlite3_step (stmt);
-    Hash hash (sqlite3_column_blob  (stmt, 0), sqlite3_column_bytes (stmt, 0));
-    sqlite3_finalize (stmt);
+    sqlite3_prepare_v2(m_db, "SELECT hash(device_name, seq_no) FROM(SELECT * FROM SyncNodes ORDER BY device_name)", -1, &stmt, 0);
+    sqlite3_step(stmt);
+    ndn::Buffer hash(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0));
+    sqlite3_finalize(stmt);
 
-    sqlite3_prepare_v2 (m_db,
+    sqlite3_prepare_v2(m_db,
                         "SELECT device_name, seq_no, last_known_locator, last_update "
                         "   FROM SyncNodes "
                         "   ORDER BY device_name", -1, &stmt, 0);
 
     cout.setf(std::ios::left, std::ios::adjustfield);
-    cout << ">> SYNC NODES (" << hash.shortHash () << ") <<" << endl;
+    cout << ">> SYNC NODES(" << hashToString(hash) << ") <<" << endl;
     cout << "====================================================================================" << endl;
     cout << setw(30) << "device_name" << " | seq_no | " << setw(20) << "locator" << " | last_update " << endl;
     cout << "====================================================================================" << endl;
 
-    while (sqlite3_step (stmt) == SQLITE_ROW)
+    while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw (30) 
-             << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0))))
+        cout << setw(30) 
+             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0)))))
              << " | "; // device_name
-        cout << setw (6) << sqlite3_column_int64 (stmt, 1) << " | "; // seq_no
-        cout << setw (20) 
-             << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 2))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 2))))
+        cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
+        cout << setw(20) 
+             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 2), (sqlite3_column_bytes(stmt, 2)))))
              << " | "; // locator
-        if (sqlite3_column_bytes (stmt, 3) > 0)
+        if (sqlite3_column_bytes(stmt, 3) > 0)
           {
-            cout << setw (10) << sqlite3_column_text (stmt, 3) << endl;
+            cout << setw(10) << sqlite3_column_text(stmt, 3) << endl;
           }
         else
           {
             cout << "unknown" << endl;
           }
       }
-    sqlite3_finalize (stmt);
+    sqlite3_finalize(stmt);
   }
 
   void
-  DumpLog ()
+  DumpLog()
   {
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2 (m_db,
+    sqlite3_prepare_v2(m_db,
                         "SELECT state_hash, last_update, state_id "
                         "   FROM SyncLog "
                         "   ORDER BY last_update", -1, &stmt, 0);
@@ -95,48 +106,48 @@ public:
     cout << setw(10) << "state_hash" << " | state details " << endl;
     cout << "====================================================================================" << endl;
 
-    while (sqlite3_step (stmt) == SQLITE_ROW)
+    while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw (10) << Hash (sqlite3_column_blob  (stmt, 0), sqlite3_column_bytes (stmt, 0)).shortHash () << " | "; // state hash
+        cout << setw(10) << hashToString(ndn::Buffer(sqlite3_column_blob (stmt, 0), sqlite3_column_bytes(stmt, 0))) << " | "; // state hash
 
         sqlite3_stmt *stmt2;
-        sqlite3_prepare_v2 (m_db,
+        sqlite3_prepare_v2(m_db,
                             "SELECT device_name, ss.seq_no "
                             "   FROM SyncStateNodes ss JOIN SyncNodes sn ON ss.device_id = sn.device_id "
                             "   WHERE state_id=? "
                             "   ORDER BY device_name", -1, &stmt2, 0);
-        _LOG_DEBUG_COND (sqlite3_errcode (m_db) != SQLITE_OK, sqlite3_errmsg (m_db));
-        sqlite3_bind_int64 (stmt2, 1, sqlite3_column_int64 (stmt, 2));
+        _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+        sqlite3_bind_int64(stmt2, 1, sqlite3_column_int64(stmt, 2));
 
-        while (sqlite3_step (stmt2) == SQLITE_ROW)
+        while (sqlite3_step(stmt2) == SQLITE_ROW)
           {
-            cout << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0))))
+            cout << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0)))))
                  << "("
-                 << sqlite3_column_int64 (stmt2, 1)
+                 << sqlite3_column_int64(stmt2, 1)
                  << "); ";
           }
 
-        sqlite3_finalize (stmt2);
+        sqlite3_finalize(stmt2);
 
         cout << endl;
       }
-    sqlite3_finalize (stmt);
+    sqlite3_finalize(stmt);
   }
 };
 
 class ActionLogDumper : public DbHelper
 {
 public:
-  ActionLogDumper (const filesystem::path &path)
-  : DbHelper (path / ".chronoshare", "action-log.db")
+  ActionLogDumper(const filesystem::path &path)
+  : DbHelper(path / ".chronoshare", "action-log.db")
   {
   }
 
   void
-  Dump ()
+  Dump()
   {
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2 (m_db,
+    sqlite3_prepare_v2(m_db,
                         "SELECT device_name, seq_no, action, filename, version, file_hash, file_seg_num, parent_device_name, parent_seq_no "
                         "   FROM ActionLog "
                         "   ORDER BY action_timestamp", -1, &stmt, 0);
@@ -147,45 +158,45 @@ public:
     cout << setw(30) << "device_name" << " | seq_no | action |" << setw(40) << " filename " << "  | version | file_hash  | seg_num | parent_device_name             | parent_seq_no" << endl;
     cout << "=============================================================================================================================================================================" << endl;
 
-    while (sqlite3_step (stmt) == SQLITE_ROW)
+    while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw (30) << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0))))
+        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0)))))
              << " | "; // device_name
-        cout << setw (6) << sqlite3_column_int64 (stmt, 1) << " | "; // seq_no
-        cout << setw (6) << (sqlite3_column_int   (stmt, 2)==0?"UPDATE":"DELETE") << " | "; // action
-        cout << setw (40) << sqlite3_column_text  (stmt, 3) << " | "; // filename
-        cout << setw (7) << sqlite3_column_int64 (stmt, 4) << " | "; // version
+        cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
+        cout << setw(6) <<(sqlite3_column_int  (stmt, 2)==0?"UPDATE":"DELETE") << " | "; // action
+        cout << setw(40) << sqlite3_column_text (stmt, 3) << " | "; // filename
+        cout << setw(7) << sqlite3_column_int64(stmt, 4) << " | "; // version
 
-        if (sqlite3_column_int   (stmt, 2) == 0)
+        if (sqlite3_column_int  (stmt, 2) == 0)
           {
-            cout << setw (10) << Hash (sqlite3_column_blob  (stmt, 5), sqlite3_column_bytes (stmt, 5)).shortHash () << " | ";
-            cout << setw (7) << sqlite3_column_int64 (stmt, 6) << " | "; // seg_num
+            cout << setw(10) << hashToString(ndn::Buffer(sqlite3_column_blob (stmt, 5), sqlite3_column_bytes(stmt, 5))) << " | ";
+            cout << setw(7) << sqlite3_column_int64(stmt, 6) << " | "; // seg_num
           }
         else
           cout << "           |         | ";
 
-        if (sqlite3_column_bytes (stmt, 7) > 0)
+        if (sqlite3_column_bytes(stmt, 7) > 0)
           {
-            cout << setw (30) << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 7))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 7))))
+            cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 7), (sqlite3_column_bytes(stmt, 7)))))
                  << " | "; // parent_device_name
-            cout << setw (5) << sqlite3_column_int64 (stmt, 8); // seq_no
+            cout << setw(5) << sqlite3_column_int64(stmt, 8); // seq_no
           }
         else
-          cout << setw (30) << " " << " | ";
+          cout << setw(30) << " " << " | ";
         cout << endl;
       }
 
-    sqlite3_finalize (stmt);
+    sqlite3_finalize(stmt);
   }
 
   boost::shared_ptr<ActionItem>
-  deserializeMsg (const ndn::Block &content)
+  deserializeMsg(const ndn::Block &content)
   {
-  	boost::shared_ptr<ActionItem> retval (new ActionItem ());
-  	if (!retval->ParseFromArray (content.value(), content.value_size ()))
+  	boost::shared_ptr<ActionItem> retval(new ActionItem());
+  	if (!retval->ParseFromArray(content.value(), content.value_size()))
   	{
   		// to indicate an error
-  		return boost::shared_ptr<ActionItem> ();
+  		return boost::shared_ptr<ActionItem>();
   	}
   	return retval;
   }
@@ -194,16 +205,16 @@ public:
   DumpActionData(const ndn::Name &deviceName, int64_t seqno)
   {
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2 (m_db, "SELECT action_content_object, action_name FROM ActionLog WHERE device_name = ? and seq_no = ?", -1, &stmt, 0);
+    sqlite3_prepare_v2(m_db, "SELECT action_content_object, action_name FROM ActionLog WHERE device_name = ? and seq_no = ?", -1, &stmt, 0);
     const ndn::Block nameBlock = deviceName.wireEncode();
-    sqlite3_bind_blob (stmt, 1, nameBlock.wire(), nameBlock.size(), SQLITE_STATIC);
-    sqlite3_bind_int64 (stmt, 2, seqno);
+    sqlite3_bind_blob(stmt, 1, nameBlock.wire(), nameBlock.size(), SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, seqno);
     cout << "Dumping action data for: [" << deviceName << ", " << seqno << "]" <<endl;
     if (sqlite3_step(stmt) == SQLITE_ROW)
     {
-      boost::shared_ptr<ndn::Data> pco = boost::make_shared<ndn::Data> (ndn::Block(reinterpret_cast<const uint8_t *> (sqlite3_column_blob (stmt, 0)), sqlite3_column_bytes (stmt, 0)));
+      boost::shared_ptr<ndn::Data> pco = boost::make_shared<ndn::Data>(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
       // TODO Check 1 or 0
-      ndn::Name actionName = ndn::Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0)));
+      ndn::Name actionName = Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0))));
       if (pco)
       {
         ActionItemPtr action = deserializeMsg(pco->getContent());
@@ -222,7 +233,7 @@ public:
           }
           if (action->has_file_hash())
           {
-            cout << "File hash = " << Hash(action->file_hash().c_str(), action->file_hash().size()) << endl;
+            cout << "File hash = " << hashToString(ndn::Buffer(action->file_hash().c_str(), action->file_hash().size())) << endl;
           }
         }
         else
@@ -246,16 +257,16 @@ public:
 class FileStateDumper : public DbHelper
 {
 public:
-  FileStateDumper (const filesystem::path &path)
-  : DbHelper (path / ".chronoshare", "file-state.db")
+  FileStateDumper(const filesystem::path &path)
+  : DbHelper(path / ".chronoshare", "file-state.db")
   {
   }
 
   void
-  Dump ()
+  Dump()
   {
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2 (m_db,
+    sqlite3_prepare_v2(m_db,
                         "SELECT filename,device_name,seq_no,file_hash,strftime('%s', file_mtime),file_chmod,file_seg_num,directory,is_complete "
                         "   FROM FileState "
                         "   WHERE type = 0 ORDER BY filename", -1, &stmt, 0);
@@ -266,32 +277,32 @@ public:
     cout << "filename                                 | device_name                    | seq_no | file_hash  | seg_num | directory | is_complete" << endl;
     cout << "===================================================================================================================================" << endl;
 
-    while (sqlite3_step (stmt) == SQLITE_ROW)
+    while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw (40) << sqlite3_column_text  (stmt, 0) << " | ";
-        cout << setw (30) << lexical_cast<string> (Name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0))).append(reinterpret_cast<const char*>(sqlite3_column_bytes(stmt, 0)))) 
+        cout << setw(40) << sqlite3_column_text (stmt, 0) << " | ";
+        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0))))) 
              << " | ";
-        cout << setw (6) << sqlite3_column_int64 (stmt, 2) << " | ";
-        cout << setw (10) << Hash (sqlite3_column_blob  (stmt, 3), sqlite3_column_bytes (stmt, 3)).shortHash () << " | ";
-        cout << setw (6) << sqlite3_column_int64 (stmt, 6) << " | ";
-        if (sqlite3_column_bytes (stmt, 7) == 0)
-          cout << setw (20) << "<NULL>" << " | ";
+        cout << setw(6) << sqlite3_column_int64(stmt, 2) << " | ";
+        cout << setw(10) << hashToString(ndn::Buffer(sqlite3_column_blob (stmt, 3), sqlite3_column_bytes(stmt, 3))) << " | ";
+        cout << setw(6) << sqlite3_column_int64(stmt, 6) << " | ";
+        if (sqlite3_column_bytes(stmt, 7) == 0)
+          cout << setw(20) << "<NULL>" << " | ";
         else
-          cout << setw (20) << sqlite3_column_text (stmt, 7) << " | ";
+          cout << setw(20) << sqlite3_column_text(stmt, 7) << " | ";
 
-        if (sqlite3_column_int (stmt, 8) == 0)
-          cout << setw (20) << "no" << endl;
+        if (sqlite3_column_int(stmt, 8) == 0)
+          cout << setw(20) << "no" << endl;
         else
-          cout << setw (20) << "yes" << endl;
+          cout << setw(20) << "yes" << endl;
       }
 
-    sqlite3_finalize (stmt);
+    sqlite3_finalize(stmt);
   }
 };
 
 int main(int argc, char *argv[])
 {
-  INIT_LOGGERS ();
+  INIT_LOGGERS();
 
   if (argc != 3 && !(argc == 5 && string(argv[1]) == "action"))
     {
@@ -303,43 +314,43 @@ int main(int argc, char *argv[])
   string type = argv[1];
   if (type == "state")
     {
-      StateLogDumper dumper (argv[2]);
-      dumper.DumpState ();
-      dumper.DumpLog ();
+      StateLogDumper dumper(argv[2]);
+      dumper.DumpState();
+      dumper.DumpLog();
     }
   else if (type == "action")
     {
-      ActionLogDumper dumper (argv[2]);
+      ActionLogDumper dumper(argv[2]);
       if (argc == 5)
       {
         dumper.DumpActionData(string(argv[3]), boost::lexical_cast<int64_t>(argv[4]));
       }
       else
       {
-        dumper.Dump ();
+        dumper.Dump();
       }
     }
   else if (type == "file")
     {
-      FileStateDumper dumper (argv[2]);
-      dumper.Dump ();
+      FileStateDumper dumper(argv[2]);
+      dumper.Dump();
     }
   else if (type == "all")
     {
       {
-        StateLogDumper dumper (argv[2]);
-        dumper.DumpState ();
-        dumper.DumpLog ();
+        StateLogDumper dumper(argv[2]);
+        dumper.DumpState();
+        dumper.DumpLog();
       }
 
       {
-        ActionLogDumper dumper (argv[2]);
-        dumper.Dump ();
+        ActionLogDumper dumper(argv[2]);
+        dumper.Dump();
       }
 
       {
-        FileStateDumper dumper (argv[2]);
-        dumper.Dump ();
+        FileStateDumper dumper(argv[2]);
+        dumper.Dump();
       }
     }
   else

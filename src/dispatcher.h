@@ -33,6 +33,7 @@
 
 #include <boost/function.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
 
@@ -71,11 +72,36 @@ public:
   Restore_LocalFile(FileItemPtr file);
 
   // for test
-  HashPtr
+  ndn::ConstBufferPtr
   SyncRoot() { return m_core->root(); }
 
   inline void
   LookupRecentFileActions(const boost::function<void(const std::string &, int, int)> &visitor, int limit) { m_actionLog->LookupRecentFileActions(visitor, limit); }
+
+  ndn::ConstBufferPtr
+  fromFile(const boost::filesystem::path &filename) 
+  {
+    m_digest.reset();
+    boost::filesystem::ifstream iff(filename, std::ios::in | std::ios::binary);
+    while (iff.good())
+    {
+      char buf[1024];
+      iff.read(buf, 1024);
+      m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
+    }
+    return m_digest.computeDigest();
+  }
+
+  static std::string
+  hashToString(const ndn::Buffer &digest) {
+    using namespace CryptoPP;
+
+    std::string hash;
+    StringSource(digest.buf(), digest.size(), true,
+                 new HexEncoder(new StringSink(hash), false));
+    return hash;
+  }
+
 
 private:
   void
@@ -112,7 +138,7 @@ private:
   Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg);
 
   void
-  Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionPco);
+  Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionData);
 
   void
   Did_ActionLog_ActionApply_Delete(const std::string &filename);
@@ -122,13 +148,13 @@ private:
 
   // void
   // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, ndn::Name device_name, sqlite3_int64 seq_no,
-  //                                        HashPtr hash, time_t m_time, int mode, int seg_num);
+  //                                        ndn::ConstBufferPtr hash, time_t m_time, int mode, int seg_num);
 
   void
-  Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
+  Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco);
+  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData);
 
   void
   Did_FetchManager_FileFetchComplete(const ndn::Name &deviceName, const ndn::Name &fileBaseName);
@@ -141,7 +167,7 @@ private:
 
 private:
   void
-  AssembleFile_Execute(const ndn::Name &deviceName, const Hash &filehash, const boost::filesystem::path &relativeFilepath);
+  AssembleFile_Execute(const ndn::Name &deviceName, const ndn::Buffer &filehash, const boost::filesystem::path &relativeFilepath);
 
   // void
   // fileChanged(const boost::filesystem::path &relativeFilepath, ActionType type);
@@ -172,7 +198,7 @@ private:
   // maintain object db ptrs so that we don't need to create them
   // for every fetched segment of a file
 
-  std::map<Hash, ObjectDbPtr> m_objectDbMap;
+  std::map<ndn::Buffer, ObjectDbPtr> m_objectDbMap;
 
   std::string m_sharedFolder;
   ContentServer *m_server;
@@ -181,6 +207,8 @@ private:
 
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
+
+  mutable ndn::util::Sha256 m_digest;
 };
 
 namespace Error

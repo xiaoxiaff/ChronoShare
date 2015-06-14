@@ -52,13 +52,28 @@ ObjectManager::~ObjectManager()
 {
 }
 
+ndn::ConstBufferPtr
+ObjectManager::fromFile(const fs::path &filename) 
+{
+  m_digest.reset();
+  fs::ifstream iff(filename, std::ios::in | std::ios::binary);
+  while (iff.good())
+  {
+    char buf[1024];
+    iff.read(buf, 1024);
+    m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
+  }
+  return m_digest.computeDigest();
+}
 // /<devicename>/<appname>/file/<hash>/<segment>
-boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
+boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
 ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceName)
 {
-  HashPtr fileHash = Hash::FromFileContent(file);
-  _LOG_DEBUG("fileHash size: " << fileHash->GetHashBytes());
-  ObjectDb fileDb(m_folder, lexical_cast<string>(*fileHash));
+  ndn::ConstBufferPtr fileHash = fromFile(file);
+  _LOG_DEBUG("fileHash size " << fileHash->size() << " fileHash content " << m_digest.toString());
+
+  _LOG_DEBUG("file " << file);
+  ObjectDb fileDb(m_folder, m_digest.toString());
 
   fs::ifstream iff(file, std::ios::in | std::ios::binary);
   sqlite3_int64 segment = 0;
@@ -73,7 +88,8 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
         }
 
       ndn::Name name = ndn::Name("/");
-      name.append(deviceName).append(m_appName).append("file").append(reinterpret_cast<const uint8_t*>(fileHash->GetHash()), fileHash->GetHashBytes()).appendNumber(segment);
+//      name.append(deviceName).append(m_appName).append("file").append(reinterpret_cast<const uint8_t*>(fileHash->GetHash()), fileHash->GetHashBytes()).appendNumber(segment);
+      name.append(deviceName).append(m_appName).append("file").append(ndn::name::Component(*fileHash)).appendNumber(segment);
 
       // cout << *fileHash << endl;
       // cout << name << endl;
@@ -82,27 +98,27 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       boost::shared_ptr<Data> data = boost::make_shared<Data>();
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(60));
-      data->setContent(reinterpret_cast<const uint8_t*>(&buf), sizeof(buf));
+      data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
+      m_keyChain.sign(*data);
       m_face->put(*data);
 
-      fileDb.saveContentObject(deviceName, segment, data->getContent());
-
+      fileDb.saveContentObject(deviceName, segment, *data);
 
       segment ++;
     }
   if (segment == 0) // handle empty files
     {
       ndn::Name name = ndn::Name("/");
-      name.append(m_appName);
-      name.append("file").append(reinterpret_cast<const uint8_t *>(fileHash->GetHash()), fileHash->GetHashBytes()).append(deviceName).appendNumber(0);
+      name.append(m_appName).append("file").append(ndn::name::Component(*fileHash)).append(deviceName).appendNumber(0);
 
       boost::shared_ptr<Data> data = boost::make_shared<Data>();
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(0));
       data->setContent(0, 0);
+      m_keyChain.sign(*data);
       m_face->put(*data);
 
-      fileDb.saveContentObject(deviceName, 0, data->getContent());
+      fileDb.saveContentObject(deviceName, 0, *data);
 
       segment ++;
     }
@@ -111,9 +127,9 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
 }
 
 bool
-ObjectManager::objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const Hash &fileHash, /*out*/ const fs::path &file)
+ObjectManager::objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const ndn::Buffer &fileHash, /*out*/ const fs::path &file)
 {
-  string hashStr = lexical_cast<string>(fileHash);
+  string hashStr = hashToString(fileHash);
   if (!ObjectDb::DoesExist(m_folder, deviceName, hashStr))
     {
       _LOG_ERROR("ObjectDb for [" << m_folder << ", " << deviceName << ", " << hashStr << "] does not exist or not all segments are available");
@@ -145,4 +161,15 @@ ObjectManager::objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const
   // permission and timestamp should be assigned somewhere else(ObjectManager has no idea about that)
 
   return true;
+}
+
+std::string
+ObjectManager::hashToString(const ndn::Buffer &digest)
+{
+  using namespace CryptoPP;
+
+  std::string hash;
+  StringSource(digest.buf(), digest.size(), true,
+               new HexEncoder(new StringSink(hash), false));
+  return hash;
 }

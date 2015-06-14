@@ -219,7 +219,7 @@ Dispatcher::Did_LocalFile_AddOrModify_Execute(filesystem::path relativeFilePath)
   FileItemPtr currentFile = m_fileState->LookupFile(relativeFilePath.generic_string());
 
   if (currentFile &&
-      *Hash::FromFileContent(absolutePath) == Hash(currentFile->file_hash().c_str(), currentFile->file_hash().size())
+      *fromFile(absolutePath) == ndn::Buffer(currentFile->file_hash().c_str(), currentFile->file_hash().size())
       // The following two are commented out to prevent front end from reporting intermediate files
       // should enable it if there is other way to prevent this
       // && last_write_time(absolutePath) == currentFile->mtime()
@@ -239,7 +239,7 @@ Dispatcher::Did_LocalFile_AddOrModify_Execute(filesystem::path relativeFilePath)
 
 
   int seg_num;
-  HashPtr hash;
+  ndn::ConstBufferPtr hash;
   _LOG_DEBUG("absolutePath: " << absolutePath << " m_localUserName: " << m_localUserName);
   tie(hash, seg_num) = m_objectManager.localFileToObjects(absolutePath, m_localUserName);
 
@@ -328,7 +328,7 @@ Dispatcher::Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg)
     {
       uint64_t oldSeq = state.old_seq();
       uint64_t newSeq = state.seq();
-      ndn::Name userName(state.name());
+      Name userName(ndn::Block((const unsigned char *)state.name().c_str(), state.name().size()));
 
       // fetch actions with oldSeq + 1 to newSeq(inclusive)
       ndn::Name actionNameBase = ndn::Name("/");
@@ -341,12 +341,12 @@ Dispatcher::Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg)
 
 
 void
-Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionBaseName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionPco)
+Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionBaseName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionData)
 {
   /// @todo Errors and exception checking
   _LOG_DEBUG("Received action deviceName: " << deviceName << ", actionBaseName: " << actionBaseName << ", seqno: " << seqno);
 
-  ActionItemPtr action = m_actionLog->AddRemoteAction(deviceName, seqno, actionPco);
+  ActionItemPtr action = m_actionLog->AddRemoteAction(deviceName, seqno, actionData);
   if (!action)
     {
       _LOG_ERROR("AddRemoteAction did not insert action, ignoring");
@@ -356,13 +356,13 @@ Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn:
 
   if (action->action() == ActionItem::UPDATE)
     {
-      Hash hash(action->file_hash().c_str(), action->file_hash().size());
+      ndn::Buffer hash(action->file_hash().c_str(), action->file_hash().size());
 
       ndn::Name fileNameBase = ndn::Name("/");
       fileNameBase.append(deviceName).append(CHRONOSHARE_APP).append("file");
-      fileNameBase.append((const char *) hash.GetHash());
+      fileNameBase.append(ndn::name::Component(hash));
 
-      string hashStr = lexical_cast<string>(hash);
+      string hashStr = hashToString(hash);
       if (ObjectDb::DoesExist(m_rootDir / ".chronoshare",  deviceName, hashStr))
         {
           _LOG_DEBUG("File already exists in the database. No need to refetch, just directly applying the action");
@@ -372,7 +372,7 @@ Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn:
         {
           if (m_objectDbMap.find(hash) == m_objectDbMap.end())
             {
-              _LOG_DEBUG("create ObjectDb for " << hash);
+              _LOG_DEBUG("create ObjectDb for " << hashToString(hash));
               m_objectDbMap [hash] = boost::make_shared<ObjectDb>(m_rootDir / ".chronoshare", hashStr);
             }
 
@@ -426,36 +426,34 @@ Dispatcher::Did_ActionLog_ActionApply_Delete_Execute(std::string filename)
 }
 
 void
-Dispatcher::Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentBaseName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco)
+Dispatcher::Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentBaseName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData)
 {
-  m_executor.execute(bind(&Dispatcher::Did_FetchManager_FileSegmentFetch_Execute, this, deviceName, fileSegmentBaseName, segment, fileSegmentPco));
+  m_executor.execute(bind(&Dispatcher::Did_FetchManager_FileSegmentFetch_Execute, this, deviceName, fileSegmentBaseName, segment, fileSegmentData));
 }
 
 void
-Dispatcher::Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentBaseName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentPco)
+Dispatcher::Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentBaseName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData)
 {
   // fileSegmentBaseName:  /<device_name>/<appname>/file/<hash>
 
-  ndn::name::Component comp = fileSegmentBaseName.get(-1);
-  const ndn::Buffer &hashBytes = ndn::Buffer(comp.value(), comp.size());
-  Hash hash(hashBytes.buf(), hashBytes.size());
+  ndn::Buffer hash(fileSegmentBaseName.get(-1).value(), fileSegmentBaseName.get(-1).value_size());
 
   _LOG_DEBUG("Received segment deviceName: " << deviceName << ", segmentBaseName: " << fileSegmentBaseName << ", segment: " << segment);
 
   // _LOG_DEBUG("Looking up objectdb for " << hash);
 
-  map<Hash, ObjectDbPtr>::iterator db = m_objectDbMap.find(hash);
+  map<ndn::Buffer, ObjectDbPtr>::iterator db = m_objectDbMap.find(hash);
   if (db != m_objectDbMap.end())
   {
-    db->second->saveContentObject(deviceName, segment, fileSegmentPco->getContent());
+    db->second->saveContentObject(deviceName, segment, *fileSegmentData);
   }
   else
   {
-    _LOG_ERROR("no db available for this content object: " << fileSegmentBaseName << ", size: " << fileSegmentPco->getContent().size());
+    _LOG_ERROR("no db available for this content object: " << fileSegmentBaseName << ", size: " << fileSegmentData->getContent().size());
   }
 
   // ObjectDb objectDb(m_rootDir / ".chronoshare", lexical_cast<string>(hash));
-  // objectDb.saveContentObject(deviceName, segment, fileSegmentPco->buf());
+  // objectDb.saveContentObject(deviceName, segment, *fileSegmentData);
 }
 
 void
@@ -471,10 +469,9 @@ Dispatcher::Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn
 
   _LOG_DEBUG("Finished fetching " << deviceName << ", fileBaseName: " << fileBaseName);
 
-  ndn::name::Component comp = fileBaseName.get(-1);
-  const ndn::Buffer &hashBytes = ndn::Buffer(comp.value(), comp.size());
-  Hash hash(hashBytes.buf(), hashBytes.size());
-  _LOG_DEBUG("Extracted hash: " << hash.shortHash());
+  ndn::Buffer hash(fileBaseName.get(-1).value(), fileBaseName.get(-1).value_size());
+
+  _LOG_DEBUG("Extracted hash: " << hashToString(hash));
 
   if (m_objectDbMap.find(hash) != m_objectDbMap.end())
   {
@@ -483,7 +480,7 @@ Dispatcher::Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn
   }
   else
   {
-    _LOG_ERROR("no db available for this file: " << hash);
+    _LOG_ERROR("no db available for this file: " << hashToString(hash));
   }
 
   FileItemsPtr filesToAssemble = m_fileState->LookupFilesForHash(hash);
@@ -501,7 +498,7 @@ Dispatcher::Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn
 #if BOOST_VERSION >= 104900
               filesystem::status(filePath).permissions() == static_cast<filesystem::perms>(file->mode()) &&
 #endif
-              *Hash::FromFileContent(filePath) == hash)
+              *fromFile(filePath) == hash)
             {
               _LOG_DEBUG("Asking to assemble a file, but file already exists on a filesystem");
               continue;
@@ -512,7 +509,7 @@ Dispatcher::Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn
           _LOG_ERROR("File operations failed on [" << filePath << "](ignoring)");
         }
 
-      if (ObjectDb::DoesExist(m_rootDir / ".chronoshare",  deviceName, boost::lexical_cast<string>(hash)))
+      if (ObjectDb::DoesExist(m_rootDir / ".chronoshare",  deviceName, hashToString(hash)))
       {
         bool ok = m_objectManager.objectsToLocalFile(deviceName, hash, filePath);
         if (ok)

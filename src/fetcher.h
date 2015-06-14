@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,70 +33,70 @@ class FetchManager;
 class Fetcher
 {
 public:
-  typedef boost::function<void (ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> pco)> SegmentCallback;
-  typedef boost::function<void (ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
-  typedef boost::function<void (Fetcher &, const ndn::Name &deviceName, const ndn::Name &baseName)> OnFetchCompleteCallback;
-  typedef boost::function<void (Fetcher &)> OnFetchFailedCallback;
+  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> pco)> SegmentCallback;
+  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
+  typedef boost::function<void(Fetcher &, const ndn::Name &deviceName, const ndn::Name &baseName)> OnFetchCompleteCallback;
+  typedef boost::function<void(Fetcher &)> OnFetchFailedCallback;
 
-  Fetcher (boost::shared_ptr<ndn::Face> face,
+  Fetcher(boost::shared_ptr<ndn::Face> face,
            ExecutorPtr executor,
            const SegmentCallback &segmentCallback, // callback passed by caller of FetchManager
            const FinishCallback &finishCallback, // callback passed by caller of FetchManager
            OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed, // callbacks provided by FetchManager
            const ndn::Name &deviceName, const ndn::Name &name, int64_t minSeqNo, int64_t maxSeqNo,
-           boost::posix_time::time_duration timeout = boost::posix_time::seconds (30), // this time is not precise, but sets min bound
+           boost::posix_time::time_duration timeout = boost::posix_time::seconds(30), // this time is not precise, but sets min bound
                                                                                   // actual time depends on how fast Interests timeout
-           const ndn::Name &forwardingHint = ndn::Name ());
-  virtual ~Fetcher ();
+           const ndn::Name &forwardingHint = ndn::Name());
+  virtual ~Fetcher();
 
   inline bool
-  IsActive () const;
+  IsActive() const;
 
   inline bool
   IsTimedWait() const { return m_timedwait; }
 
   void
-  RestartPipeline ();
+  RestartPipeline();
 
   void
-  SetForwardingHint (const ndn::Name &forwardingHint);
+  SetForwardingHint(const ndn::Name &forwardingHint);
 
   const ndn::Name &
-  GetForwardingHint () const { return m_forwardingHint; }
+  GetForwardingHint() const { return m_forwardingHint; }
 
   const ndn::Name &
-  GetName () const { return m_name; }
+  GetName() const { return m_name; }
 
   const ndn::Name &
-  GetDeviceName () const { return m_deviceName; }
+  GetDeviceName() const { return m_deviceName; }
 
   double
-  GetRetryPause () const { return m_retryPause; }
+  GetRetryPause() const { return m_retryPause; }
 
   void
-  SetRetryPause (double pause) { m_retryPause = pause; }
+  SetRetryPause(double pause) { m_retryPause = pause; }
 
   boost::posix_time::ptime
-  GetNextScheduledRetry () const { return m_nextScheduledRetry; }
+  GetNextScheduledRetry() const { return m_nextScheduledRetry; }
 
   void
-  SetNextScheduledRetry (boost::posix_time::ptime nextScheduledRetry) { m_nextScheduledRetry = nextScheduledRetry; }
+  SetNextScheduledRetry(boost::posix_time::ptime nextScheduledRetry) { m_nextScheduledRetry = nextScheduledRetry; }
 
 private:
   void
-  FillPipeline ();
+  FillPipeline();
 
   void
-  OnData (uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
+  OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
 
   void
-  OnData_Execute (uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
+  OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
 
   void
-  OnTimeout (uint64_t seqno, const ndn::Interest &interest);
+  OnTimeout(uint64_t seqno, const ndn::Interest &interest);
 
   void
-  OnTimeout_Execute (uint64_t seqno, const ndn::Interest &interest);
+  OnTimeout_Execute(uint64_t seqno, const ndn::Interest &interest);
 
 public:
   boost::intrusive::list_member_hook<> m_managerListHook;
@@ -132,7 +132,7 @@ private:
 
   boost::posix_time::ptime m_lastPositiveActivity;
 
-  double m_retryPause; // pause to stop trying to fetch (for fetch-manager)
+  double m_retryPause; // pause to stop trying to fetch(for fetch-manager)
   boost::posix_time::ptime m_nextScheduledRetry;
 
   ExecutorPtr m_executor; // to serialize FillPipeline events
@@ -149,7 +149,7 @@ struct Fetcher : virtual boost::exception, virtual std::exception { };
 typedef boost::shared_ptr<Fetcher> FetcherPtr;
 
 bool
-Fetcher::IsActive () const
+Fetcher::IsActive() const
 {
   return m_active;
 }

@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -30,7 +30,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <ndn-cxx/face.hpp>
 
-INIT_LOGGER ("ContentServer");
+INIT_LOGGER("ContentServer");
 
 using namespace ndn;
 using namespace std;
@@ -47,27 +47,27 @@ ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr act
   , m_actionLog(actionLog)
   , m_dbFolder(rootDir / ".chronoshare")
   , m_freshness(freshness)
-  , m_scheduler (new Scheduler())
-  , m_userName (userName)
-  , m_sharedFolderName (sharedFolderName)
-  , m_appName (appName)
+  , m_scheduler(new Scheduler())
+  , m_userName(userName)
+  , m_sharedFolderName(sharedFolderName)
+  , m_appName(appName)
 {
-  m_scheduler->start ();
+  m_scheduler->start();
   TaskPtr flushStaleDbCacheTask = boost::make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this), "flush-state-db-cache", m_scheduler, boost::make_shared<SimpleIntervalGenerator>(DB_CACHE_LIFETIME));
   m_scheduler->addTask(flushStaleDbCacheTask);
 }
 
 ContentServer::~ContentServer()
 {
-  m_scheduler->shutdown ();
+  m_scheduler->shutdown();
 
-  ScopedLock lock (m_mutex);
+  ScopedLock lock(m_mutex);
   for (FilterIdIt it = m_interestFilterIds.begin(); it != m_interestFilterIds.end(); ++it)
   {
     m_face->unsetInterestFilter(it->second);
   }
 
-  m_interestFilterIds.clear ();
+  m_interestFilterIds.clear();
 }
 
 void
@@ -76,26 +76,26 @@ ContentServer::registerPrefix(const Name &forwardingHint)
   // Format for files:   /<forwarding-hint>/<device_name>/<appname>/file/<hash>/<segment>
   // Format for actions: /<forwarding-hint>/<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
-  _LOG_DEBUG (">> content server: register " << forwardingHint);
+  _LOG_DEBUG(">> content server: register " << forwardingHint);
 
-  ScopedLock lock (m_mutex);
+  ScopedLock lock(m_mutex);
   m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), bind(&ContentServer::filterAndServe, this, forwardingHint, _1));
 
 }
 
 void
-ContentServer::deregisterPrefix (const Name &forwardingHint)
+ContentServer::deregisterPrefix(const Name &forwardingHint)
 {
-  _LOG_DEBUG ("<< content server: deregister " << forwardingHint);
+  _LOG_DEBUG("<< content server: deregister " << forwardingHint);
   m_face->unsetInterestFilter(m_interestFilterIds[forwardingHint]);
 
-  ScopedLock lock (m_mutex);
+  ScopedLock lock(m_mutex);
   m_interestFilterIds.erase(forwardingHint);
 }
 
 
 void
-ContentServer::filterAndServeImpl (const Name &forwardingHint, const Name &name, const Name &interest)
+ContentServer::filterAndServeImpl(const Name &forwardingHint, const Name &name, const Name &interest)
 {
   // interest for files:   /<forwarding-hint>/<device_name>/<appname>/file/<hash>/<segment>
   // interest for actions: /<forwarding-hint>/<device_name>/<appname>/action/<shared-folder>/<action-seq>
@@ -103,19 +103,19 @@ ContentServer::filterAndServeImpl (const Name &forwardingHint, const Name &name,
   // name for files:   /<device_name>/<appname>/file/<hash>/<segment>
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
-  if (name.size() >= 4 && name.get (-4).toUri () == m_appName)
+  if (name.size() >= 4 && name.get(-4).toUri() == m_appName)
   {
-     string type = name.get (-3).toUri ();
+     string type = name.get(-3).toUri();
      if (type == "file")
      {
-        serve_File (forwardingHint, name, interest);
+        serve_File(forwardingHint, name, interest);
      }
      else if (type == "action")
      {
-        string folder = name.get (-2).toUri ();
+        string folder = name.get(-2).toUri();
         if (folder == m_sharedFolderName)
         {
-           serve_Action (forwardingHint, name, interest);
+           serve_Action(forwardingHint, name, interest);
         }
      }
   }
@@ -123,51 +123,51 @@ ContentServer::filterAndServeImpl (const Name &forwardingHint, const Name &name,
 }
 
 void
-ContentServer::filterAndServe (Name forwardingHint, const Name &interest)
+ContentServer::filterAndServe(Name forwardingHint, const Name &interest)
 {
 
-  if (forwardingHint.size () > 0 &&
-      m_userName.size () >= forwardingHint.size () &&
-      m_userName.getSubName (0, forwardingHint.size ()) == forwardingHint)
+  if (forwardingHint.size() > 0 &&
+      m_userName.size() >= forwardingHint.size() &&
+      m_userName.getSubName(0, forwardingHint.size()) == forwardingHint)
     {
-      filterAndServeImpl (Name ("/"), interest, interest); // try without forwarding hints
+      filterAndServeImpl(Name("/"), interest, interest); // try without forwarding hints
     }
 
-  filterAndServeImpl (forwardingHint, interest.getSubName(forwardingHint.size()), interest); // always try with hint... :( have to
+  filterAndServeImpl(forwardingHint, interest.getSubName(forwardingHint.size()), interest); // always try with hint... :( have to
 
 }
 
 void
-ContentServer::serve_Action (const Name &forwardingHint, const Name &name, const Name &interest)
+ContentServer::serve_Action(const Name &forwardingHint, const Name &name, const Name &interest)
 {
-  _LOG_DEBUG (">> content server serving ACTION, hint: " << forwardingHint << ", interest: " << interest);
-  m_scheduler->scheduleOneTimeTask (m_scheduler, 0, bind (&ContentServer::serve_Action_Execute, this, forwardingHint, name, interest), boost::lexical_cast<string>(name));
+  _LOG_DEBUG(">> content server serving ACTION, hint: " << forwardingHint << ", interest: " << interest);
+  m_scheduler->scheduleOneTimeTask(m_scheduler, 0, bind(&ContentServer::serve_Action_Execute, this, forwardingHint, name, interest), boost::lexical_cast<string>(name));
   // need to unlock ccnx mutex... or at least don't lock it
 }
 
 void
-ContentServer::serve_File (const Name &forwardingHint, const Name &name, const Name &interest)
+ContentServer::serve_File(const Name &forwardingHint, const Name &name, const Name &interest)
 {
-  _LOG_DEBUG (">> content server serving FILE, hint: " << forwardingHint << ", interest: " << interest);
+  _LOG_DEBUG(">> content server serving FILE, hint: " << forwardingHint << ", interest: " << interest);
 
-  m_scheduler->scheduleOneTimeTask (m_scheduler, 0, bind (&ContentServer::serve_File_Execute, this, forwardingHint, name, interest), boost::lexical_cast<string>(name));
+  m_scheduler->scheduleOneTimeTask(m_scheduler, 0, bind(&ContentServer::serve_File_Execute, this, forwardingHint, name, interest), boost::lexical_cast<string>(name));
   // need to unlock ccnx mutex... or at least don't lock it
 }
 
 void
-ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name, const Name &interest)
+ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, const Name &interest)
 {
   // forwardingHint: /<forwarding-hint>
   // interest:       /<forwarding-hint>/<device_name>/<appname>/file/<hash>/<segment>
   // name:           /<device_name>/<appname>/file/<hash>/<segment>
 
-  int64_t segment = name.get (-1).toNumber ();
-  ndn::Name deviceName = name.getSubName (0, name.size () - 4);
-  Hash hash (reinterpret_cast<const void*>(name.get (-2).wireEncode ().value ()), name.get (-2).size ());
+  int64_t segment = name.get(-1).toNumber();
+  ndn::Name deviceName = name.getSubName(0, name.size() - 4);
+  ndn::Buffer hash(name.get(-2).value(), name.get(-2).size());
 
-  _LOG_DEBUG (" server FILE for device: " << deviceName << ", file_hash: " << hash.shortHash () << " segment: " << segment);
+  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << hashToString(hash) << " segment: " << segment);
 
-  string hashStr = lexical_cast<string> (hash);
+  string hashStr = hashToString(hash);
 
   ObjectDbPtr db;
 
@@ -180,88 +180,83 @@ ContentServer::serve_File_Execute (const Name &forwardingHint, const Name &name,
     }
     else
     {
-      if (ObjectDb::DoesExist (m_dbFolder, deviceName, hashStr)) // this is kind of overkill, as it counts available segments
+      if (ObjectDb::DoesExist(m_dbFolder, deviceName, hashStr)) // this is kind of overkill, as it counts available segments
         {
          db = boost::make_shared<ObjectDb>(m_dbFolder, hashStr);
          m_dbCache.insert(make_pair(hash, db));
         }
       else
         {
-          _LOG_ERROR ("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << hash.shortHash ());
+          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << hashToString(hash));
         }
     }
   }
 
   if (db)
   {
-    ndn::BufferPtr co = db->fetchSegment (deviceName, segment);
+    ndn::BufferPtr co = db->fetchSegment(deviceName, segment);
     if (co)
       {
-        if (forwardingHint.size () == 0)
-          {
-            _LOG_DEBUG (Name(reinterpret_cast<const char*>(co->buf())));
 
-            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
-          	data->setName(Name(reinterpret_cast<const char*>(co->buf())));
-          	data->setContent(co->buf(), co->size());
-          	m_face->put(*data);
+        boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+        data->setContent(co->buf(), co->size());
+        if (forwardingHint.size() == 0)
+          {
+            _LOG_DEBUG(deviceName);
           }
         else
           {
-            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
-            data->setName(interest);
             if (m_freshness > 0)
               {
               	data->setFreshnessPeriod(time::seconds(m_freshness));
               }
-           	data->setContent(co->buf(), co->size());
-            m_face->put(*data);
+            data->setName(interest);
           }
-
+         m_keyChain.sign(*data);
+         m_face->put(*data);
       }
     else
       {
-        _LOG_ERROR ("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << hash.shortHash ());
+        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << hashToString(hash));
       }
 
   }
 }
 
 void
-ContentServer::serve_Action_Execute (const Name &forwardingHint, const Name &name, const Name &interest)
+ContentServer::serve_Action_Execute(const Name &forwardingHint, const Name &name, const Name &interest)
 {
   // forwardingHint: /<forwarding-hint>
   // interest:       /<forwarding-hint>/<device_name>/<appname>/action/<shared-folder>/<action-seq>
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
-  int64_t seqno = name.get (-1).toNumber ();
-  ndn::Name deviceName = name.getSubName (0, name.size () - 4);
+  int64_t seqno = name.get(-1).toNumber();
+  ndn::Name deviceName = name.getSubName(0, name.size() - 4);
 
-  _LOG_DEBUG (" server ACTION for device: " << deviceName << " and seqno: " << seqno);
+  _LOG_DEBUG(" server ACTION for device: " << deviceName << " and seqno: " << seqno);
 
-  boost::shared_ptr<ndn::Data> dataObject = m_actionLog->LookupActionPco (deviceName, seqno);
-  if (dataObject)
+  boost::shared_ptr<ndn::Data> data = m_actionLog->LookupActionData(deviceName, seqno);
+  if (data)
     {
-      if (forwardingHint.size () == 0)
+      if (forwardingHint.size() == 0)
         {
-          m_face->put (*dataObject);
+          m_keyChain.sign(*data);
+          m_face->put(*data);
         }
       else
         {
-          const Block &block = dataObject->getContent ();
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
           data->setName(interest);
           if (m_freshness > 0)
           {
         	  data->setFreshnessPeriod(time::seconds(m_freshness));
           }
-          data->setContent(block.value(), block.value_size());
+          m_keyChain.sign(*data);
           m_face->put(*data);
         }
     }
   else
     {
-      _LOG_ERROR ("ACTION not found for device: " << deviceName << " and seqno: " << seqno);
+      _LOG_ERROR("ACTION not found for device: " << deviceName << " and seqno: " << seqno);
     }
 }
 
@@ -282,4 +277,16 @@ ContentServer::flushStaleDbCache()
       ++it;
     }
   }
+}
+
+
+std::string
+ContentServer::hashToString(const ndn::Buffer &digest)
+{
+  using namespace CryptoPP;
+
+  std::string hash;
+  StringSource(digest.buf(), digest.size(), true,
+               new HexEncoder(new StringSink(hash), false));
+  return hash;
 }

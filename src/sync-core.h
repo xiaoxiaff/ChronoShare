@@ -22,12 +22,10 @@
 #ifndef SYNC_CORE_H
 #define SYNC_CORE_H
 
+#include <ndn-cxx/security/key-chain.hpp>
 #include "sync-log.h"
-//#include "ccnx-wrapper.h"
-//#include "ccnx-selectors.h"
 #include "scheduler.h"
 #include "task.h"
-//#include <ndn-cxx/contexts/consumer-context.hpp>
 #include <ndn-cxx/face.hpp>
 
 #include <boost/function.hpp>
@@ -69,11 +67,14 @@ public:
 
 // ------------------ only used in test -------------------------
 public:
-  HashPtr
-  root() const { return m_rootHash; }
+  ndn::ConstBufferPtr
+  root() const { return m_rootDigest; }
 
   sqlite3_int64
   seq (const ndn::Name &name);
+
+  std::string
+  printDigest(ndn::ConstBufferPtr digest);
 
 private:
   void
@@ -95,7 +96,7 @@ private:
   deregister(const ndn::Name &name);
 
   void
-  recover(HashPtr hash);
+  recover(ndn::ConstBufferPtr digest);
 
 private:
   void
@@ -119,13 +120,14 @@ private:
   StateMsgCallback m_stateMsgCallback;
 
   ndn::Name m_syncPrefix;
-  HashPtr m_rootHash;
+  ndn::ConstBufferPtr m_rootDigest;
 
   IntervalGeneratorPtr m_recoverWaitGenerator;
 
   TaskPtr m_sendSyncInterestTask;
 
   long m_syncInterestInterval;
+  ndn::KeyChain m_keyChain;
 };
 
 #endif // SYNC_CORE_H
