@@ -325,8 +325,8 @@ SyncLog::LookupLocator(const Name &deviceName)
   {
   case SQLITE_ROW:
     {
-//TODO      locator = Name((const unsigned char *)sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0));
-      locator.wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+      locator = Name(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+//      locator.wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
     }
   case SQLITE_DONE: break;
   default:
@@ -351,7 +351,7 @@ SyncLog::UpdateLocator(const Name &deviceName, const Name &locator)
   sqlite3_prepare_v2(m_db, "UPDATE SyncNodes SET last_known_locator=?,last_update=datetime('now') WHERE device_name=?;", -1, &stmt, 0);
 
   sqlite3_bind_blob(stmt, 1, locator.wireEncode().wire(), locator.wireEncode().size(), SQLITE_STATIC);
-  sqlite3_bind_blob(stmt, 2, deviceName.wireEncode().wire(),  deviceName.wireEncode().size(),       SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 2, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
 
   int res = sqlite3_step(stmt);
 
@@ -438,11 +438,14 @@ SELECT sn.device_name, sn.last_known_locator, s_old.seq_no, s_new.seq_no\
 
       // set name
       state->set_name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0));
+//      state->set_name(Name(ndn::Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0))).toUri());
 
       // locator is optional, so must check if it is null
       if (sqlite3_column_type(stmt, 1) == SQLITE_BLOB)
       {
+        // TODO by lijing
         state->set_locator(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1));
+//        state->set_locator(Name(ndn::Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1))).toUri());
       }
 
       // set old seq

@@ -134,7 +134,6 @@ SyncCore::localStateChanged()
 
   Name syncName(m_syncPrefix);
   syncName.append(ndn::name::Component(*oldDigest));
-//  syncName.append(reinterpret_cast<const uint8_t *>(oldDigest->buf()), oldDigest->size());
 
   BufferPtr syncData = serializeGZipMsg(*msg);
 
@@ -338,7 +337,8 @@ SyncCore::handleStateData(const Buffer &content)
   while (index < size)
   {
     SyncState state = msg->state(index);
-    Name deviceName(state.name());
+    string devStr = state.name();
+    Name deviceName(ndn::Block((const unsigned char *)devStr.c_str(), devStr.size()));
   //  cout << "Got Name: " << deviceName;
     if (state.type() == SyncState::UPDATE)
     {
@@ -348,7 +348,7 @@ SyncCore::handleStateData(const Buffer &content)
       if (state.has_locator())
       {
         string locStr = state.locator();
-        Name locatorName(locStr);
+        Name locatorName(ndn::Block((const unsigned char *)locStr.c_str(), locStr.size()));
     //    cout << ", Got loc: " << locatorName << endl;
         m_log->UpdateLocator(deviceName, locatorName);
 

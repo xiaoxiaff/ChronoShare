@@ -40,7 +40,7 @@ def configure(conf):
                        uselib_store='LOG4CXX', mandatory=True)
         conf.define("HAVE_LOG4CXX", 1)
 
-#    conf.check_cfg (package='ChronoSync', args=['ChronoSync >= 0.1', '--cflags', '--libs'],
+#    conf.check_cfg(package='ChronoSync', args=['ChronoSync >= 0.1', '--cflags', '--libs'],
 #                    uselib_store='SYNC', mandatory=True)
 
     boost_libs = 'system test iostreams filesystem regex thread date_time'
@@ -53,7 +53,7 @@ def configure(conf):
     if conf.env.BOOST_VERSION_NUMBER < 104800:
         Logs.error("Minimum required boost version is 1.48.0")
         Logs.error("Please upgrade your distribution or install custom boost libraries" +
-                   " (http://redmine.named-data.net/projects/nfd/wiki/Boost_FAQ)")
+                   "(http://redmine.named-data.net/projects/nfd/wiki/Boost_FAQ)")
         return
 
     if not conf.check_cfg(package='openssl', args=['--cflags', '--libs'], uselib_store='SSL', mandatory=False):
@@ -62,20 +62,20 @@ def configure(conf):
                                   define_name='HAVE_SSL',
                                   uselib_store='SSL')
     else:
-        conf.define ("HAVE_SSL", 1)
-    if not conf.get_define ("HAVE_SSL"):
-        conf.fatal ("Cannot find SSL libraries")
+        conf.define("HAVE_SSL", 1)
+    if not conf.get_define("HAVE_SSL"):
+        conf.fatal("Cannot find SSL libraries")
 
     conf.write_config_header('src/config.h')
 
-def build (bld):
+def build(bld):
     feature_list = 'qt4 cxx'
     if bld.env["WITH_TESTS"]:
         feature_list += ' cxxstlib'
     else:
         feature_list += ' cxxprogram'
 
-    executor = bld.objects (
+    executor = bld.objects(
         target = "executor",
         features = ["cxx"],
         source = bld.path.ant_glob(['executor/**/*.cc']),
@@ -83,14 +83,14 @@ def build (bld):
         includes = "executor src",
         )
 
-    scheduler = bld.objects (
+    scheduler = bld.objects(
         target = "scheduler",
         features = ["cxx"],
         source = bld.path.ant_glob(['scheduler/**/*.cc']),
         use = 'BOOST LIBEVENT LIBEVENT_PTHREADS LOG4CXX executor',
         includes = "scheduler executor src",
         )
-#    chornoshare = bld (
+#    chornoshare = bld(
 #        target="chronoshare",
 #        features=['cxx'],
 #        source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.cpp', 'src/**/*.proto']),
@@ -98,14 +98,15 @@ def build (bld):
 #        includes = "ccnx scheduler src executor",
 #        )
 
-    chornoshare = bld (
+    chornoshare = bld(
         target="mysync",
         features=['cxx'],
         source = bld.path.ant_glob([
 #                                    'src/dispatcher.cc', 'src/fetcher.cc', 'src/fetch-manager.cc', 'src/fetch-task-db.cc',
-#                                    'src/state-server.cc', 'src/content-server.cc',
-                                    'src/object-db.cc', 
-                                    'src/object-manager.cc',
+#                                    'src/state-server.cc', 
+#                                    'src/content-server.cc',
+#                                    'src/object-db.cc', 
+#                                    'src/object-manager.cc',
                                     'src/action-log.cc', 
                                     'src/file-state.cc',
                                     'src/sync-core.cc', 
@@ -117,7 +118,7 @@ def build (bld):
 
     # Unit tests
     if bld.env["WITH_TESTS"]:
-      unittests = bld.program (
+      unittests = bld.program(
           target="unit-tests",
           source = bld.path.ant_glob(['test/**/*.cpp']),
           features=['cxx', 'cxxprogram'],
@@ -131,7 +132,7 @@ def build (bld):
     if bld.env["_DEBUG"]:
         for app in bld.path.ant_glob('debug-tools/*.cc'):
             bld(features=['cxx', 'cxxprogram'],
-                target = '%s' % (str(app.change_ext('','.cc'))),
+                target = '%s' %(str(app.change_ext('','.cc'))),
                 source = app,
                 use = 'NDN_CXX',
                 includes = "src .",

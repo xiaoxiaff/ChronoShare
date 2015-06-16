@@ -164,10 +164,10 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
   int res = sqlite3_step(stmt);
   if (res == SQLITE_ROW)
     {
-      const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
-      int bufBytes = sqlite3_column_bytes(stmt, 0);
+//      const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
+//      int bufBytes = sqlite3_column_bytes(stmt, 0);
 
-      ret = std::make_shared<ndn::Buffer>(buf, bufBytes);
+      ret = std::make_shared<ndn::Buffer>(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0));
     }
 
   sqlite3_finalize(stmt);

@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,19 +45,21 @@ public:
   // so that ContentServer knows where to look for the content object
   void registerPrefix(const ndn::Name &prefix);
   void deregisterPrefix(const ndn::Name &prefix);
+  std::string
+  hashToString(const ndn::Buffer &digest);
 
 private:
   void
-  filterAndServe (ndn::Name forwardingHint, const ndn::Name &interest);
+  filterAndServe(ndn::Name forwardingHint, const ndn::Name &interest);
 
   void
-  filterAndServeImpl (const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  filterAndServeImpl(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
 
   void
-  serve_Action (const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_Action(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
 
   void
-  serve_File (const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_File(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
 
   void
   serve_Action_Execute(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
@@ -67,6 +69,7 @@ private:
 
   void
   flushStaleDbCache();
+
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
@@ -83,8 +86,8 @@ private:
   boost::filesystem::path m_dbFolder;
   int m_freshness;
 
-  SchedulerPtr     m_scheduler;
-  typedef std::map<Hash, ObjectDbPtr> DbCache;
+  SchedulerPtr m_scheduler;
+  typedef std::map<ndnd::Buffer, ObjectDbPtr> DbCache;
   DbCache m_dbCache;
   Mutex m_dbCacheMutex;
 

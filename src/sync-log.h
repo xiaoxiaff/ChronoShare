@@ -65,7 +65,7 @@ public:
 
   // done
   /**
-   * Create an entry in SyncLog and SyncStateNodes corresponding to the current state of SyncNodes
+   * Create an 1ntry in SyncLog and SyncStateNodes corresponding to the current state of SyncNodes
    */
   ndn::ConstBufferPtr
   RememberStateInStateLog();

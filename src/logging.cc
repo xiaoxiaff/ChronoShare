@@ -48,10 +48,10 @@ INIT_LOGGERS()
     PropertyConfigurator::configureAndWatch("log4cxx.properties");
   else
     {
-      PatternLayoutPtr   layout  (new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
+      PatternLayoutPtr layout(new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
       ConsoleAppenderPtr appender(new ConsoleAppender(layout));
 
-      BasicConfigurator::configure( appender );
+      BasicConfigurator::configure(appender);
       Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
     }
 

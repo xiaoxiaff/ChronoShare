@@ -72,7 +72,7 @@ public:
   //////////////////////////
 
   ActionItemPtr
-  AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, boost::shared_ptr<ndn::Data> actionPco);
+  AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, boost::shared_ptr<ndn::Data> actionData);
 
   /**
    * @brief Add remote action using just action's parsed content object
@@ -80,17 +80,17 @@ public:
    * This function extracts device name and sequence number from the content object's and calls the overloaded method
    */
   ActionItemPtr
-  AddRemoteAction(boost::shared_ptr<ndn::Data> actionPco);
+  AddRemoteAction(boost::shared_ptr<ndn::Data> actionData);
 
   ///////////////////////////
   // General operations    //
   ///////////////////////////
 
   boost::shared_ptr<ndn::Data>
-  LookupActionPco(const ndn::Name &deviceName, sqlite3_int64 seqno);
+  LookupActionData(const ndn::Name &deviceName, sqlite3_int64 seqno);
 
   boost::shared_ptr<ndn::Data>
-  LookupActionPco(const ndn::Name &actionName);
+  LookupActionData(const ndn::Name &actionName);
 
   ActionItemPtr
   LookupAction(const ndn::Name &deviceName, sqlite3_int64 seqno);
