@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012 University of California, Los Angeles
+ * Copyright(c) 2012 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -32,10 +32,10 @@
   static log4cxx::LoggerPtr staticModuleLogger;
 
 #define INIT_MEMBER_LOGGER(className,name)          \
-  log4cxx::LoggerPtr className::staticModuleLogger =  log4cxx::Logger::getLogger (name);
+  log4cxx::LoggerPtr className::staticModuleLogger =  log4cxx::Logger::getLogger(name);
 
 #define INIT_LOGGER(name) \
-  static log4cxx::LoggerPtr staticModuleLogger = log4cxx::Logger::getLogger (name);
+  static log4cxx::LoggerPtr staticModuleLogger = log4cxx::Logger::getLogger(name);
 
 #define _LOG_DEBUG(x) \
   LOG4CXX_DEBUG(staticModuleLogger, x);
@@ -59,7 +59,7 @@
   if (cond) { _LOG_DEBUG(x) }
 
 void
-INIT_LOGGERS ();
+INIT_LOGGERS();
 
 #else // else HAVE_LOG4CXX
 
@@ -82,7 +82,7 @@ INIT_LOGGERS ();
 #include <iostream>
 
 #define _LOG_DEBUG(x) \
-  std::clog << boost::get_system_time () << " " << boost::this_thread::get_id () << " " << x << std::endl;
+  std::clog << boost::get_system_time() << " " << boost::this_thread::get_id() << " " << x << std::endl;
 
 #else
 #define _LOG_DEBUG(x)

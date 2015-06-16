@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012 University of California, Los Angeles
+ * Copyright(c) 2012 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -38,21 +38,21 @@ using namespace log4cxx::helpers;
 #include <unistd.h>
 
 void
-INIT_LOGGERS ()
+INIT_LOGGERS()
 {
   static bool configured = false;
 
   if (configured) return;
 
-  if (access ("log4cxx.properties", R_OK)==0)
-    PropertyConfigurator::configureAndWatch ("log4cxx.properties");
+  if (access("log4cxx.properties", R_OK)==0)
+    PropertyConfigurator::configureAndWatch("log4cxx.properties");
   else
     {
-      PatternLayoutPtr   layout   (new PatternLayout ("%d{HH:mm:ss} %p %c{1} - %m%n"));
-      ConsoleAppenderPtr appender (new ConsoleAppender (layout));
+      PatternLayoutPtr   layout  (new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
+      ConsoleAppenderPtr appender(new ConsoleAppender(layout));
 
       BasicConfigurator::configure( appender );
-      Logger::getRootLogger()->setLevel (log4cxx::Level::getInfo ());
+      Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
     }
 
 //  _LOG_DEBUG("Hello World!");    // Debug level
