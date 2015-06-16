@@ -91,8 +91,7 @@ ObjectDb::DoesExist(const boost::filesystem::path &folder, const ndn::Name &devi
       sqlite3_stmt *stmt;
       sqlite3_prepare_v2(db, "SELECT count(*), count(nullif (content_object,0)) FROM File WHERE device_name=?", -1, &stmt, 0);
 
-      const ndn::Block block = deviceName.wireEncode();
-      sqlite3_bind_blob(stmt, 1, block.value(), block.size(), SQLITE_TRANSIENT);
+      sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_TRANSIENT);
 
       int res = sqlite3_step(stmt);
       if (res == SQLITE_ROW)
@@ -138,10 +137,9 @@ ObjectDb::saveContentObject(const ndn::Name &deviceName, sqlite3_int64 segment, 
 
   //_LOG_DEBUG("Saving content object for [" << deviceName << ", seqno: " << segment << ", size: " << data.size() << "]");
 
-  ndn::Block buf = deviceName.wireEncode();
-  sqlite3_bind_blob(stmt, 1, buf.wire(), buf.size(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 2, segment);
-  sqlite3_bind_blob(stmt, 3, data.value(), data.size(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 3, data.wire(), data.size(), SQLITE_STATIC);
 
   sqlite3_step(stmt);
   //_LOG_DEBUG("After saving object: " << sqlite3_errmsg(m_db));
@@ -157,8 +155,7 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db, "SELECT content_object FROM File WHERE device_name=? AND segment=?", -1, &stmt, 0);
 
-  const ndn::Block block = deviceName.wireEncode();
-  sqlite3_bind_blob(stmt, 1, block.value(), block.size(), SQLITE_TRANSIENT);
+  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_TRANSIENT);
 
   sqlite3_bind_int64(stmt, 2, segment);
 
@@ -170,7 +167,7 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
       const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
       int bufBytes = sqlite3_column_bytes(stmt, 0);
 
-      ret = std::make_shared<ndn::Buffer>(buf, buf+bufBytes);
+      ret = std::make_shared<ndn::Buffer>(buf, bufBytes);
     }
 
   sqlite3_finalize(stmt);

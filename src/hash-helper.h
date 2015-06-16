@@ -32,8 +32,6 @@
 
 // Other options: VP_md2, EVP_md5, EVP_sha, EVP_sha1, EVP_sha256, EVP_dss, EVP_dss1, EVP_mdc2, EVP_ripemd160
 #define HASH_FUNCTION EVP_sha256
-typedef boost::shared_ptr<ndn::util::Sha256> HashPtr;
-typedef ndn::util::Sha256 Hash;
 class Hash;
 typedef boost::shared_ptr<Hash> HashPtr;
 

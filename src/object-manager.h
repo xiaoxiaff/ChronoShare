@@ -23,7 +23,6 @@
 #define OBJECT_MANAGER_H
 
 #include <string>
-#include "hash-helper.h"
 #include <boost/filesystem.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <ndn-cxx/face.hpp>
@@ -43,14 +42,17 @@ public:
    *
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
-  boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
+  boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
   localFileToObjects(const boost::filesystem::path &file, const ndn::Name &deviceName);
 
   ndn::ConstBufferPtr
   fromFile(const boost::filesystem::path &filename);
 
   bool
-  objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const Hash &hash, /*out*/ const boost::filesystem::path &file);
+  objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const ndn::Buffer &hash, /*out*/ const boost::filesystem::path &file);
+
+  std::string
+  hashToString(const ndn::Buffer &digest);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;

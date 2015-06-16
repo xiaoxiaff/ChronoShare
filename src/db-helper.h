@@ -27,7 +27,6 @@
 #include <openssl/evp.h>
 #include <boost/exception/all.hpp>
 #include <string>
-//#include "hash-helper.h"
 #include <boost/filesystem.hpp>
 
 // Other options: VP_md2, EVP_md5, EVP_sha, EVP_sha1, EVP_sha256, EVP_dss, EVP_dss1, EVP_mdc2, EVP_ripemd160

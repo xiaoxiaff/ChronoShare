@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -25,7 +25,7 @@
 #include "db-helper.h"
 
 #include "file-item.pb.h"
-#include "hash-helper.h"
+#include <ndn-cxx/util/digest.hpp>
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/exception/all.hpp>
@@ -43,66 +43,66 @@ typedef boost::shared_ptr<FileItems> FileItemsPtr;
 class FileState : public DbHelper
 {
 public:
-  FileState (const boost::filesystem::path &path);
-  ~FileState ();
+  FileState(const boost::filesystem::path &path);
+  ~FileState();
 
   /**
    * @brief Update or add a file
    */
   void
-  UpdateFile (const std::string &filename, sqlite3_int64 version,
-              const Hash &hash, const ndn::Buffer &device_name, sqlite3_int64 seqno,
+  UpdateFile(const std::string &filename, sqlite3_int64 version,
+              const ndn::Buffer &hash, const ndn::Buffer &device_name, sqlite3_int64 seqno,
               time_t atime, time_t mtime, time_t ctime, int mode, int seg_num);
 
   /**
    * @brief Delete file
    */
   void
-  DeleteFile (const std::string &filename);
+  DeleteFile(const std::string &filename);
 
   /**
    * @brief Set "complete" flag
    *
-   * The call will do nothing if FileState does not have a record for the file (e.g., file got subsequently deleted)
+   * The call will do nothing if FileState does not have a record for the file(e.g., file got subsequently deleted)
    */
   void
-  SetFileComplete (const std::string &filename);
+  SetFileComplete(const std::string &filename);
 
   /**
    * @brief Lookup file state using file name
    */
   FileItemPtr
-  LookupFile (const std::string &filename) ;
+  LookupFile(const std::string &filename);
 
   /**
-   * @brief Lookup file state using content hash (multiple items may be returned)
+   * @brief Lookup file state using content hash(multiple items may be returned)
    */
   FileItemsPtr
-  LookupFilesForHash (const Hash &hash);
+  LookupFilesForHash(const ndn::Buffer &hash);
 
   /**
    * @brief Lookup all files in the specified folder and call visitor(file) for each file
    */
   void
-  LookupFilesInFolder (const boost::function<void (const FileItem&)> &visitor, const std::string &folder, int offset=0, int limit=-1);
+  LookupFilesInFolder(const boost::function<void(const FileItem&)> &visitor, const std::string &folder, int offset=0, int limit=-1);
 
   /**
-   * @brief Lookup all files in the specified folder (wrapper around the overloaded version)
+   * @brief Lookup all files in the specified folder(wrapper around the overloaded version)
    */
   FileItemsPtr
-  LookupFilesInFolder (const std::string &folder, int offset=0, int limit=-1);
+  LookupFilesInFolder(const std::string &folder, int offset=0, int limit=-1);
 
   /**
    * @brief Recursively lookup all files in the specified folder and call visitor(file) for each file
    */
   bool
-  LookupFilesInFolderRecursively (const boost::function<void (const FileItem&)> &visitor, const std::string &folder, int offset=0, int limit=-1);
+  LookupFilesInFolderRecursively(const boost::function<void(const FileItem&)> &visitor, const std::string &folder, int offset=0, int limit=-1);
 
   /**
-   * @brief Recursively lookup all files in the specified folder (wrapper around the overloaded version)
+   * @brief Recursively lookup all files in the specified folder(wrapper around the overloaded version)
    */
   FileItemsPtr
-  LookupFilesInFolderRecursively (const std::string &folder, int offset=0, int limit=-1);
+  LookupFilesInFolderRecursively(const std::string &folder, int offset=0, int limit=-1);
 };
 
 typedef boost::shared_ptr<FileState> FileStatePtr;

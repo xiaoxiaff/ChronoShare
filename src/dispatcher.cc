@@ -447,7 +447,7 @@ Dispatcher::Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn:
   map<Hash, ObjectDbPtr>::iterator db = m_objectDbMap.find(hash);
   if (db != m_objectDbMap.end())
   {
-    db->second->saveContentObject(deviceName, segment, fileSegmentPco->getContent());
+    db->second->saveContentObject(deviceName, segment, fileSegmentPco->wireEncode());
   }
   else
   {

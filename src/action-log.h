@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -38,41 +38,41 @@ typedef boost::shared_ptr<ActionItem> ActionItemPtr;
 class ActionLog : public DbHelper
 {
 public:
-  typedef boost::function<void (std::string /*filename*/, ndn::Name /*device_name*/, sqlite3_int64 /*seq_no*/,
-                                HashPtr /*hash*/, time_t /*m_time*/, int /*mode*/, int /*seg_num*/)> OnFileAddedOrChangedCallback;
+  typedef boost::function<void(std::string /*filename*/, ndn::Name /*device_name*/, sqlite3_int64 /*seq_no*/,
+                                ndn::ConstBufferPtr /*hash*/, time_t /*m_time*/, int /*mode*/, int /*seg_num*/)> OnFileAddedOrChangedCallback;
 
-  typedef boost::function<void (std::string /*filename*/)> OnFileRemovedCallback;
+  typedef boost::function<void(std::string /*filename*/)> OnFileRemovedCallback;
 
 public:
-  ActionLog (boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &path,
+  ActionLog(boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &path,
              SyncLogPtr syncLog,
              const std::string &sharedFolder, const std::string &appName,
              OnFileAddedOrChangedCallback onFileAddedOrChanged, OnFileRemovedCallback onFileRemoved);
 
-  virtual ~ActionLog () { }
+  virtual ~ActionLog() { }
 
   //////////////////////////
   // Local operations     //
   //////////////////////////
   ActionItemPtr
-  AddLocalActionUpdate (const std::string &filename,
-                        const Hash &hash,
+  AddLocalActionUpdate(const std::string &filename,
+                        const ndn::Buffer &hash,
                         time_t wtime,
                         int mode,
                         int seg_num);
 
   // void
-  // AddActionMove (const std::string &oldFile, const std::string &newFile);
+  // AddActionMove(const std::string &oldFile, const std::string &newFile);
 
   ActionItemPtr
-  AddLocalActionDelete (const std::string &filename);
+  AddLocalActionDelete(const std::string &filename);
 
   //////////////////////////
   // Remote operations    //
   //////////////////////////
 
   ActionItemPtr
-  AddRemoteAction (const ndn::Name &deviceName, sqlite3_int64 seqno, boost::shared_ptr<ndn::Data> actionPco);
+  AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, boost::shared_ptr<ndn::Data> actionPco);
 
   /**
    * @brief Add remote action using just action's parsed content object
@@ -80,59 +80,59 @@ public:
    * This function extracts device name and sequence number from the content object's and calls the overloaded method
    */
   ActionItemPtr
-  AddRemoteAction (boost::shared_ptr<ndn::Data> actionPco);
+  AddRemoteAction(boost::shared_ptr<ndn::Data> actionPco);
 
   ///////////////////////////
   // General operations    //
   ///////////////////////////
 
   boost::shared_ptr<ndn::Data>
-  LookupActionPco (const ndn::Name &deviceName, sqlite3_int64 seqno);
+  LookupActionPco(const ndn::Name &deviceName, sqlite3_int64 seqno);
 
   boost::shared_ptr<ndn::Data>
-  LookupActionPco (const ndn::Name &actionName);
+  LookupActionPco(const ndn::Name &actionName);
 
   ActionItemPtr
-  LookupAction (const ndn::Name &deviceName, sqlite3_int64 seqno);
+  LookupAction(const ndn::Name &deviceName, sqlite3_int64 seqno);
 
   ActionItemPtr
-  LookupAction (const ndn::Name &actionName);
+  LookupAction(const ndn::Name &actionName);
 
   FileItemPtr
-  LookupAction (const std::string &filename, sqlite3_int64 version, const Hash &filehash);
+  LookupAction(const std::string &filename, sqlite3_int64 version, const ndn::Buffer &filehash);
 
   /**
-   * @brief Lookup up to [limit] actions starting [offset] in decreasing order (by timestamp) and calling visitor(device_name,seqno,action) for each action
+   * @brief Lookup up to [limit] actions starting [offset] in decreasing order(by timestamp) and calling visitor(device_name,seqno,action) for each action
    */
   bool
-  LookupActionsInFolderRecursively (const boost::function<void (const ndn::Name &name, sqlite3_int64 seq_no, const ActionItem &)> &visitor,
+  LookupActionsInFolderRecursively(const boost::function<void(const ndn::Name &name, sqlite3_int64 seq_no, const ActionItem &)> &visitor,
                                     const std::string &folder, int offset=0, int limit=-1);
 
   bool
-  LookupActionsForFile (const boost::function<void (const ndn::Name &name, sqlite3_int64 seq_no, const ActionItem &)> &visitor,
+  LookupActionsForFile(const boost::function<void(const ndn::Name &name, sqlite3_int64 seq_no, const ActionItem &)> &visitor,
                         const std::string &file, int offset=0, int limit=-1);
 
   void
-  LookupRecentFileActions(const boost::function<void (const std::string &, int, int)> &visitor, int limit = 5);
+  LookupRecentFileActions(const boost::function<void(const std::string &, int, int)> &visitor, int limit = 5);
 
   //
   inline FileStatePtr
-  GetFileState ();
+  GetFileState();
 
 public:
   // for test purposes
   sqlite3_int64
-  LogSize ();
+  LogSize();
 
 private:
   boost::tuple<sqlite3_int64 /*version*/, ndn::BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
-  GetLatestActionForFile (const std::string &filename);
+  GetLatestActionForFile(const std::string &filename);
 
   static void
-  apply_action_xFun (sqlite3_context *context, int argc, sqlite3_value **argv);
+  apply_action_xFun(sqlite3_context *context, int argc, sqlite3_value **argv);
 
   boost::shared_ptr<ActionItem>
-  deserialize (const ndn::Block &content);
+  deserialize(const ndn::Block &content);
 
 private:
   SyncLogPtr m_syncLog;
@@ -151,7 +151,7 @@ struct ActionLog : virtual boost::exception, virtual std::exception { };
 }
 
 inline FileStatePtr
-ActionLog::GetFileState ()
+ActionLog::GetFileState()
 {
   return m_fileState;
 }
