@@ -197,29 +197,23 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
     ndn::BufferPtr co = db->fetchSegment(deviceName, segment);
     if (co)
       {
+
+        boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+        data->setContent(co->buf(), co->size());
         if (forwardingHint.size() == 0)
           {
-            _LOG_DEBUG(name);
-
-            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
-          	data->setName(name);
-            data->wireDecode(ndn::Block(co->buf(), co->size()));
-            m_keyChain.sign(*data);
-          	m_face->put(*data);
+            _LOG_DEBUG(deviceName);
           }
         else
           {
-            boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
-            data->setName(interest);
             if (m_freshness > 0)
               {
               	data->setFreshnessPeriod(time::seconds(m_freshness));
               }
-            data->wireDecode(ndn::Block(co->buf(), co->size()));
-            m_keyChain.sign(*data);
-            m_face->put(*data);
+            data->setName(interest);
           }
-
+         m_keyChain.sign(*data);
+         m_face->put(*data);
       }
     else
       {
@@ -241,23 +235,21 @@ ContentServer::serve_Action_Execute(const Name &forwardingHint, const Name &name
 
   _LOG_DEBUG(" server ACTION for device: " << deviceName << " and seqno: " << seqno);
 
-  boost::shared_ptr<ndn::Data> dataObject = m_actionLog->LookupActionPco(deviceName, seqno);
-  if (dataObject)
+  boost::shared_ptr<ndn::Data> data = m_actionLog->LookupActionData(deviceName, seqno);
+  if (data)
     {
       if (forwardingHint.size() == 0)
         {
-          m_face->put(*dataObject);
+          m_keyChain.sign(*data);
+          m_face->put(*data);
         }
       else
         {
-          const Block &block = dataObject->getContent();
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
           data->setName(interest);
           if (m_freshness > 0)
           {
         	  data->setFreshnessPeriod(time::seconds(m_freshness));
           }
-          data->setContent(block.value(), block.value_size());
           m_keyChain.sign(*data);
           m_face->put(*data);
         }

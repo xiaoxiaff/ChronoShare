@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+ * Copyright(c) 2012-2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,9 +45,9 @@ public:
     };
 
   typedef boost::function<ndn::Name(const ndn::Name &)> Mapping;
-  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> pco)> SegmentCallback;
+  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> data)> SegmentCallback;
   typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
-  FetchManager (boost::shared_ptr<ndn::Face> face,
+  FetchManager(boost::shared_ptr<ndn::Face> face,
                 const Mapping &mapping,
                 const ndn::Name &broadcastForwardingHint,
                 uint32_t parallelFetches = 3,
@@ -55,39 +55,39 @@ public:
                 const FinishCallback &defaultFinishCallback = FinishCallback(),
                 const FetchTaskDbPtr &taskDb = FetchTaskDbPtr()
                 );
-  virtual ~FetchManager ();
+  virtual ~FetchManager();
 
   void
-  Enqueue (const ndn::Name &deviceName, const ndn::Name &baseName,
+  Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
            const SegmentCallback &segmentCallback, const FinishCallback &finishCallback,
            uint64_t minSeqNo, uint64_t maxSeqNo, int priority=PRIORITY_NORMAL);
 
   // Enqueue using default callbacks
   void
-  Enqueue (const ndn::Name &deviceName, const ndn::Name &baseName,
+  Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
            uint64_t minSeqNo, uint64_t maxSeqNo, int priority=PRIORITY_NORMAL);
 
   // only for Fetcher
   inline boost::shared_ptr<ndn::Face>  
-  GetFace ();
+  GetFace();
 
 private:
   // Fetch Events
   void
-  DidDataSegmentFetched (Fetcher &fetcher, uint64_t seqno, const ndn::Name &basename,
+  DidDataSegmentFetched(Fetcher &fetcher, uint64_t seqno, const ndn::Name &basename,
                          const ndn::Name &name, boost::shared_ptr<ndn::Data> data);
 
   void
-  DidNoDataTimeout (Fetcher &fetcher);
+  DidNoDataTimeout(Fetcher &fetcher);
 
   void
-  DidFetchComplete (Fetcher &fetcher, const ndn::Name &deviceName, const ndn::Name &baseName);
+  DidFetchComplete(Fetcher &fetcher, const ndn::Name &deviceName, const ndn::Name &baseName);
 
   void
-  ScheduleFetches ();
+  ScheduleFetches();
 
   void
-  TimedWait (Fetcher &fetcher);
+  TimedWait(Fetcher &fetcher);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;

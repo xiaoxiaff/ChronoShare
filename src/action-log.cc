@@ -470,7 +470,7 @@ ActionLog::LookupActionData(const ndn::Name &actionName)
     }
   else
     {
-      _LOG_TRACE("No action found for deviceName [" << deviceName << "] and seqno:" << seqno);
+      _LOG_TRACE ("No action found for name: " << actionName);
     }
   // _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK && sqlite3_errcode(m_db) != SQLITE_ROW, sqlite3_errmsg(m_db));
   sqlite3_finalize(stmt);
@@ -543,7 +543,7 @@ ActionLog::AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, boo
       return ActionItemPtr();
     }
 
-  _LOG_DEBUG("AddRemoteAction: [" << deviceName << "] seqno: " << seqno);
+  _LOG_DEBUG("AddRemoteAction: [" << deviceName.toUri() << "] seqno: " << seqno);
 
   sqlite3_stmt *stmt;
   int res = sqlite3_prepare_v2(m_db, "INSERT INTO ActionLog "
@@ -890,7 +890,7 @@ ActionLog::apply_action_xFun(sqlite3_context *context, int argc, sqlite3_value *
       int mode = sqlite3_value_int(argv[9]);
       int seg_num = sqlite3_value_int(argv[10]);
 
-      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << hash);
+      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << hashToString(hash));
 
       the->m_fileState->UpdateFile(filename, version, hash, device_name, seq_no, atime, mtime, ctime, mode, seg_num);
 

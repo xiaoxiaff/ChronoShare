@@ -87,7 +87,7 @@ private:
   int m_freshness;
 
   SchedulerPtr m_scheduler;
-  typedef std::map<ndnd::Buffer, ObjectDbPtr> DbCache;
+  typedef std::map<ndn::Buffer, ObjectDbPtr> DbCache;
   DbCache m_dbCache;
   Mutex m_dbCacheMutex;
 

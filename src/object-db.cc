@@ -128,7 +128,7 @@ ObjectDb::~ObjectDb()
 }
 
 void
-ObjectDb::saveContentObject(const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Block &data)
+ObjectDb::saveContentObject(const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Data &data)
 {
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db, "INSERT INTO File "
@@ -139,7 +139,7 @@ ObjectDb::saveContentObject(const ndn::Name &deviceName, sqlite3_int64 segment, 
 
   sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 2, segment);
-  sqlite3_bind_blob(stmt, 3, data.wire(), data.size(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 3, data.wireEncode().wire(), data.wireEncode().size(), SQLITE_STATIC);
 
   sqlite3_step(stmt);
   //_LOG_DEBUG("After saving object: " << sqlite3_errmsg(m_db));
@@ -160,14 +160,14 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
   sqlite3_bind_int64(stmt, 2, segment);
 
   ndn::BufferPtr ret;
+  boost::shared_ptr<Data> data = boost::make_shared<Data>();
 
   int res = sqlite3_step(stmt);
   if (res == SQLITE_ROW)
     {
 //      const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
-//      int bufBytes = sqlite3_column_bytes(stmt, 0);
-
-      ret = std::make_shared<ndn::Buffer>(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0));
+      data->wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+      ret = ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().size());
     }
 
   sqlite3_finalize(stmt);

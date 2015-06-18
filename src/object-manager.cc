@@ -102,16 +102,14 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       m_keyChain.sign(*data);
       m_face->put(*data);
 
-      fileDb.saveContentObject(deviceName, segment, data->wireEncode());
-
+      fileDb.saveContentObject(deviceName, segment, *data);
 
       segment ++;
     }
   if (segment == 0) // handle empty files
     {
       ndn::Name name = ndn::Name("/");
-      name.append(m_appName);
-      name.append("file").append(ndn::name::Component(*fileHash)).append(deviceName).appendNumber(0);
+      name.append(m_appName).append("file").append(ndn::name::Component(*fileHash)).append(deviceName).appendNumber(0);
 
       boost::shared_ptr<Data> data = boost::make_shared<Data>();
       data->setName(name);
@@ -120,7 +118,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       m_keyChain.sign(*data);
       m_face->put(*data);
 
-      fileDb.saveContentObject(deviceName, 0, data->wireEncode());
+      fileDb.saveContentObject(deviceName, 0, *data);
 
       segment ++;
     }

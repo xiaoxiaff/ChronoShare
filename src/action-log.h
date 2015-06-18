@@ -123,6 +123,15 @@ public:
   // for test purposes
   sqlite3_int64
   LogSize();
+  static std::string
+  hashToString(const ndn::Buffer &digest) {
+    using namespace CryptoPP;
+
+    std::string hash;
+    StringSource(digest.buf(), digest.size(), true,
+                 new HexEncoder(new StringSink(hash), false));
+    return hash;
+  }
 
 private:
   boost::tuple<sqlite3_int64 /*version*/, ndn::BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>

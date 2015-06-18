@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012 University of California, Los Angeles
+ * Copyright(c) 2012 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -31,18 +31,18 @@
 
 
 
-INIT_LOGGER ("FetchManager");
+INIT_LOGGER("FetchManager");
 
 using namespace boost;
 using namespace std;
 using namespace ndn;
 
 //The disposer object function
-struct fetcher_disposer { void operator() (Fetcher *delete_this) { delete delete_this; } };
+struct fetcher_disposer { void operator()(Fetcher *delete_this) { delete delete_this; } };
 
 static const string SCHEDULE_FETCHES_TAG = "ScheduleFetches";
 
-FetchManager::FetchManager (boost::shared_ptr<ndn::Face> face,
+FetchManager::FetchManager(boost::shared_ptr<ndn::Face> face,
                             const Mapping &mapping,
                             const Name &broadcastForwardingHint,
                             uint32_t parallelFetches, // = 3
@@ -53,7 +53,7 @@ FetchManager::FetchManager (boost::shared_ptr<ndn::Face> face,
   : m_face(face)
   , m_mapping(mapping)
   , m_maxParallelFetches(parallelFetches)
-  , m_currentParallelFetches (0)
+  , m_currentParallelFetches(0)
   , m_scheduler(new Scheduler)
   , m_executor(new Executor(1))
   , m_defaultSegmentCallback(defaultSegmentCallback)
@@ -64,8 +64,8 @@ FetchManager::FetchManager (boost::shared_ptr<ndn::Face> face,
   m_scheduler->start();
   m_executor->start();
 
-  m_scheduleFetchesTask = Scheduler::schedulePeriodicTask (m_scheduler,
-                                                           boost::make_shared<SimpleIntervalGenerator> (300), // no need to check to often. if needed, will be rescheduled
+  m_scheduleFetchesTask = Scheduler::schedulePeriodicTask(m_scheduler,
+                                                           boost::make_shared<SimpleIntervalGenerator>(300), // no need to check to often. if needed, will be rescheduled
                                                            boost::bind(&FetchManager::ScheduleFetches, this), SCHEDULE_FETCHES_TAG);
   // resume un-finished fetches if there is any
   if (m_taskDb)
@@ -74,26 +74,26 @@ FetchManager::FetchManager (boost::shared_ptr<ndn::Face> face,
   }
 }
 
-FetchManager::~FetchManager ()
+FetchManager::~FetchManager()
 {
-  m_scheduler->shutdown ();
+  m_scheduler->shutdown();
   m_executor->shutdown();
 
   m_face.reset();
 
-  m_fetchList.clear_and_dispose (fetcher_disposer ());
+  m_fetchList.clear_and_dispose(fetcher_disposer());
 }
 
 // Enqueue using default callbacks
 void
-FetchManager::Enqueue (const ndn::Name &deviceName, const ndn::Name &baseName,
+FetchManager::Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
            uint64_t minSeqNo, uint64_t maxSeqNo, int priority)
 {
   Enqueue(deviceName, baseName, m_defaultSegmentCallback, m_defaultFinishCallback, minSeqNo, maxSeqNo, priority);
 }
 
 void
-FetchManager::Enqueue (const ndn::Name &deviceName, const ndn::Name &baseName,
+FetchManager::Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
          const SegmentCallback &segmentCallback, const FinishCallback &finishCallback,
          uint64_t minSeqNo, uint64_t maxSeqNo, int priority/*PRIORITY_NORMAL*/)
 {
@@ -105,149 +105,149 @@ FetchManager::Enqueue (const ndn::Name &deviceName, const ndn::Name &baseName,
 
   // we may need to guarantee that LookupLocator will gives an answer and not throw exception...
   Name forwardingHint;
-  forwardingHint = m_mapping (deviceName);
+  forwardingHint = m_mapping(deviceName);
 
   if (m_taskDb)
     {
       m_taskDb->addTask(deviceName, baseName, minSeqNo, maxSeqNo, priority);
     }
 
-  boost::unique_lock<boost::mutex> lock (m_parellelFetchMutex);
+  boost::unique_lock<boost::mutex> lock(m_parellelFetchMutex);
 
-  _LOG_TRACE ("++++ Create fetcher: " << baseName);
-  Fetcher *fetcher = new Fetcher (m_face,
+  _LOG_TRACE("++++ Create fetcher: " << baseName);
+  Fetcher *fetcher = new Fetcher(m_face,
                                   m_executor,
                                   segmentCallback,
                                   finishCallback,
-                                  boost::bind (&FetchManager::DidFetchComplete, this, _1, _2, _3),
-                                  boost::bind (&FetchManager::DidNoDataTimeout, this, _1),
+                                  boost::bind(&FetchManager::DidFetchComplete, this, _1, _2, _3),
+                                  boost::bind(&FetchManager::DidNoDataTimeout, this, _1),
                                   deviceName, baseName, minSeqNo, maxSeqNo,
-                                  boost::posix_time::seconds (30),
+                                  boost::posix_time::seconds(30),
                                   forwardingHint);
 
-  switch (priority)
+  switch(priority)
     {
     case PRIORITY_HIGH:
-      _LOG_TRACE ("++++ Push front fetcher: " << fetcher->GetName ());
-      m_fetchList.push_front (*fetcher);
+      _LOG_TRACE("++++ Push front fetcher: " << fetcher->GetName());
+      m_fetchList.push_front(*fetcher);
       break;
 
     case PRIORITY_NORMAL:
     default:
-      _LOG_TRACE ("++++ Push back fetcher: " << fetcher->GetName ());
-      m_fetchList.push_back (*fetcher);
+      _LOG_TRACE("++++ Push back fetcher: " << fetcher->GetName());
+      m_fetchList.push_back(*fetcher);
       break;
     }
 
-  _LOG_DEBUG ("++++ Reschedule fetcher task");
-  m_scheduler->rescheduleTaskAt (m_scheduleFetchesTask, 0);
-  // ScheduleFetches (); // will start a fetch if m_currentParallelFetches is less than max, otherwise does nothing
+  _LOG_DEBUG("++++ Reschedule fetcher task");
+  m_scheduler->rescheduleTaskAt(m_scheduleFetchesTask, 0);
+  // ScheduleFetches(); // will start a fetch if m_currentParallelFetches is less than max, otherwise does nothing
 }
 
 void
-FetchManager::ScheduleFetches ()
+FetchManager::ScheduleFetches()
 {
-  boost::unique_lock<boost::mutex> lock (m_parellelFetchMutex);
+  boost::unique_lock<boost::mutex> lock(m_parellelFetchMutex);
 
-  boost::posix_time::ptime currentTime = date_time::second_clock<boost::posix_time::ptime>::universal_time ();
-  boost::posix_time::ptime nextSheduleCheck = currentTime + posix_time::seconds (300); // no reason to have anything, but just in case
+  boost::posix_time::ptime currentTime = date_time::second_clock<boost::posix_time::ptime>::universal_time();
+  boost::posix_time::ptime nextSheduleCheck = currentTime + posix_time::seconds(300); // no reason to have anything, but just in case
 
-  for (FetchList::iterator item = m_fetchList.begin ();
-       m_currentParallelFetches < m_maxParallelFetches && item != m_fetchList.end ();
+  for (FetchList::iterator item = m_fetchList.begin();
+       m_currentParallelFetches < m_maxParallelFetches && item != m_fetchList.end();
        item++)
     {
-      if (item->IsActive ())
+      if (item->IsActive())
         {
-          _LOG_DEBUG ("Item is active");
+          _LOG_DEBUG("Item is active");
           continue;
         }
 
-      if (item->IsTimedWait ())
+      if (item->IsTimedWait())
         {
-          _LOG_DEBUG ("Item is in timed-wait");
+          _LOG_DEBUG("Item is in timed-wait");
           continue;
         }
 
-      if (currentTime < item->GetNextScheduledRetry ())
+      if (currentTime < item->GetNextScheduledRetry())
         {
-          if (item->GetNextScheduledRetry () < nextSheduleCheck)
-            nextSheduleCheck = item->GetNextScheduledRetry ();
+          if (item->GetNextScheduledRetry() < nextSheduleCheck)
+            nextSheduleCheck = item->GetNextScheduledRetry();
 
-          _LOG_DEBUG ("Item is delayed");
+          _LOG_DEBUG("Item is delayed");
           continue;
         }
 
-      _LOG_DEBUG ("Start fetching of " << item->GetName ());
+      _LOG_DEBUG("Start fetching of " << item->GetName());
 
       m_currentParallelFetches ++;
-      _LOG_TRACE ("++++ RESTART PIPELINE: " << item->GetName ());
-      item->RestartPipeline ();
+      _LOG_TRACE("++++ RESTART PIPELINE: " << item->GetName());
+      item->RestartPipeline();
     }
 
-  m_scheduler->rescheduleTaskAt (m_scheduleFetchesTask, (nextSheduleCheck - currentTime).total_seconds ());
+  m_scheduler->rescheduleTaskAt(m_scheduleFetchesTask,(nextSheduleCheck - currentTime).total_seconds());
 }
 
 void
-FetchManager::DidNoDataTimeout (Fetcher &fetcher)
+FetchManager::DidNoDataTimeout(Fetcher &fetcher)
 {
-  _LOG_DEBUG ("No data timeout for " << fetcher.GetName () << " with forwarding hint: " << fetcher.GetForwardingHint ());
+  _LOG_DEBUG("No data timeout for " << fetcher.GetName() << " with forwarding hint: " << fetcher.GetForwardingHint());
 
   {
-    boost::unique_lock<boost::mutex> lock (m_parellelFetchMutex);
+    boost::unique_lock<boost::mutex> lock(m_parellelFetchMutex);
     m_currentParallelFetches --;
     // no need to do anything with the m_fetchList
   }
 
-  if (fetcher.GetForwardingHint ().size () == 0)
+  if (fetcher.GetForwardingHint().size() == 0)
     {
       // will be tried initially and again after empty forwarding hint
 
       /// @todo Handle potential exception
       Name forwardingHint;
-      forwardingHint = m_mapping (fetcher.GetDeviceName ());
+      forwardingHint = m_mapping(fetcher.GetDeviceName());
 
-      if (forwardingHint.size () == 0)
+      if (forwardingHint.size() == 0)
         {
           // make sure that we will try broadcast forwarding hint eventually
-          fetcher.SetForwardingHint (m_broadcastHint);
+          fetcher.SetForwardingHint(m_broadcastHint);
         }
       else
         {
-          fetcher.SetForwardingHint (forwardingHint);
+          fetcher.SetForwardingHint(forwardingHint);
         }
     }
-  else if (fetcher.GetForwardingHint () == m_broadcastHint)
+  else if (fetcher.GetForwardingHint() == m_broadcastHint)
     {
       // will be tried after broadcast forwarding hint
-      fetcher.SetForwardingHint (Name ("/"));
+      fetcher.SetForwardingHint(Name("/"));
     }
   else
     {
       // will be tried after normal forwarding hint
-      fetcher.SetForwardingHint (m_broadcastHint);
+      fetcher.SetForwardingHint(m_broadcastHint);
     }
 
-  double delay = fetcher.GetRetryPause ();
+  double delay = fetcher.GetRetryPause();
   if (delay < 1) // first time
     {
       delay = 1;
     }
   else
     {
-      delay = std::min (2*delay, 300.0); // 5 minutes max
+      delay = std::min(2*delay, 300.0); // 5 minutes max
     }
 
-  fetcher.SetRetryPause (delay);
-  fetcher.SetNextScheduledRetry (date_time::second_clock<boost::posix_time::ptime>::universal_time () + posix_time::seconds (delay));
+  fetcher.SetRetryPause(delay);
+  fetcher.SetNextScheduledRetry(date_time::second_clock<boost::posix_time::ptime>::universal_time() + posix_time::seconds(delay));
 
-  m_scheduler->rescheduleTaskAt (m_scheduleFetchesTask, 0);
+  m_scheduler->rescheduleTaskAt(m_scheduleFetchesTask, 0);
 }
 
 void
-FetchManager::DidFetchComplete (Fetcher &fetcher, const ndn::Name &deviceName, const ndn::Name &baseName)
+FetchManager::DidFetchComplete(Fetcher &fetcher, const ndn::Name &deviceName, const ndn::Name &baseName)
 {
   {
-    boost::unique_lock<boost::mutex> lock (m_parellelFetchMutex);
+    boost::unique_lock<boost::mutex> lock(m_parellelFetchMutex);
     m_currentParallelFetches --;
 
     if (m_taskDb)
@@ -256,16 +256,16 @@ FetchManager::DidFetchComplete (Fetcher &fetcher, const ndn::Name &deviceName, c
       }
   }
 
-  // like TCP timed-wait
+  // like TCP timed-waidatat
   m_scheduler->scheduleOneTimeTask(m_scheduler, 10, boost::bind(&FetchManager::TimedWait, this, boost::ref(fetcher)), boost::lexical_cast<string>(baseName));
 
-  m_scheduler->rescheduleTaskAt (m_scheduleFetchesTask, 0);
+  m_scheduler->rescheduleTaskAt(m_scheduleFetchesTask, 0);
 }
 
 void
-FetchManager::TimedWait (Fetcher &fetcher)
+FetchManager::TimedWait(Fetcher &fetcher)
 {
-    boost::unique_lock<boost::mutex> lock (m_parellelFetchMutex);
-    _LOG_TRACE ("+++++ removing fetcher: " << fetcher.GetName ());
-    m_fetchList.erase_and_dispose (FetchList::s_iterator_to (fetcher), fetcher_disposer ());
+    boost::unique_lock<boost::mutex> lock(m_parellelFetchMutex);
+    _LOG_TRACE("+++++ removing fetcher: " << fetcher.GetName());
+    m_fetchList.erase_and_dispose(FetchList::s_iterator_to(fetcher), fetcher_disposer());
 }
