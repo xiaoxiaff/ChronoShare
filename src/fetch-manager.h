@@ -45,7 +45,7 @@ public:
     };
 
   typedef boost::function<ndn::Name(const ndn::Name &)> Mapping;
-  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> data)> SegmentCallback;
+  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
   typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
   FetchManager(boost::shared_ptr<ndn::Face> face,
                 const Mapping &mapping,
@@ -75,7 +75,7 @@ private:
   // Fetch Events
   void
   DidDataSegmentFetched(Fetcher &fetcher, uint64_t seqno, const ndn::Name &basename,
-                         const ndn::Name &name, boost::shared_ptr<ndn::Data> data);
+                         const ndn::Name &name, ndn::shared_ptr<ndn::Data> data);
 
   void
   DidNoDataTimeout(Fetcher &fetcher);

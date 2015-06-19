@@ -118,20 +118,29 @@ def configure(conf):
     conf.load('boost')
 
 
-    conf.check_boost(lib='system test iostreams filesystem regex thread date_time')
+#    conf.check_boost(lib='system test iostreams filesystem regex thread date_time')
 
-    boost_version = conf.env.BOOST_VERSION.split('_')
-    if int(boost_version[0]) < 1 or int(boost_version[1]) < 46:
-        Logs.error ("Minumum required boost version is 1.46")
-        return
+    boost_libs = 'system random thread filesystem'
 
     if conf.options._test:
-        conf.define ('_TESTS', 1)
-        conf.env.TEST = 1
+        conf.env['TEST'] = 1
+        conf.define('TEST', 1);
+        boost_libs += ' unit_test_framework'
+
+    conf.check_boost(lib=boost_libs)
+    if conf.env.BOOST_VERSION_NUMBER < 104800:
+        Logs.error("Minimum required boost version is 1.48.0")
+        Logs.error("Please upgrade your distribution or install custom boost libraries" +
+                   " (http://redmine.named-data.net/projects/nfd/wiki/Boost_FAQ)")
+        return
 
     conf.write_config_header('src/config.h')
 
 def build (bld):
+    feature_list = 'qt4 cxx'
+    if bld.env["TEST"]:
+        feature_list += ' cxxstlib'
+
     executor = bld.objects (
         target = "executor",
         features = ["cxx"],
@@ -160,9 +169,9 @@ def build (bld):
 
     chornoshare = bld (
         target="chronoshare",
-        features=['cxx'],
-        source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.cpp', 'src/**/*.proto']),
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML",
+        features=feature_list,
+        source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.proto']),
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML SSL",
         includes = "scheduler src executor",
         )
 
@@ -176,15 +185,27 @@ def build (bld):
         )
 
     # Unit tests
-    if bld.env['TEST']:
+#    if bld.env['TEST']:
+#      unittests = bld.program (
+#          target="unit-tests",
+#          features = "cxx cxxprogram",
+#          defines = "WAF",
+#          source = bld.path.ant_glob(['test/test-sync-log.cc']),
+#          use = 'BOOST chronoshare',
+#          includes = "scheduler src executor gui fs-watcher",
+#          install_prefix = None,
+#          )
+
+    # Unit tests
+    if bld.env["TEST"]:
       unittests = bld.program (
           target="unit-tests",
-          features = "qt4 cxx cxxprogram",
-          defines = "WAF",
-          source = bld.path.ant_glob(['test/*.cc']),
-          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
-          includes = "scheduler src executor gui fs-watcher",
-          install_prefix = None,
+          source = bld.path.ant_glob(['test/test-sync-log.cc', 'test/main.cc']),
+          features=['cxx', 'cxxprogram'],
+          use = 'BOOST chronoshare',
+          includes = "src .",
+          install_path = None,
+          defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
           )
 
     http_server = bld (
@@ -201,7 +222,7 @@ def build (bld):
         defines = "WAF",
         source = bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
         includes = "scheduler executor fs-watcher gui src adhoc server . ",
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server SSL TINYXML",
+        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server TINYXML",
 
         html_resources = bld.path.find_dir ("gui/html").ant_glob([
                 '**/*.js', '**/*.png', '**/*.css',
@@ -264,7 +285,7 @@ def build (bld):
 	defines = "WAF",
 	source = "cmd/csd.cc",
 	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
 	)
 
     dump_db = bld (
@@ -272,7 +293,7 @@ def build (bld):
         features = "cxx cxxprogram",
 	source = "cmd/dump-db.cc",
 	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare SSL TINYXML"
+	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
         )
 
 from waflib import TaskGen

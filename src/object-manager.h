@@ -22,6 +22,7 @@
 #ifndef OBJECT_MANAGER_H
 #define OBJECT_MANAGER_H
 
+#include "digest-computer.h"
 #include <string>
 #include <boost/filesystem.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -45,21 +46,15 @@ public:
   boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
   localFileToObjects(const boost::filesystem::path &file, const ndn::Name &deviceName);
 
-  ndn::ConstBufferPtr
-  fromFile(const boost::filesystem::path &filename);
-
   bool
   objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const ndn::Buffer &hash, /*out*/ const boost::filesystem::path &file);
-
-  std::string
-  hashToString(const ndn::Buffer &digest);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
-  mutable ndn::util::Sha256 m_digest;
   ndn::KeyChain m_keyChain;
+  DigestComputer m_digestComputer;
 };
 
 typedef boost::shared_ptr<ObjectManager> ObjectManagerPtr;

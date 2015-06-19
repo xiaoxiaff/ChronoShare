@@ -28,6 +28,7 @@
 #include "action-item.pb.h"
 #include "file-item.pb.h"
 #include <ndn-cxx/face.hpp>
+#include <ndn-cxx/security/key-chain.hpp>
 
 #include <boost/tuple/tuple.hpp>
 
@@ -72,7 +73,7 @@ public:
   //////////////////////////
 
   ActionItemPtr
-  AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, boost::shared_ptr<ndn::Data> actionData);
+  AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, ndn::shared_ptr<ndn::Data> actionData);
 
   /**
    * @brief Add remote action using just action's parsed content object
@@ -80,16 +81,16 @@ public:
    * This function extracts device name and sequence number from the content object's and calls the overloaded method
    */
   ActionItemPtr
-  AddRemoteAction(boost::shared_ptr<ndn::Data> actionData);
+  AddRemoteAction(ndn::shared_ptr<ndn::Data> actionData);
 
   ///////////////////////////
   // General operations    //
   ///////////////////////////
 
-  boost::shared_ptr<ndn::Data>
+  ndn::shared_ptr<ndn::Data>
   LookupActionData(const ndn::Name &deviceName, sqlite3_int64 seqno);
 
-  boost::shared_ptr<ndn::Data>
+  ndn::shared_ptr<ndn::Data>
   LookupActionData(const ndn::Name &actionName);
 
   ActionItemPtr
@@ -123,15 +124,6 @@ public:
   // for test purposes
   sqlite3_int64
   LogSize();
-  static std::string
-  hashToString(const ndn::Buffer &digest) {
-    using namespace CryptoPP;
-
-    std::string hash;
-    StringSource(digest.buf(), digest.size(), true,
-                 new HexEncoder(new StringSink(hash), false));
-    return hash;
-  }
 
 private:
   boost::tuple<sqlite3_int64 /*version*/, ndn::BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
@@ -153,6 +145,7 @@ private:
 
   OnFileAddedOrChangedCallback m_onFileAddedOrChanged;
   OnFileRemovedCallback        m_onFileRemoved;
+  ndn::KeyChain m_keyChain;
 };
 
 namespace Error {

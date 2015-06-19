@@ -19,6 +19,7 @@
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  */
 
+#include "digest-computer.h"
 #include "content-server.h"
 #include "logging.h"
 #include <boost/make_shared.hpp>
@@ -165,9 +166,9 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
   ndn::Name deviceName = name.getSubName(0, name.size() - 4);
   ndn::Buffer hash(name.get(-2).value(), name.get(-2).size());
 
-  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << hashToString(hash) << " segment: " << segment);
+  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash) << " segment: " << segment);
 
-  string hashStr = hashToString(hash);
+  string hashStr = DigestComputer::digestToString(hash);
 
   ObjectDbPtr db;
 
@@ -187,7 +188,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
         }
       else
         {
-          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << hashToString(hash));
+          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
         }
     }
   }
@@ -198,7 +199,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
     if (co)
       {
 
-        boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+        ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
         data->setContent(co->buf(), co->size());
         if (forwardingHint.size() == 0)
           {
@@ -217,7 +218,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
       }
     else
       {
-        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << hashToString(hash));
+        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
       }
 
   }
@@ -235,7 +236,7 @@ ContentServer::serve_Action_Execute(const Name &forwardingHint, const Name &name
 
   _LOG_DEBUG(" server ACTION for device: " << deviceName << " and seqno: " << seqno);
 
-  boost::shared_ptr<ndn::Data> data = m_actionLog->LookupActionData(deviceName, seqno);
+  ndn::shared_ptr<ndn::Data> data = m_actionLog->LookupActionData(deviceName, seqno);
   if (data)
     {
       if (forwardingHint.size() == 0)
@@ -279,14 +280,3 @@ ContentServer::flushStaleDbCache()
   }
 }
 
-
-std::string
-ContentServer::hashToString(const ndn::Buffer &digest)
-{
-  using namespace CryptoPP;
-
-  std::string hash;
-  StringSource(digest.buf(), digest.size(), true,
-               new HexEncoder(new StringSink(hash), false));
-  return hash;
-}

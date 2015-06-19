@@ -25,7 +25,7 @@
 #include "random-interval-generator.h"
 #include "simple-interval-generator.h"
 #include "periodic-task.h"
-#include <ndn-cxx/util/digest.hpp>
+#include "digest-computer.h"
 
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
@@ -138,7 +138,7 @@ SyncCore::localStateChanged()
   BufferPtr syncData = serializeGZipMsg(*msg);
 
   // Create Data packet
-  boost::shared_ptr<Data> data = boost::make_shared<Data>();
+  ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
   data->setName(syncName);
   data->setFreshnessPeriod(time::seconds(FRESHNESS));
   data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
@@ -146,7 +146,7 @@ SyncCore::localStateChanged()
   m_face->put(*data);
 
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] localStateChanged ");
-  _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes: " << printDigest(oldDigest));
+  _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes: " << DigestComputer::digestToString(*oldDigest));
   // _LOG_TRACE(msg);
 
   m_scheduler->deleteTask(SYNC_INTEREST_TAG2);
@@ -199,14 +199,14 @@ SyncCore::handleRecoverInterest(const Name &name)
     SyncStateMsgPtr msg = m_log->FindStateDifferences(*origin, *m_rootDigest);
 
     BufferPtr syncData = serializeGZipMsg(*msg);
-    boost::shared_ptr<Data> data = boost::make_shared<Data>();
+    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
     m_keyChain.sign(*data);
     m_face->put(*data);
 
-    _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes " << printDigest(digest));
+    _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes " << DigestComputer::digestToString(*digest));
     // _LOG_TRACE(msg);
   }
   else
@@ -224,7 +224,7 @@ SyncCore::handleSyncInterest(const Name &name)
   if (*digest == *m_rootDigest)
   {
     // we have the same digest; nothing needs to be done
-    _LOG_TRACE("same as root digest: " << printDigest(digest));
+    _LOG_TRACE("same as root digest: " << DigestComputer::digestToString(*digest));
     return;
   }
   else if (m_log->LookupSyncLog(*digest) > 0)
@@ -234,26 +234,26 @@ SyncCore::handleSyncInterest(const Name &name)
     SyncStateMsgPtr msg = m_log->FindStateDifferences(*digest, *m_rootDigest);
 
     BufferPtr syncData = serializeGZipMsg(*msg);
-    boost::shared_ptr<Data> data = boost::make_shared<Data>();
+    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
     m_keyChain.sign(*data);
     m_face->put(*data);
 
-    _LOG_TRACE(m_log->GetLocalName() << " publishes: " << printDigest(digest));
+    _LOG_TRACE(m_log->GetLocalName() << " publishes: " << DigestComputer::digestToString(*digest));
     _LOG_TRACE(msg);
   }
   else
   {
     // we don't recognize the digest, send recover Interest if still don't know the digest after a randomized wait period
     double wait = m_recoverWaitGenerator->nextInterval();
-    _LOG_TRACE(m_log->GetLocalName() << ", rootDigest: " << printDigest(m_rootDigest) << ", digest: " << printDigest(digest));
+    _LOG_TRACE(m_log->GetLocalName() << ", rootDigest: " << DigestComputer::digestToString(*m_rootDigest) << ", digest: " << DigestComputer::digestToString(*digest));
     _LOG_TRACE("recover task scheduled after wait: " << wait);
 
     Scheduler::scheduleOneTimeTask(m_scheduler,
                                     wait, boost::bind(&SyncCore::recover, this, digest),
-                                    "r-"+printDigest(digest));
+                                    "r-"+DigestComputer::digestToString(*digest));
   }
 }
 
@@ -382,7 +382,7 @@ SyncCore::sendSyncInterest()
   syncInterest.append(ndn::name::Component(*m_rootDigest));
 //  syncInterest.append(reinterpret_cast<const uint8_t*>(m_rootDigest->GetDigest()), m_rootDigest->GetDigestBytes());
 
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> SYNC Interest for " << printDigest(m_rootDigest) << ": " << syncInterest);
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> SYNC Interest for " << DigestComputer::digestToString(*m_rootDigest) << ": " << syncInterest);
 
   Interest interest(syncInterest);
   if (m_syncInterestInterval > 0 && m_syncInterestInterval < 30)
@@ -404,12 +404,12 @@ SyncCore::recover(ndn::ConstBufferPtr digest)
 {
   if (!(*digest == *m_rootDigest) && m_log->LookupSyncLog(*digest) <= 0)
   {
-    _LOG_TRACE(m_log->GetLocalName() << ", Recover for: " << printDigest(digest));
+    _LOG_TRACE(m_log->GetLocalName() << ", Recover for: " << DigestComputer::digestToString(*digest));
     // unfortunately we still don't recognize this digest
     // append the unknown digest
     Name recoverInterest(m_syncPrefix);
     recoverInterest.append(RECOVER).append(ndn::name::Component(*digest));
-    _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> RECOVER Interests for " << printDigest(digest));
+    _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> RECOVER Interests for " << DigestComputer::digestToString(*digest));
 
     m_face->expressInterest(recoverInterest,
     		boost::bind(&SyncCore::handleRecoverData, this, _1, _2),
@@ -432,15 +432,4 @@ sqlite3_int64
 SyncCore::seq(const Name &name)
 {
   return m_log->SeqNo(name);
-}
-
-std::string
-SyncCore::printDigest(ndn::ConstBufferPtr digest)
-{
-  using namespace CryptoPP;
-
-  std::string hash;
-  StringSource(digest->buf(), digest->size(), true,
-               new HexEncoder(new StringSink(hash), false));
-  return hash;
 }

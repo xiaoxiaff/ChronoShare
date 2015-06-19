@@ -32,7 +32,7 @@
 
 using namespace std;
 using namespace boost;
-using namespace Ccnx;
+using namespace ndn;
 namespace fs = boost::filesystem;
 
 BOOST_AUTO_TEST_SUITE(TestActionLog)

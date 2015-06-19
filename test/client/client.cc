@@ -25,7 +25,6 @@
 #include <Ice/Ice.h>
 #include <chronoshare-client.ice.h>
 #include <sys/stat.h>
-#include <hash-helper.h>
 
 
 using namespace std;

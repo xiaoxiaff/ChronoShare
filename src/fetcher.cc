@@ -133,7 +133,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
   const ndn::Name &name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
-  boost::shared_ptr<ndn::Data> pco = boost::make_shared<ndn::Data>(data.getContent());
+  ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.getContent());
   
   if (m_forwardingHint == Name())
   {

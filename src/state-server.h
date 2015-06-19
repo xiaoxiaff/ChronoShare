@@ -22,6 +22,7 @@
 #ifndef STATE_SERVER_H
 #define STATE_SERVER_H
 
+#include "digest-computer.h"
 #include "object-manager.h"
 #include "object-db.h"
 #include "action-log.h"
@@ -157,19 +158,6 @@ public:
               int freshness = -1);
   ~StateServer();
 
-  ndn::ConstBufferPtr
-  fromFile(const boost::filesystem::path &filename);
-
-  static std::string
-  hashToString(const ndn::Buffer &digest) {
-    using namespace CryptoPP;
-
-    std::string hash;
-    StringSource(digest.buf(), digest.size(), true,
-                 new HexEncoder(new StringSink(hash), false));
-    return hash;
-  }
-
 private:
   void
   info_actions_folder(const ndn::Name &interest);
@@ -227,6 +215,6 @@ private:
   std::string m_sharedFolderName;
   std::string m_appName;
   ndn::KeyChain m_keyChain;
-  mutable ndn::util::Sha256 m_digest;
+  DigestComputer m_digestComputer;
 };
 #endif // CONTENT_SERVER_H

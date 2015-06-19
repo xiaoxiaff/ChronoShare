@@ -57,7 +57,7 @@ FileState::FileState(const boost::filesystem::path &path)
   : DbHelper(path / ".chronoshare", "file-state.db")
 {
   sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, NULL);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "DB INIT: " << sqlite3_errmsg(m_db));
 }
 
 FileState::~FileState()
@@ -96,7 +96,7 @@ FileState::UpdateFile(const std::string &filename, sqlite3_int64 version,
   sqlite3_step(stmt);
 
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_ROW && sqlite3_errcode(m_db) != SQLITE_DONE,
-                   sqlite3_errmsg(m_db));
+                   "UpdataeFile: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 
@@ -109,7 +109,7 @@ FileState::UpdateFile(const std::string &filename, sqlite3_int64 version,
                           "VALUES(0, ?, ?, ?, ?, ?, "
                           "datetime(?, 'unixepoch'), datetime(?, 'unixepoch'), datetime(?, 'unixepoch'), ?, ?)", -1, &stmt, 0);
 
-      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "UpdateFile:(inside1) " << sqlite3_errmsg(m_db));
 
       sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
       sqlite3_bind_int64(stmt, 2, version);
@@ -124,16 +124,16 @@ FileState::UpdateFile(const std::string &filename, sqlite3_int64 version,
 
       sqlite3_step(stmt);
       _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE,
-                       sqlite3_errmsg(m_db));
+                       "UpdateFile:(inside2) " << sqlite3_errmsg(m_db));
       sqlite3_finalize(stmt);
 
       sqlite3_prepare_v2(m_db, "UPDATE FileState SET directory=directory_name(filename) WHERE filename=?", -1, &stmt, 0);
-      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "UpdateFile:(inside3) " << sqlite3_errmsg(m_db));
 
       sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
       sqlite3_step(stmt);
       _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE,
-                       sqlite3_errmsg(m_db));
+                       "UpdateFile:(inside4) " << sqlite3_errmsg(m_db));
       sqlite3_finalize(stmt);
     }
 }
@@ -151,7 +151,7 @@ FileState::DeleteFile(const std::string &filename)
 
   sqlite3_step(stmt);
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE,
-                   sqlite3_errmsg(m_db));
+                   "DeleteFile " << sqlite3_errmsg(m_db));
   sqlite3_finalize(stmt);
 }
 
@@ -162,11 +162,11 @@ FileState::SetFileComplete(const std::string &filename)
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db,
                       "UPDATE FileState SET is_complete=1 WHERE type = 0 AND filename = ?", -1, &stmt, 0);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "SetFileComplete:1 " << sqlite3_errmsg(m_db));
   sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
 
   sqlite3_step(stmt);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "SetFileComplete:2 " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 }
@@ -183,7 +183,7 @@ FileState::LookupFile(const std::string &filename)
                       "SELECT filename,version,device_name,seq_no,file_hash,strftime('%s', file_mtime),file_chmod,file_seg_num,is_complete "
                       "       FROM FileState "
                       "       WHERE type = 0 AND filename = ?", -1, &stmt, 0);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFile before" << sqlite3_errmsg(m_db));
   sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
 
   FileItemPtr retval;
@@ -200,7 +200,7 @@ FileState::LookupFile(const std::string &filename)
     retval->set_seg_num(sqlite3_column_int64(stmt, 7));
     retval->set_is_complete(sqlite3_column_int(stmt, 8));
   }
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "LookupFile after " << sqlite3_errmsg(m_db));
   sqlite3_finalize(stmt);
 
   return retval;
@@ -214,9 +214,9 @@ FileState::LookupFilesForHash(const ndn::Buffer &hash)
                       "SELECT filename,version,device_name,seq_no,file_hash,strftime('%s', file_mtime),file_chmod,file_seg_num,is_complete "
                       "   FROM FileState "
                       "   WHERE type = 0 AND file_hash = ?", -1, &stmt, 0);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFilesForHash before bind: " << sqlite3_errmsg(m_db));
   sqlite3_bind_blob(stmt, 1, hash.buf(), hash.size(), SQLITE_STATIC);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFilesForHash after bind: " << sqlite3_errmsg(m_db));
 
   FileItemsPtr retval = boost::make_shared<FileItems>();
   while (sqlite3_step(stmt) == SQLITE_ROW)
@@ -234,7 +234,7 @@ FileState::LookupFilesForHash(const ndn::Buffer &hash)
 
       retval->push_back(file);
     }
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "LookupFilesForHash finish: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 
@@ -274,7 +274,7 @@ FileState::LookupFilesInFolder(const boost::function<void(const FileItem&)> &vis
       visitor(file);
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "LookupFilesInFolder " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 }
@@ -308,10 +308,10 @@ FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileI
                           "   WHERE type = 0 AND is_dir_prefix(?, directory)=1 "
                           "   ORDER BY filename "
                           "   LIMIT ? OFFSET ?", -1, &stmt, 0); // there is a small ambiguity with is_prefix matching, but should be ok for now
-      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFilesInFolderRecursively before bind" << sqlite3_errmsg(m_db));
 
       sqlite3_bind_text(stmt, 1, folder.c_str(), folder.size(), SQLITE_STATIC);
-      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+      _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFilesInFolderRecursively after bind" << sqlite3_errmsg(m_db));
 
       sqlite3_bind_int(stmt, 2, limit);
       sqlite3_bind_int(stmt, 3, offset);
@@ -328,7 +328,7 @@ FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileI
       sqlite3_bind_int(stmt, 2, offset);
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "LookupFilesInFolderRecursively before while" << sqlite3_errmsg(m_db));
 
   while (sqlite3_step(stmt) == SQLITE_ROW)
     {
@@ -350,7 +350,7 @@ FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileI
       limit --;
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "LookupFilesInFolderRecursively finish: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 

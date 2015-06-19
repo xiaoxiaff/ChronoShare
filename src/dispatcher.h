@@ -22,6 +22,7 @@
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
+#include "digest-computer.h"
 #include "action-log.h"
 #include "sync-core.h"
 #include "executor.h"
@@ -78,30 +79,6 @@ public:
   inline void
   LookupRecentFileActions(const boost::function<void(const std::string &, int, int)> &visitor, int limit) { m_actionLog->LookupRecentFileActions(visitor, limit); }
 
-  ndn::ConstBufferPtr
-  fromFile(const boost::filesystem::path &filename) 
-  {
-    m_digest.reset();
-    boost::filesystem::ifstream iff(filename, std::ios::in | std::ios::binary);
-    while (iff.good())
-    {
-      char buf[1024];
-      iff.read(buf, 1024);
-      m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
-    }
-    return m_digest.computeDigest();
-  }
-
-  static std::string
-  hashToString(const ndn::Buffer &digest) {
-    using namespace CryptoPP;
-
-    std::string hash;
-    StringSource(digest.buf(), digest.size(), true,
-                 new HexEncoder(new StringSink(hash), false));
-    return hash;
-  }
-
 
 private:
   void
@@ -138,7 +115,7 @@ private:
   Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg);
 
   void
-  Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, boost::shared_ptr<ndn::Data> actionData);
+  Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn::Name &actionName, uint32_t seqno, ndn::shared_ptr<ndn::Data> actionData);
 
   void
   Did_ActionLog_ActionApply_Delete(const std::string &filename);
@@ -151,10 +128,10 @@ private:
   //                                        ndn::ConstBufferPtr hash, time_t m_time, int mode, int seg_num);
 
   void
-  Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData);
+  Did_FetchManager_FileSegmentFetch(const ndn::Name &deviceName, const ndn::Name &fileSegmentName, uint32_t segment, ndn::shared_ptr<ndn::Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, boost::shared_ptr<ndn::Data> fileSegmentData);
+  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName, uint32_t segment, ndn::shared_ptr<ndn::Data> fileSegmentData);
 
   void
   Did_FetchManager_FileFetchComplete(const ndn::Name &deviceName, const ndn::Name &fileBaseName);
@@ -207,8 +184,8 @@ private:
 
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
+  DigestComputer m_digestComputer;
 
-  mutable ndn::util::Sha256 m_digest;
 };
 
 namespace Error

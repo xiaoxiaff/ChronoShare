@@ -33,7 +33,7 @@ class FetchManager;
 class Fetcher
 {
 public:
-  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, boost::shared_ptr<ndn::Data> pco)> SegmentCallback;
+  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, ndn::shared_ptr<ndn::Data> pco)> SegmentCallback;
   typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
   typedef boost::function<void(Fetcher &, const ndn::Name &deviceName, const ndn::Name &baseName)> OnFetchCompleteCallback;
   typedef boost::function<void(Fetcher &)> OnFetchFailedCallback;

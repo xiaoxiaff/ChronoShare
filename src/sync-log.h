@@ -23,6 +23,7 @@
 #define SYNC_LOG_H
 
 #include "db-helper.h"
+#include "digest-computer.h"
 #include <sync-state.pb.h>
 #include <ndn-cxx/name.hpp>
 #include <map>
@@ -105,6 +106,7 @@ protected:
   typedef boost::unique_lock<Mutex> WriteLock;
 
   Mutex m_stateUpdateMutex;
+  DigestComputer m_digestComputer;
 };
 
 typedef boost::shared_ptr<SyncLog> SyncLogPtr;

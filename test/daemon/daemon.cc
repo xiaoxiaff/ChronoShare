@@ -23,7 +23,6 @@
 #include <iostream>
 #include <Ice/Service.h>
 #include <Ice/Identity.h>
-#include <ccnx-wrapper.h>
 
 #include "notify-i.h"
 #include <boost/make_shared.hpp>
