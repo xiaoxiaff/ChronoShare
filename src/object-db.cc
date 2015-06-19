@@ -160,7 +160,7 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
   sqlite3_bind_int64(stmt, 2, segment);
 
   ndn::BufferPtr ret;
-  boost::shared_ptr<Data> data = boost::make_shared<Data>();
+  ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
 
   int res = sqlite3_step(stmt);
   if (res == SQLITE_ROW)

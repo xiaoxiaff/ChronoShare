@@ -45,8 +45,6 @@ public:
   // so that ContentServer knows where to look for the content object
   void registerPrefix(const ndn::Name &prefix);
   void deregisterPrefix(const ndn::Name &prefix);
-  std::string
-  hashToString(const ndn::Buffer &digest);
 
 private:
   void

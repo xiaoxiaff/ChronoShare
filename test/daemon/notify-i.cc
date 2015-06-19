@@ -20,7 +20,6 @@
  */
 
 #include "notify-i.h"
-#include <hash-helper.h>
 
 using namespace std;
 using namespace boost;

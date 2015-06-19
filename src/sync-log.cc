@@ -114,6 +114,7 @@ SyncLog::SyncLog(const boost::filesystem::path &path, const ndn::Name &localName
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       m_localDeviceId = sqlite3_column_int64(stmt, 0);
+      std::cout << "m_localDeviceId " << m_localDeviceId <<std::endl;   
     }
   else
     {
@@ -203,7 +204,9 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
   int stepRes = sqlite3_step(getHashStmt);
   if (stepRes == SQLITE_ROW)
     {
+      std::cout << "HEHEHEHEH" << std::endl;
       retval = ndn::make_shared<ndn::Buffer>(static_cast<const uint8_t*>(sqlite3_column_blob(getHashStmt, 0)), sqlite3_column_bytes(getHashStmt, 0));
+      std::cout << "AFTER" << std::endl;
     }
   else
     {
@@ -223,6 +226,8 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
                              << errmsg_info_str("Some error with rememberStateInStateLog"));
     }
 
+  std::cout << "rememberinStateLog by lijing "  << std::endl;
+//  std::cout << "rememberinStateLog by lijing " << DigestComputer::digestToString(*retval) << std::endl;
   return retval;
 }
 

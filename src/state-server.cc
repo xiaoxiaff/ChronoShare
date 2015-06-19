@@ -161,7 +161,7 @@ StateServer::formatActionJson(json_spirit::Array &actions,
     {
       Object update;
       const ndn::Buffer hash(action.file_hash().c_str(), action.file_hash().size());
-      update.push_back(Pair("hash", hashToString(hash)));
+      update.push_back(Pair("hash", DigestComputer::digestToString(hash)));
       update.push_back(Pair("timestamp", to_iso_extended_string(from_time_t(action.mtime()))));
 
       ostringstream chmod;
@@ -273,7 +273,7 @@ StateServer::info_actions_fileOrFolder_Execute(const ndn::Name &interest, bool i
   ostringstream os;
 	write_stream(Value(json), os, pretty_print | raw_utf8);
 
-  boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
 	data->setName(interest);
 	data->setFreshnessPeriod(time::seconds(60));
 	data->setContent(reinterpret_cast<const uint8_t*>(os.str().c_str()), os.str().size());
@@ -321,7 +321,7 @@ StateServer::formatFilestateJson(json_spirit::Array &files, const FileItem &file
     json.push_back(Pair("owner", owner));
   }
 
-  json.push_back(Pair("hash", hashToString(ndn::Buffer(file.file_hash().c_str(), file.file_hash().size()))));
+  json.push_back(Pair("hash", DigestComputer::digestToString(ndn::Buffer(file.file_hash().c_str(), file.file_hash().size()))));
   json.push_back(Pair("timestamp", to_iso_extended_string(from_time_t(file.mtime()))));
 
   ostringstream chmod;
@@ -405,7 +405,7 @@ StateServer::info_files_folder_Execute(const ndn::Name &interest)
   ostringstream os;
   write_stream(Value(json), os, pretty_print | raw_utf8);
 
-  boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
 	data->setName(interest);
 	data->setFreshnessPeriod(time::seconds(60));
 	data->setContent(reinterpret_cast<const uint8_t*>(os.str().c_str()), os.str().size());
@@ -448,7 +448,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
           file = m_actionLog->LookupAction(filename, version, hash);
           if (!file)
             {
-              _LOG_ERROR("Requested file is not found: [" << filename << "] version [" << version << "] hash [" << hashToString(hash) << "]");
+              _LOG_ERROR("Requested file is not found: [" << filename << "] version [" << version << "] hash [" << DigestComputer::digestToString(hash) << "]");
             }
         }
       else
@@ -464,7 +464,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
 
       if (!file)
         {
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
       		data->setName(interest);
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: Requested file is not found";
@@ -490,9 +490,9 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
 #if BOOST_VERSION >= 104900
               filesystem::status(filePath).permissions() == static_cast<filesystem::perms>(file->mode()) &&
 #endif
-              *fromFile(filePath) == hash)
+              *m_digestComputer.digestFromFile(filePath) == hash)
             {
-              boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+              ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
       		    data->setName(interest);
       		    data->setFreshnessPeriod(time::seconds(60));
       		    string msg = "OK: File already exists";
@@ -505,7 +505,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
         }
       catch(filesystem::filesystem_error &error)
         {
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
       		data->setName(interest);
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: File operation failed";
@@ -522,7 +522,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
 #if BOOST_VERSION >= 104900
           permissions(filePath, static_cast<filesystem::perms>(file->mode()));
 #endif
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
       		data->setName(interest);
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "OK";
@@ -532,7 +532,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
         }
       else
         {
-          boost::shared_ptr<ndn::Data> data = boost::make_shared<ndn::Data>();
+          ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
       		data->setName(interest);
       		data->setFreshnessPeriod(time::seconds(60));
       		string msg = "FAIL: Unknown error while restoring file";
@@ -542,16 +542,3 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
         }
 }
 
-ndn::ConstBufferPtr
-StateServer::fromFile(const fs::path &filename) 
-{
-  m_digest.reset();
-  fs::ifstream iff(filename, std::ios::in | std::ios::binary);
-  while (iff.good())
-  {
-    char buf[1024];
-    iff.read(buf, 1024);
-    m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
-  }
-  return m_digest.computeDigest();
-}

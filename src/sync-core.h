@@ -73,9 +73,6 @@ public:
   sqlite3_int64
   seq (const ndn::Name &name);
 
-  std::string
-  printDigest(ndn::ConstBufferPtr digest);
-
 private:
   void
   handleInterest(const ndn::Name &name);

@@ -52,28 +52,15 @@ ObjectManager::~ObjectManager()
 {
 }
 
-ndn::ConstBufferPtr
-ObjectManager::fromFile(const fs::path &filename) 
-{
-  m_digest.reset();
-  fs::ifstream iff(filename, std::ios::in | std::ios::binary);
-  while (iff.good())
-  {
-    char buf[1024];
-    iff.read(buf, 1024);
-    m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
-  }
-  return m_digest.computeDigest();
-}
 // /<devicename>/<appname>/file/<hash>/<segment>
 boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
 ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceName)
 {
-  ndn::ConstBufferPtr fileHash = fromFile(file);
-  _LOG_DEBUG("fileHash size " << fileHash->size() << " fileHash content " << m_digest.toString());
+  ndn::ConstBufferPtr fileHash = m_digestComputer.digestFromFile(file);
+  _LOG_DEBUG("fileHash size " << fileHash->size() << " fileHash content " << DigestComputer::digestToString(*fileHash));
 
   _LOG_DEBUG("file " << file);
-  ObjectDb fileDb(m_folder, m_digest.toString());
+  ObjectDb fileDb(m_folder, DigestComputer::digestToString(*fileHash));
 
   fs::ifstream iff(file, std::ios::in | std::ios::binary);
   sqlite3_int64 segment = 0;
@@ -95,7 +82,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       // cout << name << endl;
       //_LOG_DEBUG("Read " << iff.gcount() << " from " << file << " for segment " << segment);
 
-      boost::shared_ptr<Data> data = boost::make_shared<Data>();
+      ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(60));
       data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
@@ -111,7 +98,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
       ndn::Name name = ndn::Name("/");
       name.append(m_appName).append("file").append(ndn::name::Component(*fileHash)).append(deviceName).appendNumber(0);
 
-      boost::shared_ptr<Data> data = boost::make_shared<Data>();
+      ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
       data->setName(name);
       data->setFreshnessPeriod(time::seconds(0));
       data->setContent(0, 0);
@@ -129,7 +116,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
 bool
 ObjectManager::objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const ndn::Buffer &fileHash, /*out*/ const fs::path &file)
 {
-  string hashStr = hashToString(fileHash);
+  string hashStr = DigestComputer::digestToString(fileHash);
   if (!ObjectDb::DoesExist(m_folder, deviceName, hashStr))
     {
       _LOG_ERROR("ObjectDb for [" << m_folder << ", " << deviceName << ", " << hashStr << "] does not exist or not all segments are available");
@@ -161,15 +148,4 @@ ObjectManager::objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const
   // permission and timestamp should be assigned somewhere else(ObjectManager has no idea about that)
 
   return true;
-}
-
-std::string
-ObjectManager::hashToString(const ndn::Buffer &digest)
-{
-  using namespace CryptoPP;
-
-  std::string hash;
-  StringSource(digest.buf(), digest.size(), true,
-               new HexEncoder(new StringSink(hash), false));
-  return hash;
 }
