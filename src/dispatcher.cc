@@ -17,6 +17,7 @@
  *
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "dispatcher.h"
@@ -356,13 +357,14 @@ Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn:
 
   if (action->action() == ActionItem::UPDATE)
     {
-      ndn::Buffer hash(action->file_hash().c_str(), action->file_hash().size());
+      ndn::ConstBufferPtr hash = ndn::make_shared<ndn::Buffer>(action->file_hash().c_str(), action->file_hash().size());
 
       ndn::Name fileNameBase = ndn::Name("/");
       fileNameBase.append(deviceName).append(CHRONOSHARE_APP).append("file");
-      fileNameBase.append(ndn::name::Component(hash));
+//      fileNameBase.append(ndn::name::Component(hash));
+      fileNameBase.appendImplicitSha256Digest(hash);
 
-      string hashStr = DigestComputer::digestToString(hash);
+      string hashStr = DigestComputer::digestToString(*hash);
       if (ObjectDb::DoesExist(m_rootDir / ".chronoshare",  deviceName, hashStr))
         {
           _LOG_DEBUG("File already exists in the database. No need to refetch, just directly applying the action");
@@ -370,10 +372,10 @@ Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name &deviceName, const ndn:
         }
       else
         {
-          if (m_objectDbMap.find(hash) == m_objectDbMap.end())
+          if (m_objectDbMap.find(*hash) == m_objectDbMap.end())
             {
-              _LOG_DEBUG("create ObjectDb for " << DigestComputer::digestToString(hash));
-              m_objectDbMap [hash] = boost::make_shared<ObjectDb>(m_rootDir / ".chronoshare", hashStr);
+              _LOG_DEBUG("create ObjectDb for " << DigestComputer::digestToString(*hash));
+              m_objectDbMap[*hash] = boost::make_shared<ObjectDb>(m_rootDir / ".chronoshare", hashStr);
             }
 
           m_fileFetcher->Enqueue(deviceName, fileNameBase,

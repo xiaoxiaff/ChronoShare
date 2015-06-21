@@ -17,6 +17,7 @@
  *
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef DISPATCHER_H

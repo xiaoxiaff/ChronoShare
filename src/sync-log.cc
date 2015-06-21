@@ -102,7 +102,7 @@ SyncLog::SyncLog(const boost::filesystem::path &path, const ndn::Name &localName
   , m_localName(localName)
 {
   sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, NULL);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "DB Constructer: " << sqlite3_errmsg(m_db));
 
   UpdateDeviceSeqNo(localName, 0);
 
@@ -136,7 +136,7 @@ SyncLog::GetNextLocalSeqNo()
                              << errmsg_info_str("Impossible thing in SyncLog::GetNextLocalSeqNo"));
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "DB GetNextLocalSeqNo: " << sqlite3_errmsg(m_db));
 
   sqlite3_int64 seq_no = sqlite3_column_int64(stmt_seq, 0) + 1;
   sqlite3_finalize(stmt_seq);
@@ -310,7 +310,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
                              << errmsg_info_str("Some error with UpdateDeviceSeqNo(id)"));
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "UpdateDeviceSeqNo: " << sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "DB UpdateDeviceSeqNo: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 }

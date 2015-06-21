@@ -52,6 +52,18 @@ class DigestComputer
     return hash;
   }
 
+  static ndn::Buffer 
+  digestFromString(std::string hash) {
+    using namespace CryptoPP;
+    
+    std::string digestStr;
+    StringSource(hash, true,
+                 new HexDecoder(new StringSink(digestStr)));
+    ndn::Buffer digest(reinterpret_cast<const uint8_t*>(digestStr.c_str()), digestStr.size());
+
+    return digest;
+  }
+
   static std::string
   shortDigest(const ndn::Buffer &digest) {
     using namespace CryptoPP;

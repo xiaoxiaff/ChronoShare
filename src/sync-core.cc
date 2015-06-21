@@ -17,6 +17,7 @@
  *
  * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "sync-core.h"
