@@ -21,6 +21,7 @@
 #include "dispatcher.h"
 #include "logging.h"
 #include "fs-watcher.h"
+#include "sync-core.h"
 
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
@@ -86,14 +87,14 @@ public:
   {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(m_db,
-                        "SELECT state_hash, last_update, state_id "
+                        "SELECT state_hash, last_update, state_id, last_update "
                         "   FROM SyncLog "
                         "   ORDER BY last_update", -1, &stmt, 0);
 
     cout.setf(std::ios::left, std::ios::adjustfield);
     cout << ">> SYNC LOG <<" << endl;
     cout << "====================================================================================" << endl;
-    cout << setw(10) << "state_hash" << " | state details " << endl;
+    cout << setw(10) << "state_hash" << " | state details " << endl;    
     cout << "====================================================================================" << endl;
 
     while (sqlite3_step(stmt) == SQLITE_ROW)
@@ -120,6 +121,8 @@ public:
         sqlite3_finalize(stmt2);
 
         cout << endl;
+
+        sqlite3_finalize(stmt2);
       }
     sqlite3_finalize(stmt);
   }
@@ -179,18 +182,6 @@ public:
     sqlite3_finalize(stmt);
   }
 
-  boost::shared_ptr<ActionItem>
-  deserializeMsg(const ndn::Block &content)
-  {
-  	boost::shared_ptr<ActionItem> retval(new ActionItem());
-  	if (!retval->ParseFromArray(content.value(), content.value_size()))
-  	{
-  		// to indicate an error
-  		return boost::shared_ptr<ActionItem>();
-  	}
-  	return retval;
-  }
-
   void
   DumpActionData(const ndn::Name &deviceName, int64_t seqno)
   {
@@ -202,15 +193,14 @@ public:
     cout << "Dumping action data for: [" << deviceName << ", " << seqno << "]" <<endl;
     if (sqlite3_step(stmt) == SQLITE_ROW)
     {
-      ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
-      // TODO Check 1 or 0
-      ndn::Name actionName = Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))));
-      if (pco)
+      ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
+      ndn::Name actionName = Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1))));
+      if (data)
       {
-        ActionItemPtr action = deserializeMsg(pco->getContent());
+        ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
         if (action)
         {
-          cout << "Action data size : " << pco->getContent().size() << endl;
+          cout << "Action data size : " << data->getContent().size() << endl;
           cout << "Action data name : " << actionName << endl;
           string type = action->action() == ActionItem::UPDATE ? "UPDATE" : "DELETE";
           cout << "Action Type = " << type << endl;
@@ -228,12 +218,12 @@ public:
         }
         else
         {
-          cerr << "Error! Failed to parse action from pco! " << endl;
+          cerr << "Error! Failed to parse action from data! " << endl;
         }
       }
       else
       {
-        cerr << "Error! Invalid pco! " << endl;
+        cerr << "Error! Invalid data! " << endl;
       }
     }
     else

@@ -4,9 +4,10 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
+#include <thread>
 
 using namespace std;
-using namespace Ccnx;
+using namespace ndn;
 using namespace boost;
 using namespace boost::filesystem;
 
@@ -16,6 +17,7 @@ BOOST_AUTO_TEST_SUITE(SyncCoreTests)
 
 void callback(const SyncStateMsgPtr &msg)
 {
+  std::cout << "Callback I'm called!!!!" << std::endl;
   BOOST_CHECK(msg->state_size() > 0);
   int size = msg->state_size();
   int index = 0;
@@ -32,9 +34,19 @@ void callback(const SyncStateMsgPtr &msg)
   }
 }
 
-void checkRoots(const HashPtr &root1, const HashPtr &root2)
+void listen(boost::shared_ptr<ndn::Face> face)
 {
-  BOOST_CHECK_EQUAL(*root1, *root2);
+  face->processEvents();
+  // do stuff...
+}
+
+void checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
+{
+  std::cout << "I'm checking rootDigest!!" << std::endl;
+  std::cout << "root1 " << DigestComputer::shortDigest(*root1) << std::endl;
+  std::cout << "root2 " << DigestComputer::shortDigest(*root2) << std::endl;
+  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
+  std::cout << "checking rootDigest Over!!" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(SyncCoreTest)
@@ -51,22 +63,30 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
 
   string dir1 = "./SyncCoreTest/1";
   string dir2 = "./SyncCoreTest/2";
-  Name user1("/joker");
-  Name loc1("/gotham1");
-  Name user2("/darkknight");
-  Name loc2("/gotham2");
-  Name syncPrefix("/broadcast/darkknight");
-  CcnxWrapperPtr c1(new CcnxWrapper());
-  CcnxWrapperPtr c2(new CcnxWrapper());
-  SyncLogPtr log1(new SyncLog(dir1, user1.toString()));
-  SyncLogPtr log2(new SyncLog(dir2, user2.toString()));
+  Name user1("/shuai");
+  Name loc1("/locator1");
+  Name user2("/loli");
+  Name loc2("/locator2");
+  Name syncPrefix("/broadcast/arslan");
+  boost::shared_ptr<ndn::Face> c1 = boost::make_shared<ndn::Face>();
+  boost::shared_ptr<ndn::Face> c2 = boost::make_shared<ndn::Face>();
+  SyncLogPtr log1(new SyncLog(dir1, user1));
+  SyncLogPtr log2(new SyncLog(dir2, user2));
 
-  SyncCore *core1 = new SyncCore(log1, user1, loc1, syncPrefix, bind(callback, _1), c1);
+  SyncCore *core1 = new SyncCore(c1, log1, user1, loc1, syncPrefix, bind(callback, _1));
   usleep(10000);
-  SyncCore *core2 = new SyncCore(log2, user2, loc2, syncPrefix, bind(callback, _1), c2);
+  SyncCore *core2 = new SyncCore(c2, log2, user2, loc2, syncPrefix, bind(callback, _1));
 
-  sleep(1);
+  std::cout << "Before processEvents" <<std::endl;
+  std::thread c1_listeningThread(listen, c1);
+  std::cout << "Before 2--- processEvents" <<std::endl;
+  std::thread c2_listeningThread(listen, c2);
+  sleep(2);
+//  c1_listeningThread.join();
+//  c2_listeningThread.join();
+//  std::cout << "After join" <<std::endl;
   checkRoots(core1->root(), core2->root());
+//  sleep(100);
 
   // _LOG_TRACE ("\n\n\n\n\n\n----------\n");
 
@@ -74,7 +94,7 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   usleep(100000);
   checkRoots(core1->root(), core2->root());
   BOOST_CHECK_EQUAL(core2->seq(user1), 1);
-  BOOST_CHECK_EQUAL(log2->LookupLocator (user1), loc1);
+  BOOST_CHECK_EQUAL(log2->LookupLocator(user1), loc1);
 
   core1->updateLocalState(5);
   usleep(100000);
@@ -108,6 +128,11 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   // clean the test dir
   if (exists(d))
   {
+    std::cout << "Clear ALLLLLLLL" << std::endl;
+    c1->shutdown();
+    c2->shutdown();
+    c1_listeningThread.detach();
+    c2_listeningThread.detach();
     remove_all(d);
   }
 }

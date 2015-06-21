@@ -164,7 +164,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
 
   int64_t segment = name.get(-1).toNumber();
   ndn::Name deviceName = name.getSubName(0, name.size() - 4);
-  ndn::Buffer hash(name.get(-2).value(), name.get(-2).size());
+  ndn::Buffer hash(name.get(-2).value(), name.get(-2).value_size());
 
   _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash) << " segment: " << segment);
 

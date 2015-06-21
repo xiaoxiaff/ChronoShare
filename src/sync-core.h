@@ -29,6 +29,70 @@
 #include <ndn-cxx/face.hpp>
 
 #include <boost/function.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
+#include <boost/make_shared.hpp>
+
+template<class Msg>
+ndn::BufferPtr
+serializeMsg(const Msg &msg)
+{
+  int size = msg.ByteSize();
+  ndn::BufferPtr bytes = std::make_shared<ndn::Buffer>(size);
+  msg.SerializeToArray(bytes->buf(), size);
+  return bytes;
+}
+
+template<class Msg>
+boost::shared_ptr<Msg>
+deserializeMsg(const ndn::Buffer &bytes)
+{
+  boost::shared_ptr<Msg> retval(new Msg());
+  if (!retval->ParseFromArray(bytes.buf(), bytes.size()))
+    {
+      // to indicate an error
+      return boost::shared_ptr<Msg>();
+    }
+  return retval;
+}
+
+template<class Msg>
+ndn::BufferPtr
+serializeGZipMsg(const Msg &msg)
+{
+  std::vector<char> bytes;   // Bytes couldn't work
+  {
+    boost::iostreams::filtering_ostream out;
+    out.push(boost::iostreams::gzip_compressor()); // gzip filter
+    out.push(boost::iostreams::back_inserter(bytes)); // back_inserter sink
+
+    msg.SerializeToOstream(&out);
+  }
+  ndn::BufferPtr uBytes = std::make_shared<ndn::Buffer>(bytes.size());
+  memcpy(&(*uBytes)[0], &bytes[0], bytes.size());
+  return uBytes;
+}
+
+template<class Msg>
+boost::shared_ptr<Msg>
+deserializeGZipMsg(const ndn::Buffer &bytes)
+{
+  std::vector<char> sBytes(bytes.size());
+  memcpy(&sBytes[0], &bytes[0], bytes.size());
+  boost::iostreams::filtering_istream in;
+  in.push(boost::iostreams::gzip_decompressor()); // gzip filter
+  in.push(boost::make_iterator_range(sBytes)); // source
+
+  boost::shared_ptr<Msg> retval = boost::make_shared<Msg>();
+  if (!retval->ParseFromIstream(&in))
+    {
+      // to indicate an error
+      return boost::shared_ptr<Msg>();
+    }
+
+  return retval;
+}
 
 class SyncCore
 {
@@ -75,7 +139,16 @@ public:
 
 private:
   void
-  handleInterest(const ndn::Name &name);
+  handleInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
+
+  void
+  onRegisterFailed(const ndn::Name& prefix, const std::string& reason)
+  {
+    std::cerr << "ERROR: Failed to register prefix \""
+              << prefix << "\" in local hub's daemon (" << reason << ")"
+              << std::endl;
+    m_face->shutdown();
+  }
 
   void
   handleSyncData(const ndn::Interest &interest, ndn::Data &data);

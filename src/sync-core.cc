@@ -28,10 +28,6 @@
 #include "digest-computer.h"
 
 #include <boost/lexical_cast.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
 
 INIT_LOGGER("Sync.Core");
 
@@ -60,7 +56,11 @@ SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name 
 {
   m_rootDigest = m_log->RememberStateInStateLog();
 
-  m_face->setInterestFilter(m_syncPrefix, boost::bind(&SyncCore::handleInterest, this, _1));
+//  m_face->setInterestFilter(m_syncPrefix, boost::bind(&SyncCore::handleInterest, this, _1));
+  m_face->setInterestFilter(m_syncPrefix,
+                           boost::bind(&SyncCore::handleInterest, this, _1, _2),
+                           RegisterPrefixSuccessCallback(),
+                           boost::bind(&SyncCore::onRegisterFailed, this, _1, _2));
   // m_log->initYP(m_yp);
   m_log->UpdateLocalLocator(localPrefix);
 
@@ -85,43 +85,6 @@ SyncCore::updateLocalState(sqlite3_int64 seqno)
   localStateChanged();
 }
 
-template<class Msg>
-ndn::BufferPtr
-serializeGZipMsg(const Msg &msg)
-{
-  std::vector<char> bytes;   // Bytes couldn't work
-  {
-    boost::iostreams::filtering_ostream out;
-    out.push(boost::iostreams::gzip_compressor()); // gzip filter
-    out.push(boost::iostreams::back_inserter(bytes)); // back_inserter sink
-
-    msg.SerializeToOstream(&out);
-  }
-  BufferPtr uBytes = std::make_shared<Buffer>(bytes.size());
-  memcpy(&(*uBytes)[0], &bytes[0], bytes.size());
-  return uBytes;
-}
-
-template<class Msg>
-boost::shared_ptr<Msg>
-deserializeGZipMsg(const ndn::Buffer &bytes)
-{
-  std::vector<char> sBytes(bytes.size());
-  memcpy(&sBytes[0], &bytes[0], bytes.size());
-  boost::iostreams::filtering_istream in;
-  in.push(boost::iostreams::gzip_decompressor()); // gzip filter
-  in.push(boost::make_iterator_range(sBytes)); // source
-
-  boost::shared_ptr<Msg> retval = boost::make_shared<Msg>();
-  if (!retval->ParseFromIstream(&in))
-    {
-      // to indicate an error
-      return boost::shared_ptr<Msg>();
-    }
-
-  return retval;
-}
-
 void
 SyncCore::localStateChanged()
 {
@@ -133,7 +96,8 @@ SyncCore::localStateChanged()
   // reply sync Interest with oldDigest as last component
 
   Name syncName(m_syncPrefix);
-  syncName.append(ndn::name::Component(*oldDigest));
+  syncName.appendImplicitSha256Digest(oldDigest);
+//  syncName.append(ndn::name::Component(*oldDigest));
 
   BufferPtr syncData = serializeGZipMsg(*msg);
 
@@ -147,7 +111,7 @@ SyncCore::localStateChanged()
 
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] localStateChanged ");
   _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes: " << DigestComputer::digestToString(*oldDigest));
-  // _LOG_TRACE(msg);
+  _LOG_TRACE(msg);
 
   m_scheduler->deleteTask(SYNC_INTEREST_TAG2);
   // no hurry in sending out new Sync Interest; if others send the new Sync Interest first, no problem, we know the new root digest already;
@@ -169,8 +133,10 @@ SyncCore::localStateChangedDelayed()
 }
 
 void
-SyncCore::handleInterest(const Name &name)
+SyncCore::handleInterest(const InterestFilter& filter, const Interest& interest)
 {
+  ndn::Name name = interest.getName();
+  _LOG_DEBUG("handleInterest interest name: " << name);
   int size = name.size();
   int prefixSize = m_syncPrefix.size();
   if (size == prefixSize + 1)
@@ -188,14 +154,18 @@ SyncCore::handleInterest(const Name &name)
 void
 SyncCore::handleRecoverInterest(const Name &name)
 {
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< RECOVER Interest with name " << name);
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< handle RECOVER Interest with name " << name);
 
   ndn::ConstBufferPtr digest = ndn::make_shared<ndn::Buffer>(name.get(-1).value(), name.get(-1).value_size());
   // this is the digest unkonwn to the sender of the interest
+  _LOG_DEBUG("rootDigest: " << DigestComputer::digestToString(*digest));
   if (m_log->LookupSyncLog(*digest) > 0)
   {
+     _LOG_DEBUG("Find in our sync_log! " << DigestComputer::digestToString(*digest));
     // we know the digest, should reply everything
-    ndn::BufferPtr origin(0);
+    unsigned char _origin = 0;
+    ndn::BufferPtr origin = ndn::make_shared<ndn::Buffer>(_origin);
+    std::cout << "size of origin " << origin->size() << std::endl;
     SyncStateMsgPtr msg = m_log->FindStateDifferences(*origin, *m_rootDigest);
 
     BufferPtr syncData = serializeGZipMsg(*msg);
@@ -213,12 +183,13 @@ SyncCore::handleRecoverInterest(const Name &name)
     {
       // we don't recognize this digest, can not help
     }
+  _LOG_DEBUG("handleRecoverInterest Over");
 }
 
 void
 SyncCore::handleSyncInterest(const Name &name)
 {
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< SYNC Interest with name " << name);
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< handle SYNC Interest with name " << name);
 
   ndn::ConstBufferPtr digest = ndn::make_shared<ndn::Buffer>(name.get(-1).value(), name.get(-1).value_size());
   if (*digest == *m_rootDigest)
@@ -275,7 +246,7 @@ SyncCore::handleRecoverInterestTimeout(const Interest &interest)
 void
 SyncCore::handleRecoverData(const Interest &interest, Data &data)
 {
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< RECOVER DATA with interest: " << interest.toUri());
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< receive RECOVER DATA with interest: " << interest.toUri());
   //cout << "handle recover data" << end;
   const Block &content = data.getContent();
   if (content.value() && content.size() > 0)
@@ -297,7 +268,7 @@ SyncCore::handleRecoverData(const Interest &interest, Data &data)
 void
 SyncCore::handleSyncData(const Interest &interest, Data &data)
 {
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< SYNC DATA with interest: " << interest.toUri());
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< receive SYNC DATA with interest: " << interest.toUri());
 
   const Block &content = data.getContent();
   // suppress recover in interest - data out of order case
@@ -322,6 +293,7 @@ SyncCore::handleSyncData(const Interest &interest, Data &data)
 void
 SyncCore::handleStateData(const Buffer &content)
 {
+  _LOG_DEBUG("handleStateData Begin");
   SyncStateMsgPtr msg = deserializeGZipMsg<SyncStateMsg>(content);
   if (!(msg))
   {
@@ -339,17 +311,17 @@ SyncCore::handleStateData(const Buffer &content)
     SyncState state = msg->state(index);
     string devStr = state.name();
     Name deviceName(ndn::Block((const unsigned char *)devStr.c_str(), devStr.size()));
-  //  cout << "Got Name: " << deviceName;
+    cout << "Got Name: " << deviceName;
     if (state.type() == SyncState::UPDATE)
     {
       sqlite3_int64 seqno = state.seq();
-   //   cout << ", Got seq: " << seqno << endl;
+      cout << ", Got seq: " << seqno << endl;
       m_log->UpdateDeviceSeqNo(deviceName, seqno);
       if (state.has_locator())
       {
         string locStr = state.locator();
         Name locatorName(ndn::Block((const unsigned char *)locStr.c_str(), locStr.size()));
-    //    cout << ", Got loc: " << locatorName << endl;
+        cout << ", Got loc: " << locatorName << endl;
         m_log->UpdateLocator(deviceName, locatorName);
 
         _LOG_TRACE("self: " << m_log->GetLocalName() << ", device: " << deviceName << " < == > " << locatorName);
@@ -379,10 +351,10 @@ void
 SyncCore::sendSyncInterest()
 {
   Name syncInterest(m_syncPrefix);
-  syncInterest.append(ndn::name::Component(*m_rootDigest));
-//  syncInterest.append(reinterpret_cast<const uint8_t*>(m_rootDigest->GetDigest()), m_rootDigest->GetDigestBytes());
+//  syncInterest.append(ndn::name::Component(*m_rootDigest));
+  syncInterest.appendImplicitSha256Digest(m_rootDigest);
 
-  _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> SYNC Interest for " << DigestComputer::digestToString(*m_rootDigest) << ": " << syncInterest);
+  _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send SYNC Interest for " << DigestComputer::digestToString(*m_rootDigest) << ": " << syncInterest.toUri());
 
   Interest interest(syncInterest);
   if (m_syncInterestInterval > 0 && m_syncInterestInterval < 30)
@@ -408,8 +380,10 @@ SyncCore::recover(ndn::ConstBufferPtr digest)
     // unfortunately we still don't recognize this digest
     // append the unknown digest
     Name recoverInterest(m_syncPrefix);
-    recoverInterest.append(RECOVER).append(ndn::name::Component(*digest));
-    _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> RECOVER Interests for " << DigestComputer::digestToString(*digest));
+//    recoverInterest.append(RECOVER).append(ndn::name::Component(*digest));
+    recoverInterest.append(RECOVER).appendImplicitSha256Digest(digest);
+
+    _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send RECOVER Interests for " << DigestComputer::digestToString(*digest));
 
     m_face->expressInterest(recoverInterest,
     		boost::bind(&SyncCore::handleRecoverData, this, _1, _2),

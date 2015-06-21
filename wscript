@@ -200,10 +200,12 @@ def build (bld):
     if bld.env["TEST"]:
       unittests = bld.program (
           target="unit-tests",
-          source = bld.path.ant_glob(['test/test-sync-log.cc', 'test/main.cc']),
+          source = bld.path.ant_glob(['test/main.cc', 
+#'test/test-protobuf.cc', 
+                                      'test/test-sync-core.cc']),
           features=['cxx', 'cxxprogram'],
           use = 'BOOST chronoshare',
-          includes = "src .",
+          includes = "scheduler src executor gui fs-watcher",
           install_path = None,
           defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
           )

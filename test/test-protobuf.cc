@@ -1,4 +1,3 @@
-#include "ccnx-common.h"
 #include "sync-core.h"
 #include <boost/make_shared.hpp>
 #include <boost/test/unit_test.hpp>
@@ -8,7 +7,7 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/make_shared.hpp>
 
-using namespace Ccnx;
+using namespace ndn;
 using namespace std;
 using namespace boost;
 
@@ -17,7 +16,7 @@ BOOST_AUTO_TEST_SUITE(ProtobufTests)
 
 BOOST_AUTO_TEST_CASE (TestGzipProtobuf)
 {
-  SyncStateMsgPtr msg = make_shared<SyncStateMsg>();
+  SyncStateMsgPtr msg = boost::make_shared<SyncStateMsg>();
 
   SyncState *state = msg->add_state();
   state->set_type(SyncState::UPDATE);
@@ -26,9 +25,9 @@ BOOST_AUTO_TEST_CASE (TestGzipProtobuf)
   state->set_locator(&x[0], sizeof(x));
   state->set_name(&x[0], sizeof(x));
 
-  BytesPtr bb = serializeMsg<SyncStateMsg>(*msg);
+  ndn::ConstBufferPtr bb = serializeMsg<SyncStateMsg>(*msg);
 
-  BytesPtr cb = serializeGZipMsg<SyncStateMsg>(*msg);
+  ndn::ConstBufferPtr cb = serializeGZipMsg<SyncStateMsg>(*msg);
   BOOST_CHECK(cb->size() < bb->size());
   cout << cb->size() <<", " << bb->size() << endl;
 

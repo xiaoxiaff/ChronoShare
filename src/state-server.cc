@@ -441,7 +441,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
 
       if (interest.size() - m_PREFIX_CMD.size() == 5)
         {
-          const ndn::Buffer hash(interest.get(-1).value(), interest.get(-1).size());
+          const ndn::Buffer hash(interest.get(-1).value(), interest.get(-1).value_size());
 		      uint64_t version = interest.get(-2).toNumber();
 		      string  filename = interest.get(-3).toUri(); // should be safe even with full relative path
 

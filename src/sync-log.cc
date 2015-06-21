@@ -114,7 +114,6 @@ SyncLog::SyncLog(const boost::filesystem::path &path, const ndn::Name &localName
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       m_localDeviceId = sqlite3_column_int64(stmt, 0);
-      std::cout << "m_localDeviceId " << m_localDeviceId <<std::endl;   
     }
   else
     {
@@ -158,7 +157,7 @@ SyncLog::RememberStateInStateLog()
 INSERT INTO SyncLog                                                \
    (state_hash, last_update)                                      \
     SELECT                                                         \
-       hash(device_name, seq_no), datetime('now')                  \
+       hash(device_name, seq_no), datetime('now', 'localtime')                  \
     FROM(SELECT * FROM SyncNodes                                  \
               ORDER BY device_name);                               \
 ", 0,0,0);
@@ -204,9 +203,7 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
   int stepRes = sqlite3_step(getHashStmt);
   if (stepRes == SQLITE_ROW)
     {
-      std::cout << "HEHEHEHEH" << std::endl;
       retval = ndn::make_shared<ndn::Buffer>(static_cast<const uint8_t*>(sqlite3_column_blob(getHashStmt, 0)), sqlite3_column_bytes(getHashStmt, 0));
-      std::cout << "AFTER" << std::endl;
     }
   else
     {
@@ -226,8 +223,7 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
                              << errmsg_info_str("Some error with rememberStateInStateLog"));
     }
 
-  std::cout << "rememberinStateLog by lijing "  << std::endl;
-//  std::cout << "rememberinStateLog by lijing " << DigestComputer::digestToString(*retval) << std::endl;
+  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::digestToString(*retval));
   return retval;
 }
 
@@ -273,6 +269,7 @@ void
 SyncLog::UpdateDeviceSeqNo(const ndn::Name &name, sqlite3_int64 seqNo)
 {
   sqlite3_stmt *stmt;
+  std::cout << "Before UpdateDeviceSeqNo" << std::endl;
   // update is performed using trigger
   int res = sqlite3_prepare(m_db, "INSERT INTO SyncNodes(device_name, seq_no) VALUES(?,?);",
                              -1, &stmt, 0);
@@ -313,7 +310,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
                              << errmsg_info_str("Some error with UpdateDeviceSeqNo(id)"));
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "UpdateDeviceSeqNo: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 }
@@ -353,7 +350,7 @@ void
 SyncLog::UpdateLocator(const Name &deviceName, const Name &locator)
 {
   sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(m_db, "UPDATE SyncNodes SET last_known_locator=?,last_update=datetime('now') WHERE device_name=?;", -1, &stmt, 0);
+  sqlite3_prepare_v2(m_db, "UPDATE SyncNodes SET last_known_locator=?,last_update=datetime('now', 'localtime') WHERE device_name=?;", -1, &stmt, 0);
 
   sqlite3_bind_blob(stmt, 1, locator.wireEncode().wire(), locator.wireEncode().size(), SQLITE_STATIC);
   sqlite3_bind_blob(stmt, 2, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);

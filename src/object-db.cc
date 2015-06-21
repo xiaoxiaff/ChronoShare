@@ -167,7 +167,7 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
     {
 //      const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
       data->wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
-      ret = ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().size());
+      ret = ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().value_size());
     }
 
   sqlite3_finalize(stmt);

@@ -22,6 +22,7 @@
 #include "action-log.h"
 #include "logging.h"
 #include "digest-computer.h"
+#include "sync-core.h"
 
 #include <boost/make_shared.hpp>
 
@@ -436,20 +437,8 @@ ActionLog::LookupAction(const ndn::Name &deviceName, sqlite3_int64 seqno)
   ndn::shared_ptr<ndn::Data> data = LookupActionData(deviceName, seqno);
   if (!data) return ActionItemPtr();
 
-  ActionItemPtr action = deserialize(data->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
   return action;
-}
-
-boost::shared_ptr<ActionItem>
-ActionLog::deserialize(const ndn::Block &content)
-{
-	boost::shared_ptr<ActionItem> retval(new ActionItem());
-	if (!retval->ParseFromArray(content.value(), content.value_size()))
-	{
-		// to indicate an error
-		return boost::shared_ptr<ActionItem>();
-	}
-	return retval;
 }
 
 ndn::shared_ptr<ndn::Data>
@@ -486,7 +475,7 @@ ActionLog::LookupAction(const ndn::Name &actionName)
 	ndn::shared_ptr<ndn::Data> data = LookupActionData(actionName);
   if (!data) return ActionItemPtr();
 
-  ActionItemPtr action = deserialize(data->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
 
   return action;
 }
@@ -537,7 +526,7 @@ ActionLog::AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, ndn
       _LOG_ERROR("actionData is not valid");
       return ActionItemPtr();
     }
-  ActionItemPtr action = deserialize(actionData->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(actionData->getContent().value(), actionData->getContent().value_size()));
 
   if (!action)
     {
