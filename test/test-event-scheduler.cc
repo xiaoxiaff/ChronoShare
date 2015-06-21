@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -180,10 +180,10 @@ BOOST_AUTO_TEST_CASE(GeneratorTest)
     }
   }
 
-  BOOST_CHECK( abs(1.0 - (sum / static_cast<double>(times)) / interval) < 0.05);
-  BOOST_CHECK( min > interval * (1 - percent / 2.0));
-  BOOST_CHECK( max < interval * (1 + percent / 2.0));
-  BOOST_CHECK( abs(1.0 - ((max - min) / interval) / percent) < 0.05);
+  BOOST_CHECK( abs(1.0 -(sum / static_cast<double>(times)) / interval) < 0.05);
+  BOOST_CHECK( min > interval *(1 - percent / 2.0));
+  BOOST_CHECK( max < interval *(1 + percent / 2.0));
+  BOOST_CHECK( abs(1.0 -((max - min) / interval) / percent) < 0.05);
 
 }
 

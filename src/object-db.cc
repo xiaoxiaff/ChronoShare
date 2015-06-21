@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "object-db.h"
@@ -135,7 +136,7 @@ ObjectDb::saveContentObject(const ndn::Name &deviceName, sqlite3_int64 segment, 
                       "(device_name, segment, content_object) "
                       "VALUES(?, ?, ?)", -1, &stmt, 0);
 
-  //_LOG_DEBUG("Saving content object for [" << deviceName << ", seqno: " << segment << ", size: " << data.size() << "]");
+  _LOG_DEBUG("Saving content object for [" << deviceName << ", seqno: " << segment << ", size: " << data.wireEncode().size() << "]");
 
   sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 2, segment);
@@ -167,7 +168,7 @@ ObjectDb::fetchSegment(const ndn::Name &deviceName, sqlite3_int64 segment)
     {
 //      const unsigned char *buf = reinterpret_cast<const unsigned char*>(sqlite3_column_blob(stmt, 0));
       data->wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
-      ret = ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().size());
+      ret = ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().value_size());
     }
 
   sqlite3_finalize(stmt);

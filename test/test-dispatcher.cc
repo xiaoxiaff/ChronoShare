@@ -17,9 +17,9 @@
  *
  * Author:  Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *          Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *          Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
-#include "ccnx-wrapper.h"
 #include "logging.h"
 #include "dispatcher.h"
 #include <boost/test/unit_test.hpp>
@@ -28,7 +28,7 @@
 #include <fstream>
 #include <cassert>
 
-using namespace Ccnx;
+using namespace ndn;
 using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
@@ -46,9 +46,9 @@ void cleanDir(fs::path dir)
   }
 }
 
-void checkRoots(const HashPtr &root1, const HashPtr &root2)
+void checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 {
-  BOOST_CHECK_EQUAL(*root1, *root2);
+  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
 }
 
 BOOST_AUTO_TEST_CASE(DispatcherTest)
@@ -63,17 +63,17 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   string folder = "who-is-president";
 
-  CcnxWrapperPtr ccnx1 = make_shared<CcnxWrapper>();
+  boost::shared_ptr<Face> face1 = boost::make_shared<Face>();
   usleep(100);
-  CcnxWrapperPtr ccnx2 = make_shared<CcnxWrapper>();
+  boost::shared_ptr<Face> face2 = boost::make_shared<Face>();
   usleep(100);
 
   cleanDir(dir1);
   cleanDir(dir2);
 
-  Dispatcher d1(user1, folder, dir1, ccnx1, false);
+  Dispatcher d1(user1, folder, dir1, face1, false);
   usleep(100);
-  Dispatcher d2(user2, folder, dir2, ccnx2, false);
+  Dispatcher d2(user2, folder, dir2, face2, false);
 
   usleep(14900000);
 
@@ -100,12 +100,15 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
   fs::path ef = dir2 / filename;
   BOOST_REQUIRE_MESSAGE(fs::exists(ef), user1 << " failed to notify " << user2 << " about " << filename.string());
   BOOST_CHECK_EQUAL(fs::file_size(abf), fs::file_size(ef));
-  HashPtr fileHash1 = Hash::FromFileContent(abf);
-  HashPtr fileHash2 = Hash::FromFileContent(ef);
-  BOOST_CHECK_EQUAL(*fileHash1, *fileHash2);
+  DigestComputer digestComputer1;
+  DigestComputer digestComputer2;
+  ConstBufferPtr fileHash1 = digestComputer1.digestFromFile(abf);
+  ConstBufferPtr fileHash2 = digestComputer2.digestFromFile(ef);
 
-  cleanDir(dir1);
-  cleanDir(dir2);
+  checkRoots(fileHash1, fileHash2);
+
+//  cleanDir(dir1);
+//  cleanDir(dir2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

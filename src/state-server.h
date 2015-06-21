@@ -17,6 +17,7 @@
  *
  * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef STATE_SERVER_H
@@ -160,22 +161,22 @@ public:
 
 private:
   void
-  info_actions_folder(const ndn::Name &interest);
+  info_actions_folder(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
-  info_actions_file(const ndn::Name &interest);
+  info_actions_file(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
   info_actions_fileOrFolder_Execute(const ndn::Name &interest, bool isFolder = true);
 
   void
-  info_files_folder(const ndn::Name &interest);
+  info_files_folder(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
   info_files_folder_Execute(const ndn::Name &interest);
 
   void
-  cmd_restore_file(const ndn::Name &interest);
+  cmd_restore_file(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
   cmd_restore_file_Execute(const ndn::Name &interest);
@@ -201,10 +202,10 @@ private:
   ndn::Name m_PREFIX_INFO;
   ndn::Name m_PREFIX_CMD;
 
-  const ndn::InterestFilterId* actionsFolderId;
-  const ndn::InterestFilterId* actionsFileId;
-  const ndn::InterestFilterId* filesFolderId;
-  const ndn::InterestFilterId* restoreFileId;
+  const ndn::RegisteredPrefixId *actionsFolderId;
+  const ndn::RegisteredPrefixId *actionsFileId;
+  const ndn::RegisteredPrefixId *filesFolderId;
+  const ndn::RegisteredPrefixId *restoreFileId;
 
   boost::filesystem::path m_rootDir;
   int m_freshness;

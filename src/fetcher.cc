@@ -111,6 +111,7 @@ Fetcher::FillPipeline()
       // cout << ">>> " << m_minSendSeqNo+1 << endl;
 
       ndn::Interest interest(ndn::Name(m_forwardingHint).append(m_name).appendNumber(m_minSendSeqNo+1)); // Alex: this lifetime should be changed to RTO
+      _LOG_DEBUG("interest Name: " << interest);
       interest.setInterestLifetime(time::seconds(1));
       m_face->expressInterest(interest,
     		  	  	              boost::bind(&Fetcher::OnData, this, m_minSendSeqNo+1, _1, _2),
@@ -133,7 +134,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
   const ndn::Name &name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
-  ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.getContent());
+  ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.wireEncode());
   
   if (m_forwardingHint == Name())
   {

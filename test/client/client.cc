@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012 University of California, Los Angeles
+ * Copyright(c) 2012 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,7 +33,7 @@ using namespace ChronoshareClient;
 namespace fs = boost::filesystem;
 
 void
-usage ()
+usage()
 {
   cerr << "Usage: chronoshare <cmd> [<options>]\n"
        << "\n"
@@ -42,25 +42,25 @@ usage ()
        << "       update <filename>\n"
        << "       delete <filename>\n"
        << "       move <filename> <filename>\n";
-  exit (1);
+  exit(1);
 }
 
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
   if (argc < 2)
     {
-      usage ();
+      usage();
     }
 
   string cmd = argv[1];
-  algorithm::to_lower (cmd);
+  algorithm::to_lower(cmd);
   
   if (cmd == "version")
     {
       cout << "chronoshare version " << CHRONOSHARE_VERSION << endl;
-      exit (0);
+      exit(0);
     }
   
   int status = 0;
@@ -69,7 +69,7 @@ main (int argc, char **argv)
     {
       // Create a communicator
       //
-      ic = Ice::initialize (argc, argv);
+      ic = Ice::initialize(argc, argv);
     
       Ice::ObjectPrx base = ic->stringToProxy("NotifyDaemon:default -p 55436");
       if (!base)
@@ -77,7 +77,7 @@ main (int argc, char **argv)
           throw "Could not create proxy";
         }
 
-      NotifyPrx notify = NotifyPrx::checkedCast (base);
+      NotifyPrx notify = NotifyPrx::checkedCast(base);
       if (notify)
         {
 
@@ -85,23 +85,25 @@ main (int argc, char **argv)
             {
               if (argc != 3)
                 {
-                  usage ();
+                  usage();
                 }
 
-              fs::path file (argv[2]);
-              fs::file_status fileStatus = fs::status (file);
-              if (is_regular_file (fileStatus))
+              fs::path file(argv[2]);
+              fs::file_status fileStatus = fs::status(file);
+              if (is_regular_file(fileStatus))
                 {
                   // Alex: the following code is platform specific :(
-                  HashPtr fileHash = Hash::FromFileContent (file);
+
+                  DigestComputer digestComputer;
+                  ndn::ConstBufferPtr fileHash = digestComputer.digestFromFile(file); 
                   
-                  notify->updateFile (file.generic_string (),
-                                      make_pair(reinterpret_cast<const ::Ice::Byte*> (fileHash->GetHash ()),
-                                                reinterpret_cast<const ::Ice::Byte*> (fileHash->GetHash ()) +
-                                                fileHash->GetHashBytes ()),
-                                      fs::last_write_time (file),
+                  notify->updateFile(file.generic_string(),
+                                      make_pair(reinterpret_cast<const ::Ice::Byte*>(fileHash),
+                                                reinterpret_cast<const ::Ice::Byte*>(fileHash) +
+                                                fileHash),
+                                      fs::last_write_time(file),
                                       // fileStats.st_atime, fileStats.st_mtime, fileStats.st_ctime,
-                                      fileStatus.permissions ());
+                                      fileStatus.permissions());
                 }
               else
                 {
@@ -113,27 +115,27 @@ main (int argc, char **argv)
             {
               if (argc != 3)
                 {
-                  usage ();
+                  usage();
                 }
               
-              notify->deleteFile (argv[2]);
+              notify->deleteFile(argv[2]);
             }
           else if (cmd == "move")
             {
               if (argc != 4)
                 {
-                  usage ();
+                  usage();
                 }
 
-              fs::path srcFile (argv[2]);
-              fs::path dstFile (argv[3]);
+              fs::path srcFile(argv[2]);
+              fs::path dstFile(argv[3]);
               
-              notify->moveFile (srcFile.generic_string (), dstFile.generic_string ());
+              notify->moveFile(srcFile.generic_string(), dstFile.generic_string());
             }
           else
             {
               cerr << "ERROR: Unknown command " << cmd << endl;
-              usage ();
+              usage();
             }
         }
       else
@@ -142,7 +144,7 @@ main (int argc, char **argv)
           status = 1;
         }
     }
-  catch (const Ice::Exception& ex)
+  catch(const Ice::Exception& ex)
     {
       cerr << ex << endl;
       status = 1;

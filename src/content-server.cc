@@ -17,6 +17,7 @@
  *
  * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "digest-computer.h"
@@ -53,6 +54,8 @@ ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr act
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
 {
+//  m_listeningThread = boost::thread(boost::bind(&ContentServer::listen, this));
+
   m_scheduler->start();
   TaskPtr flushStaleDbCacheTask = boost::make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this), "flush-state-db-cache", m_scheduler, boost::make_shared<SimpleIntervalGenerator>(DB_CACHE_LIFETIME));
   m_scheduler->addTask(flushStaleDbCacheTask);
@@ -69,6 +72,7 @@ ContentServer::~ContentServer()
   }
 
   m_interestFilterIds.clear();
+  
 }
 
 void
@@ -80,7 +84,10 @@ ContentServer::registerPrefix(const Name &forwardingHint)
   _LOG_DEBUG(">> content server: register " << forwardingHint);
 
   ScopedLock lock(m_mutex);
-  m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), bind(&ContentServer::filterAndServe, this, forwardingHint, _1));
+  m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), 
+                                                                 boost::bind(&ContentServer::filterAndServe, this, _1, _2),
+                                                                 RegisterPrefixSuccessCallback(),
+                                                                 RegisterPrefixFailureCallback());
 
 }
 
@@ -124,16 +131,21 @@ ContentServer::filterAndServeImpl(const Name &forwardingHint, const Name &name, 
 }
 
 void
-ContentServer::filterAndServe(Name forwardingHint, const Name &interest)
+ContentServer::filterAndServe(const InterestFilter& interestFilter, const Interest& interestTrue)
 {
 
+  Name forwardingHint =  Name(interestFilter);
+  Name interest = interestTrue.getName();
+  _LOG_DEBUG("I'm serving ForwardingHint: " << forwardingHint << " Interest: " << interest);
   if (forwardingHint.size() > 0 &&
       m_userName.size() >= forwardingHint.size() &&
       m_userName.getSubName(0, forwardingHint.size()) == forwardingHint)
     {
+      _LOG_DEBUG("Triggered without Forwardinghint!");
       filterAndServeImpl(Name("/"), interest, interest); // try without forwarding hints
     }
 
+  _LOG_DEBUG("Triggered with Forwardinghint~!");
   filterAndServeImpl(forwardingHint, interest.getSubName(forwardingHint.size()), interest); // always try with hint... :( have to
 
 }
@@ -164,9 +176,9 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
 
   int64_t segment = name.get(-1).toNumber();
   ndn::Name deviceName = name.getSubName(0, name.size() - 4);
-  ndn::Buffer hash(name.get(-2).value(), name.get(-2).size());
+  ndn::Buffer hash(name.get(-2).value(), name.get(-2).value_size());
 
-  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash) << " segment: " << segment);
+  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash) << " segment: " << segment);
 
   string hashStr = DigestComputer::digestToString(hash);
 
@@ -188,7 +200,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
         }
       else
         {
-          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
+          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash));
         }
     }
   }
@@ -218,7 +230,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
       }
     else
       {
-        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
+        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash));
       }
 
   }

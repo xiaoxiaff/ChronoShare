@@ -1,12 +1,34 @@
+/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
+/*
+ * Copyright (c) 2015 University of California, Los Angeles
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ */
 #include "sync-core.h"
 #include "logging.h"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
+#include <thread>
 
 using namespace std;
-using namespace Ccnx;
+using namespace ndn;
 using namespace boost;
 using namespace boost::filesystem;
 
@@ -16,6 +38,7 @@ BOOST_AUTO_TEST_SUITE(SyncCoreTests)
 
 void callback(const SyncStateMsgPtr &msg)
 {
+  _LOG_DEBUG("Callback I'm called!!!!");
   BOOST_CHECK(msg->state_size() > 0);
   int size = msg->state_size();
   int index = 0;
@@ -32,10 +55,23 @@ void callback(const SyncStateMsgPtr &msg)
   }
 }
 
-void checkRoots(const HashPtr &root1, const HashPtr &root2)
+void checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 {
-  BOOST_CHECK_EQUAL(*root1, *root2);
+//  std::cout << "I'm checking rootDigest!!" << std::endl;
+//  std::cout << "root1 " << DigestComputer::shortDigest(*root1) << std::endl;
+//  std::cout << "root2 " << DigestComputer::shortDigest(*root2) << std::endl;
+  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
+//  std::cout << "checking rootDigest Over!!" << std::endl;
 }
+
+void
+listen(boost::shared_ptr<ndn::Face> face, std::string name) {
+  printf("%s start listening ...\n", name.c_str());
+  std::cout << name << "start listening ... " << std::endl;
+  face->processEvents();
+  printf("%s listen Over !!!\n", name.c_str());
+}
+
 
 BOOST_AUTO_TEST_CASE(SyncCoreTest)
 {
@@ -51,30 +87,35 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
 
   string dir1 = "./SyncCoreTest/1";
   string dir2 = "./SyncCoreTest/2";
-  Name user1("/joker");
-  Name loc1("/gotham1");
-  Name user2("/darkknight");
-  Name loc2("/gotham2");
-  Name syncPrefix("/broadcast/darkknight");
-  CcnxWrapperPtr c1(new CcnxWrapper());
-  CcnxWrapperPtr c2(new CcnxWrapper());
-  SyncLogPtr log1(new SyncLog(dir1, user1.toString()));
-  SyncLogPtr log2(new SyncLog(dir2, user2.toString()));
+  Name user1("/shuai");
+  Name loc1("/locator1");
+  Name user2("/loli");
+  Name loc2("/locator2");
+  Name syncPrefix("/broadcast/arslan");
 
-  SyncCore *core1 = new SyncCore(log1, user1, loc1, syncPrefix, bind(callback, _1), c1);
+  boost::shared_ptr<ndn::Face> c1 = boost::make_shared<ndn::Face>();
+  boost::thread c1_listen(listen, c1, "c1");
+  boost::shared_ptr<ndn::Face> c2 = boost::make_shared<ndn::Face>();
+  boost::thread c2_listen(listen, c2, "c2");
+
+  SyncLogPtr log1(new SyncLog(dir1, user1));
+  SyncLogPtr log2(new SyncLog(dir2, user2));
+
+  SyncCore *core1 = new SyncCore(c1, log1, user1, loc1, syncPrefix, bind(callback, _1));
   usleep(10000);
-  SyncCore *core2 = new SyncCore(log2, user2, loc2, syncPrefix, bind(callback, _1), c2);
+  SyncCore *core2 = new SyncCore(c2, log2, user2, loc2, syncPrefix, bind(callback, _1));
 
-  sleep(1);
+  sleep(2);
+
   checkRoots(core1->root(), core2->root());
 
-  // _LOG_TRACE ("\n\n\n\n\n\n----------\n");
+  _LOG_TRACE ("\n\n\n\n\n\n----------\n");
 
   core1->updateLocalState(1);
   usleep(100000);
   checkRoots(core1->root(), core2->root());
   BOOST_CHECK_EQUAL(core2->seq(user1), 1);
-  BOOST_CHECK_EQUAL(log2->LookupLocator (user1), loc1);
+  BOOST_CHECK_EQUAL(log2->LookupLocator(user1), loc1);
 
   core1->updateLocalState(5);
   usleep(100000);
@@ -89,8 +130,7 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   BOOST_CHECK_EQUAL(log1->LookupLocator (user2), loc2);
 
   // simple simultaneous data generation
-  // _LOG_TRACE ("\n\n\n\n\n\n----------Simultaneous\n");
-  _LOG_TRACE ("Simultaneous");
+   _LOG_TRACE ("\n\n\n\n\n\n----------Simultaneous\n");
 
   core1->updateLocalState(11);
   usleep(100);
@@ -108,7 +148,7 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   // clean the test dir
   if (exists(d))
   {
-    remove_all(d);
+    _LOG_DEBUG("Clear ALL");
   }
 }
 

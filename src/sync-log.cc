@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "sync-log.h"
@@ -102,7 +103,7 @@ SyncLog::SyncLog(const boost::filesystem::path &path, const ndn::Name &localName
   , m_localName(localName)
 {
   sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, NULL);
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "DB Constructer: " << sqlite3_errmsg(m_db));
 
   UpdateDeviceSeqNo(localName, 0);
 
@@ -114,7 +115,6 @@ SyncLog::SyncLog(const boost::filesystem::path &path, const ndn::Name &localName
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       m_localDeviceId = sqlite3_column_int64(stmt, 0);
-      std::cout << "m_localDeviceId " << m_localDeviceId <<std::endl;   
     }
   else
     {
@@ -137,7 +137,7 @@ SyncLog::GetNextLocalSeqNo()
                              << errmsg_info_str("Impossible thing in SyncLog::GetNextLocalSeqNo"));
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "DB GetNextLocalSeqNo: " << sqlite3_errmsg(m_db));
 
   sqlite3_int64 seq_no = sqlite3_column_int64(stmt_seq, 0) + 1;
   sqlite3_finalize(stmt_seq);
@@ -158,7 +158,7 @@ SyncLog::RememberStateInStateLog()
 INSERT INTO SyncLog                                                \
    (state_hash, last_update)                                      \
     SELECT                                                         \
-       hash(device_name, seq_no), datetime('now')                  \
+       hash(device_name, seq_no), datetime('now', 'localtime')                  \
     FROM(SELECT * FROM SyncNodes                                  \
               ORDER BY device_name);                               \
 ", 0,0,0);
@@ -204,9 +204,7 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
   int stepRes = sqlite3_step(getHashStmt);
   if (stepRes == SQLITE_ROW)
     {
-      std::cout << "HEHEHEHEH" << std::endl;
       retval = ndn::make_shared<ndn::Buffer>(static_cast<const uint8_t*>(sqlite3_column_blob(getHashStmt, 0)), sqlite3_column_bytes(getHashStmt, 0));
-      std::cout << "AFTER" << std::endl;
     }
   else
     {
@@ -226,16 +224,15 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
                              << errmsg_info_str("Some error with rememberStateInStateLog"));
     }
 
-  std::cout << "rememberinStateLog by lijing "  << std::endl;
-//  std::cout << "rememberinStateLog by lijing " << DigestComputer::digestToString(*retval) << std::endl;
+  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::shortDigest(*retval));
   return retval;
 }
 
-//sqlite3_int64
-//SyncLog::LookupSyncLog(const std::string &stateHash)
-//{
-//  return LookupSyncLog(*Hash::FromString(stateHash));
-//}
+sqlite3_int64
+SyncLog::LookupSyncLog(const std::string &stateHash)
+{
+  return LookupSyncLog(DigestComputer::digestFromString(stateHash));
+}
 
 sqlite3_int64
 SyncLog::LookupSyncLog(const ndn::Buffer &stateHash)
@@ -273,6 +270,7 @@ void
 SyncLog::UpdateDeviceSeqNo(const ndn::Name &name, sqlite3_int64 seqNo)
 {
   sqlite3_stmt *stmt;
+  _LOG_DEBUG("UpdateDeviceSeqNo Name: " <<name << " seq_no: " << seqNo);
   // update is performed using trigger
   int res = sqlite3_prepare(m_db, "INSERT INTO SyncNodes(device_name, seq_no) VALUES(?,?);",
                              -1, &stmt, 0);
@@ -300,6 +298,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
 {
   sqlite3_stmt *stmt;
   // update is performed using trigger
+  _LOG_DEBUG("UpdateLocalSeqNo my_Name: " << m_localName << " seq_no: " << seqNo);
   int res = sqlite3_prepare(m_db, "UPDATE SyncNodes SET seq_no=MAX(seq_no,?) WHERE device_id=?;",
                              -1, &stmt, 0);
 
@@ -313,7 +312,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
                              << errmsg_info_str("Some error with UpdateDeviceSeqNo(id)"));
     }
 
-  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
+  _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, "DB UpdateDeviceSeqNo: " << sqlite3_errmsg(m_db));
 
   sqlite3_finalize(stmt);
 }
@@ -353,7 +352,7 @@ void
 SyncLog::UpdateLocator(const Name &deviceName, const Name &locator)
 {
   sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(m_db, "UPDATE SyncNodes SET last_known_locator=?,last_update=datetime('now') WHERE device_name=?;", -1, &stmt, 0);
+  sqlite3_prepare_v2(m_db, "UPDATE SyncNodes SET last_known_locator=?,last_update=datetime('now', 'localtime') WHERE device_name=?;", -1, &stmt, 0);
 
   sqlite3_bind_blob(stmt, 1, locator.wireEncode().wire(), locator.wireEncode().size(), SQLITE_STATIC);
   sqlite3_bind_blob(stmt, 2, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
@@ -374,11 +373,11 @@ SyncLog::UpdateLocalLocator(const ndn::Name &forwardingHint)
   return UpdateLocator(m_localName, forwardingHint);
 }
 
-//SyncStateMsgPtr
-//SyncLog::FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq)
-//{
-//  return FindStateDifferences(*Hash::FromString(oldHash), *Hash::FromString(newHash), includeOldSeq);
-//}
+SyncStateMsgPtr
+SyncLog::FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq)
+{
+  return FindStateDifferences(DigestComputer::digestFromString(oldHash), DigestComputer::digestFromString(newHash), includeOldSeq);
+}
 
 SyncStateMsgPtr
 SyncLog::FindStateDifferences(const ndn::Buffer &oldHash, const ndn::Buffer &newHash, bool includeOldSeq)
@@ -448,7 +447,6 @@ SELECT sn.device_name, sn.last_known_locator, s_old.seq_no, s_new.seq_no\
       // locator is optional, so must check if it is null
       if (sqlite3_column_type(stmt, 1) == SQLITE_BLOB)
       {
-        // TODO by lijing
         state->set_locator(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1));
 //        state->set_locator(Name(ndn::Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1))).toUri());
       }

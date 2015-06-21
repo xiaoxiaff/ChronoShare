@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "object-manager.h"
@@ -75,8 +76,8 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
         }
 
       ndn::Name name = ndn::Name("/");
-//      name.append(deviceName).append(m_appName).append("file").append(reinterpret_cast<const uint8_t*>(fileHash->GetHash()), fileHash->GetHashBytes()).appendNumber(segment);
-      name.append(deviceName).append(m_appName).append("file").append(ndn::name::Component(*fileHash)).appendNumber(segment);
+      name.append(deviceName).append(m_appName).append("file").appendImplicitSha256Digest(fileHash).appendNumber(segment);
+      _LOG_DEBUG("publish Data Name: " << name.toUri());
 
       // cout << *fileHash << endl;
       // cout << name << endl;
@@ -96,7 +97,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
   if (segment == 0) // handle empty files
     {
       ndn::Name name = ndn::Name("/");
-      name.append(m_appName).append("file").append(ndn::name::Component(*fileHash)).append(deviceName).appendNumber(0);
+      name.append(m_appName).append("file").appendImplicitSha256Digest(fileHash).append(deviceName).appendNumber(0);
 
       ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
       data->setName(name);

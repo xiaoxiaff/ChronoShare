@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef ACTION_LOG_H
@@ -132,8 +133,17 @@ private:
   static void
   apply_action_xFun(sqlite3_context *context, int argc, sqlite3_value **argv);
 
-  boost::shared_ptr<ActionItem>
-  deserialize(const ndn::Block &content);
+
+//  static boost::shared_ptr<ActionItem>
+//  deserializeActionItem(const ndn::Block &content)
+//  {
+//  	boost::shared_ptr<ActionItem> retval(new ActionItem());
+//  	if (!retval->ParseFromArray(content.value(), content.value_size()))
+//  	{
+//  		return boost::shared_ptr<ActionItem>();
+//  	}
+//  	return retval;
+//  }
 
 private:
   SyncLogPtr m_syncLog;

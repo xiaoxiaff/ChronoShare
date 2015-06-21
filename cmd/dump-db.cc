@@ -16,11 +16,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "dispatcher.h"
 #include "logging.h"
 #include "fs-watcher.h"
+#include "sync-core.h"
 
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
@@ -63,12 +65,17 @@ public:
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
         cout << setw(30) 
-             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0)))))
+             << (Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))))).toUri()
              << " | "; // device_name
         cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
-        cout << setw(20) 
-             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 2),(sqlite3_column_bytes(stmt, 2)))))
-             << " | "; // locator
+        cout << setw(20); 
+        if (sqlite3_column_bytes(stmt, 2) > 0) {
+             cout << (Name(Block(sqlite3_column_blob(stmt, 2),(sqlite3_column_bytes(stmt, 2))))).toUri();
+        } else {
+          cout << "NULL";
+        }
+        cout << " | "; // locator
+
         if (sqlite3_column_bytes(stmt, 3) > 0)
           {
             cout << setw(10) << sqlite3_column_text(stmt, 3) << endl;
@@ -86,14 +93,14 @@ public:
   {
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(m_db,
-                        "SELECT state_hash, last_update, state_id "
+                        "SELECT state_hash, last_update, state_id, last_update "
                         "   FROM SyncLog "
                         "   ORDER BY last_update", -1, &stmt, 0);
 
     cout.setf(std::ios::left, std::ios::adjustfield);
     cout << ">> SYNC LOG <<" << endl;
     cout << "====================================================================================" << endl;
-    cout << setw(10) << "state_hash" << " | state details " << endl;
+    cout << setw(10) << "state_hash" << " | state details " << endl;    
     cout << "====================================================================================" << endl;
 
     while (sqlite3_step(stmt) == SQLITE_ROW)
@@ -111,7 +118,7 @@ public:
 
         while (sqlite3_step(stmt2) == SQLITE_ROW)
           {
-            cout << Name(Block(sqlite3_column_blob(stmt2, 0),(sqlite3_column_bytes(stmt2, 0)))).toUri()
+            cout << (Name(Block(sqlite3_column_blob(stmt2, 0),(sqlite3_column_bytes(stmt2, 0))))).toUri()
                  << "("
                  << sqlite3_column_int64(stmt2, 1)
                  << "); ";
@@ -120,6 +127,8 @@ public:
         sqlite3_finalize(stmt2);
 
         cout << endl;
+
+        sqlite3_finalize(stmt2);
       }
     sqlite3_finalize(stmt);
   }
@@ -150,7 +159,7 @@ public:
 
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0)))))
+        cout << setw(30) << (Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))))).toUri()
              << " | "; // device_name
         cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
         cout << setw(6) <<(sqlite3_column_int (stmt, 2)==0?"UPDATE":"DELETE") << " | "; // action
@@ -167,7 +176,7 @@ public:
 
         if (sqlite3_column_bytes(stmt, 7) > 0)
           {
-            cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 7),(sqlite3_column_bytes(stmt, 7)))))
+            cout << setw(30) << (Name(Block(sqlite3_column_blob(stmt, 7),(sqlite3_column_bytes(stmt, 7))))).toUri()
                  << " | "; // parent_device_name
             cout << setw(5) << sqlite3_column_int64(stmt, 8); // seq_no
           }
@@ -177,18 +186,6 @@ public:
       }
 
     sqlite3_finalize(stmt);
-  }
-
-  boost::shared_ptr<ActionItem>
-  deserializeMsg(const ndn::Block &content)
-  {
-  	boost::shared_ptr<ActionItem> retval(new ActionItem());
-  	if (!retval->ParseFromArray(content.value(), content.value_size()))
-  	{
-  		// to indicate an error
-  		return boost::shared_ptr<ActionItem>();
-  	}
-  	return retval;
   }
 
   void
@@ -202,15 +199,14 @@ public:
     cout << "Dumping action data for: [" << deviceName << ", " << seqno << "]" <<endl;
     if (sqlite3_step(stmt) == SQLITE_ROW)
     {
-      ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
-      // TODO Check 1 or 0
-      ndn::Name actionName = Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))));
-      if (pco)
+      ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
+      ndn::Name actionName = Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1))));
+      if (data)
       {
-        ActionItemPtr action = deserializeMsg(pco->getContent());
+        ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
         if (action)
         {
-          cout << "Action data size : " << pco->getContent().size() << endl;
+          cout << "Action data size : " << data->getContent().size() << endl;
           cout << "Action data name : " << actionName << endl;
           string type = action->action() == ActionItem::UPDATE ? "UPDATE" : "DELETE";
           cout << "Action Type = " << type << endl;
@@ -228,12 +224,12 @@ public:
         }
         else
         {
-          cerr << "Error! Failed to parse action from pco! " << endl;
+          cerr << "Error! Failed to parse action from data! " << endl;
         }
       }
       else
       {
-        cerr << "Error! Invalid pco! " << endl;
+        cerr << "Error! Invalid data! " << endl;
       }
     }
     else
@@ -270,7 +266,7 @@ public:
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
         cout << setw(40) << sqlite3_column_text(stmt, 0) << " | ";
-        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1))))) 
+        cout << setw(30) << Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1)))).toUri()
              << " | ";
         cout << setw(6) << sqlite3_column_int64(stmt, 2) << " | ";
         cout << setw(10) << DigestComputer::shortDigest(ndn::Buffer(sqlite3_column_blob(stmt, 3), sqlite3_column_bytes(stmt, 3))) << " | ";

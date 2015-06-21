@@ -17,11 +17,13 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "action-log.h"
 #include "logging.h"
 #include "digest-computer.h"
+#include "sync-core.h"
 
 #include <boost/make_shared.hpp>
 
@@ -414,10 +416,12 @@ ActionLog::LookupActionData(const ndn::Name &deviceName, sqlite3_int64 seqno)
   sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC); //ndn version
   sqlite3_bind_int64(stmt, 2, seqno);
 
-  ndn::shared_ptr<ndn::Data> retval = ndn::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> retval;  
+
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       // _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
+      retval = ndn::make_shared<ndn::Data>();
       retval->wireDecode(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
     }
   else
@@ -436,20 +440,8 @@ ActionLog::LookupAction(const ndn::Name &deviceName, sqlite3_int64 seqno)
   ndn::shared_ptr<ndn::Data> data = LookupActionData(deviceName, seqno);
   if (!data) return ActionItemPtr();
 
-  ActionItemPtr action = deserialize(data->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
   return action;
-}
-
-boost::shared_ptr<ActionItem>
-ActionLog::deserialize(const ndn::Block &content)
-{
-	boost::shared_ptr<ActionItem> retval(new ActionItem());
-	if (!retval->ParseFromArray(content.value(), content.value_size()))
-	{
-		// to indicate an error
-		return boost::shared_ptr<ActionItem>();
-	}
-	return retval;
 }
 
 ndn::shared_ptr<ndn::Data>
@@ -460,14 +452,15 @@ ActionLog::LookupActionData(const ndn::Name &actionName)
 
   _LOG_DEBUG(actionName);
 
-  _LOG_DEBUG(" <<<<<<< " << actionName.wireEncode().wire() << " " << actionName.wireEncode().size());
+  _LOG_DEBUG(" LookActionData <<<<<<< " << actionName << " " << actionName.wireEncode().size());
 
   sqlite3_bind_blob(stmt, 1, actionName.wireEncode().wire(), actionName.wireEncode().size(), SQLITE_STATIC);
 
-  ndn::shared_ptr<ndn::Data> retval = ndn::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> retval;// = ndn::make_shared<ndn::Data>();
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       // _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
+      retval = ndn::make_shared<ndn::Data>();
       retval->wireDecode(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
     }
   else
@@ -486,7 +479,7 @@ ActionLog::LookupAction(const ndn::Name &actionName)
 	ndn::shared_ptr<ndn::Data> data = LookupActionData(actionName);
   if (!data) return ActionItemPtr();
 
-  ActionItemPtr action = deserialize(data->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
 
   return action;
 }
@@ -537,7 +530,7 @@ ActionLog::AddRemoteAction(const ndn::Name &deviceName, sqlite3_int64 seqno, ndn
       _LOG_ERROR("actionData is not valid");
       return ActionItemPtr();
     }
-  ActionItemPtr action = deserialize(actionData->getContent());
+  ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(actionData->getContent().value(), actionData->getContent().value_size()));
 
   if (!action)
     {
@@ -892,7 +885,7 @@ ActionLog::apply_action_xFun(sqlite3_context *context, int argc, sqlite3_value *
       int mode = sqlite3_value_int(argv[9]);
       int seg_num = sqlite3_value_int(argv[10]);
 
-      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << DigestComputer::digestToString(hash));
+      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << DigestComputer::shortDigest(hash));
 
       the->m_fileState->UpdateFile(filename, version, hash, device_name, seq_no, atime, mtime, ctime, mode, seg_num);
 

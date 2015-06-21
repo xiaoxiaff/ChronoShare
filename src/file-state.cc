@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "file-state.h"
@@ -69,6 +70,7 @@ FileState::UpdateFile(const std::string &filename, sqlite3_int64 version,
                        const ndn::Buffer &hash, const ndn::Buffer &device_name, sqlite3_int64 seq_no,
                        time_t atime, time_t mtime, time_t ctime, int mode, int seg_num)
 {
+  _LOG_DEBUG("UpdateFile Triggered...");
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(m_db, "UPDATE FileState "
                       "SET "

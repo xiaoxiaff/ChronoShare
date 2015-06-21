@@ -17,6 +17,7 @@
  *
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef DISPATCHER_H
@@ -81,6 +82,22 @@ public:
 
 
 private:
+
+  void
+  listen() {
+    printf("m_face start listening ...\n");
+    m_face->processEvents();
+    printf("m_face listen Over !!! \n");
+  }
+
+  void
+  listen_other(boost::shared_ptr<ndn::Face> face, std::string name) {
+    printf("%s start listening ...\n", name.c_str());
+    std::cout << name << "start listening ... " << std::endl;
+    face->processEvents();
+    printf("%s listen Over !!!\n", name.c_str());
+  }
+
   void
   Did_LocalFile_AddOrModify_Execute(boost::filesystem::path relativeFilepath); // cannot be const & for Execute event!!! otherwise there will be segfault
 
@@ -185,6 +202,12 @@ private:
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
   DigestComputer m_digestComputer;
+
+  boost::shared_ptr<ndn::Face> m_face_server;
+  boost::shared_ptr<ndn::Face> m_face_stateServer;
+  boost::thread m_faceListening;
+  boost::thread m_serverListening;
+  boost::thread m_stateServerListening;
 
 };
 

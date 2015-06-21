@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2012 University of California, Los Angeles
+ * Copyright(c) 2012 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "logging.h"
@@ -35,9 +36,9 @@
 #include <map>
 #include <utility>
 
-INIT_LOGGER ("Test.FetchTaskDb");
+INIT_LOGGER("Test.FetchTaskDb");
 
-using namespace Ccnx;
+using namespace ndn;
 using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
@@ -76,22 +77,30 @@ int g_counter = 0;
 void
 getChecker(const Name &deviceName, const Name &baseName, uint64_t minSeqNo, uint64_t maxSeqNo, int priority)
 {
+  _LOG_DEBUG("deviceName: " << deviceName << " baseName ");
   Checker checker(deviceName, baseName, minSeqNo, maxSeqNo, priority);
   g_counter ++;
-  if (checkers.find(checker.m_deviceName + checker.m_baseName) != checkers.end())
+  Name whole(checker.m_deviceName);
+  whole.append(checker.m_baseName);
+  if (checkers.find(whole) != checkers.end())
   {
     BOOST_FAIL("duplicated checkers");
   }
-  checkers.insert(make_pair(checker.m_deviceName + checker.m_baseName, checker));
+
+  checkers.insert(make_pair(whole, checker));
 }
 
-BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
+BOOST_AUTO_TEST_CASE(FetchTaskDbTest)
 {
-  INIT_LOGGERS ();
+  INIT_LOGGERS();
   fs::path folder("TaskDbTest");
+  if (exists(folder)) {
+    fs::remove_all(folder);
+  }
+
   fs::create_directories(folder / ".chronoshare");
 
-  FetchTaskDbPtr db = make_shared<FetchTaskDb>(folder, "test");
+  FetchTaskDbPtr db = boost::make_shared<FetchTaskDb>(folder, "test");
 
   map<Name, Checker> m1;
   g_counter = 0;
@@ -106,8 +115,8 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
   {
     Name d = deviceNamePrefix;
     Name b = baseNamePrefix;
-    Checker c(d.appendComp(i), b.appendComp(i), i, 11, 1);
-    m1.insert(make_pair(d + b, c));
+    Checker c(d.appendNumber(i), b.appendNumber(i), i, 11, 1);
+    m1.insert(make_pair(d.append(b), c));
     db->addTask(c.m_deviceName, c.m_baseName, c.m_minSeqNo, c.m_maxSeqNo, c.m_priority);
   }
 
@@ -116,8 +125,8 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
   {
     Name d = deviceNamePrefix;
     Name b = baseNamePrefix;
-    d.appendComp(i);
-    b.appendComp(i);
+    d.appendNumber(i);
+    b.appendNumber(i);
     db->deleteTask(d, b);
   }
 
@@ -127,7 +136,7 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
   {
     Name d = deviceNamePrefix;
     Name b = baseNamePrefix;
-    Checker c(d.appendComp(i), b.appendComp(i), i, 11, 1);
+    Checker c(d.appendNumber(i), b.appendNumber(i), i, 11, 1);
     db->addTask(c.m_deviceName, c.m_baseName, c.m_minSeqNo, c.m_maxSeqNo, c.m_priority);
   }
 
@@ -138,6 +147,7 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
   map<Name, Checker>::iterator it = checkers.begin();
   while (it != checkers.end())
   {
+    _LOG_DEBUG("first -> " << it->first);
     map<Name, Checker>::iterator mt = m1.find(it->first);
     if (mt == m1.end())
     {
@@ -148,7 +158,7 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
       Checker c1 = it->second;
       Checker c2 = mt->second;
       BOOST_CHECK(c1 == c2);
-      if (! (c1 == c2))
+      if (!(c1 == c2))
       {
         cout << "C1: " << endl;
         c1.show();
@@ -158,7 +168,7 @@ BOOST_AUTO_TEST_CASE (FetchTaskDbTest)
     }
     ++it;
   }
-  fs::remove_all(folder);
+  
 }
 
 
