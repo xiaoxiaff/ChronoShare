@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "dispatcher.h"
@@ -64,12 +65,17 @@ public:
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
         cout << setw(30) 
-             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0)))))
+             << (Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))))).toUri()
              << " | "; // device_name
         cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
-        cout << setw(20) 
-             << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 2),(sqlite3_column_bytes(stmt, 2)))))
-             << " | "; // locator
+        cout << setw(20); 
+        if (sqlite3_column_bytes(stmt, 2) > 0) {
+             cout << (Name(Block(sqlite3_column_blob(stmt, 2),(sqlite3_column_bytes(stmt, 2))))).toUri();
+        } else {
+          cout << "NULL";
+        }
+        cout << " | "; // locator
+
         if (sqlite3_column_bytes(stmt, 3) > 0)
           {
             cout << setw(10) << sqlite3_column_text(stmt, 3) << endl;
@@ -112,7 +118,7 @@ public:
 
         while (sqlite3_step(stmt2) == SQLITE_ROW)
           {
-            cout << Name(Block(sqlite3_column_blob(stmt2, 0),(sqlite3_column_bytes(stmt2, 0)))).toUri()
+            cout << (Name(Block(sqlite3_column_blob(stmt2, 0),(sqlite3_column_bytes(stmt2, 0))))).toUri()
                  << "("
                  << sqlite3_column_int64(stmt2, 1)
                  << "); ";
@@ -153,7 +159,7 @@ public:
 
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
-        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0)))))
+        cout << setw(30) << (Name(Block(sqlite3_column_blob(stmt, 0),(sqlite3_column_bytes(stmt, 0))))).toUri()
              << " | "; // device_name
         cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
         cout << setw(6) <<(sqlite3_column_int (stmt, 2)==0?"UPDATE":"DELETE") << " | "; // action
@@ -170,7 +176,7 @@ public:
 
         if (sqlite3_column_bytes(stmt, 7) > 0)
           {
-            cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 7),(sqlite3_column_bytes(stmt, 7)))))
+            cout << setw(30) << (Name(Block(sqlite3_column_blob(stmt, 7),(sqlite3_column_bytes(stmt, 7))))).toUri()
                  << " | "; // parent_device_name
             cout << setw(5) << sqlite3_column_int64(stmt, 8); // seq_no
           }
@@ -260,7 +266,7 @@ public:
     while (sqlite3_step(stmt) == SQLITE_ROW)
       {
         cout << setw(40) << sqlite3_column_text(stmt, 0) << " | ";
-        cout << setw(30) << lexical_cast<string>(Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1))))) 
+        cout << setw(30) << Name(Block(sqlite3_column_blob(stmt, 1),(sqlite3_column_bytes(stmt, 1)))).toUri()
              << " | ";
         cout << setw(6) << sqlite3_column_int64(stmt, 2) << " | ";
         cout << setw(10) << DigestComputer::shortDigest(ndn::Buffer(sqlite3_column_blob(stmt, 3), sqlite3_column_bytes(stmt, 3))) << " | ";

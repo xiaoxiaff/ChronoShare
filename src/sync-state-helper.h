@@ -27,7 +27,7 @@
 inline std::ostream &
 operator << (std::ostream &os, const SyncStateMsgPtr &msg)
 {
-  os << " ===== start Msg ======" << std::endl;
+  os << "\n ===== start Msg ======" << std::endl;
 
   int size = msg->state_size();
   if (size > 0)
@@ -40,8 +40,8 @@ operator << (std::ostream &os, const SyncStateMsgPtr &msg)
       string strLocator = state.locator();
       sqlite3_int64 seq = state.seq();
 
-      os << "Name: " << ndn::Name(ndn::Block((const unsigned char *)strName.c_str(), strName.size()))
-         << ", Locator: " << ndn::Name(ndn::Block((const unsigned char *)strLocator.c_str(), strLocator.size()))
+      os << "Name: " << ndn::Name(ndn::Block((const unsigned char *)strName.c_str(), strName.size())).toUri()
+         << ", Locator: " << ndn::Name(ndn::Block((const unsigned char *)strLocator.c_str(), strLocator.size())).toUri()
          << ", seq: " << seq << std::endl;
       index ++;
     }

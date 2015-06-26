@@ -17,6 +17,7 @@
  *
  * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "digest-computer.h"
@@ -166,7 +167,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
   ndn::Name deviceName = name.getSubName(0, name.size() - 4);
   ndn::Buffer hash(name.get(-2).value(), name.get(-2).value_size());
 
-  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash) << " segment: " << segment);
+  _LOG_DEBUG(" server FILE for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash) << " segment: " << segment);
 
   string hashStr = DigestComputer::digestToString(hash);
 
@@ -188,7 +189,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
         }
       else
         {
-          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
+          _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash));
         }
     }
   }
@@ -218,7 +219,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
       }
     else
       {
-        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << DigestComputer::digestToString(hash));
+        _LOG_ERROR("ObjectDd exists, but no segment " << segment << " for device: " << deviceName << ", file_hash: " << DigestComputer::shortDigest(hash));
       }
 
   }

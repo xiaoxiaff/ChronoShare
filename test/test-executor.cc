@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -25,25 +25,25 @@
 
 #include "logging.h"
 
-INIT_LOGGER ("Test.Executor");
+INIT_LOGGER("Test.Executor");
 
 using namespace boost;
 using namespace std;
 
-void timeConsumingJob ()
+void timeConsumingJob()
 {
-  _LOG_DEBUG ("Start sleep");
+  _LOG_DEBUG("Start sleep");
   sleep(1);
-  _LOG_DEBUG ("Finish sleep");
+  _LOG_DEBUG("Finish sleep");
 }
 
 BOOST_AUTO_TEST_CASE(TestExecutor)
 {
-  INIT_LOGGERS ();
+  INIT_LOGGERS();
 
   {
-    Executor executor (3);
-    executor.start ();
+    Executor executor(3);
+    executor.start();
     Executor::Job job = bind(timeConsumingJob);
 
     executor.execute(job);
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(TestExecutor)
     usleep(501000);
     BOOST_CHECK_EQUAL(executor.jobQueueSize(), 0);
 
-    executor.shutdown ();
+    executor.shutdown();
   } //separate scope to ensure that destructor is called
 
 

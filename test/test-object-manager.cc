@@ -42,12 +42,6 @@ namespace fs = boost::filesystem;
 
 BOOST_AUTO_TEST_SUITE(TestObjectManager)
 
-void listen(boost::shared_ptr<ndn::Face> face)
-{
-  face->processEvents();
-  // do stuff...
-}
-
 BOOST_AUTO_TEST_CASE(ObjectManagerTest)
 {
   INIT_LOGGERS();
@@ -58,15 +52,14 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
 
   
   boost::shared_ptr<ndn::Face> face = boost::make_shared<ndn::Face>();
-  std::thread face_listeningThread(listen, face);
 
   ObjectManager manager(face, tmpdir, "test-chronoshare");
 
-  boost::tuple<ndn::ConstBufferPtr, int> hash_semgents = manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
+  boost::tuple<ndn::ConstBufferPtr, int> hash_segments = manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
 
-  BOOST_CHECK_EQUAL(hash_semgents.get<1>(), 3);
+  BOOST_CHECK_EQUAL(hash_segments.get<1>(), 3);
 
-  bool ok = manager.objectsToLocalFile(deviceName, *hash_semgents.get<0>(), tmpdir / "test.cc");
+  bool ok = manager.objectsToLocalFile(deviceName, *hash_segments.get<0>(), tmpdir / "test.cc");
   BOOST_CHECK_EQUAL(ok, true);
 
   {
@@ -84,7 +77,7 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
   {
     std::cout << "Clear ALLLLLLLL" << std::endl;
     face->shutdown();
-    face_listeningThread.detach();
+
     remove_all(tmpdir);
   }
 

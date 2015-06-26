@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef SYNC_LOG_H
@@ -72,16 +73,16 @@ public:
   RememberStateInStateLog();
 
   // done
-//  sqlite3_int64
-//  LookupSyncLog(const std::string &stateHash);
+  sqlite3_int64
+  LookupSyncLog(const std::string &stateHash);
 
   // done
   sqlite3_int64
   LookupSyncLog(const ndn::Buffer &stateHash);
 
   // How difference is exposed will be determined later by the actual protocol
-//  SyncStateMsgPtr
-//  FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq = false);
+  SyncStateMsgPtr
+  FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq = false);
 
   SyncStateMsgPtr
   FindStateDifferences(const ndn::Buffer &oldHash, const ndn::Buffer &newHash, bool includeOldSeq = false);

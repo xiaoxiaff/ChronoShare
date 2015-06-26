@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "sync-log.h"
@@ -223,15 +224,15 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
                              << errmsg_info_str("Some error with rememberStateInStateLog"));
     }
 
-  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::digestToString(*retval));
+  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::shortDigest(*retval));
   return retval;
 }
 
-//sqlite3_int64
-//SyncLog::LookupSyncLog(const std::string &stateHash)
-//{
-//  return LookupSyncLog(*Hash::FromString(stateHash));
-//}
+sqlite3_int64
+SyncLog::LookupSyncLog(const std::string &stateHash)
+{
+  return LookupSyncLog(DigestComputer::digestFromString(stateHash));
+}
 
 sqlite3_int64
 SyncLog::LookupSyncLog(const ndn::Buffer &stateHash)
@@ -269,7 +270,7 @@ void
 SyncLog::UpdateDeviceSeqNo(const ndn::Name &name, sqlite3_int64 seqNo)
 {
   sqlite3_stmt *stmt;
-  std::cout << "Before UpdateDeviceSeqNo" << std::endl;
+  _LOG_DEBUG("UpdateDeviceSeqNo Name: " <<name << " seq_no: " << seqNo);
   // update is performed using trigger
   int res = sqlite3_prepare(m_db, "INSERT INTO SyncNodes(device_name, seq_no) VALUES(?,?);",
                              -1, &stmt, 0);
@@ -297,6 +298,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
 {
   sqlite3_stmt *stmt;
   // update is performed using trigger
+  _LOG_DEBUG("UpdateLocalSeqNo my_Name: " << m_localName << " seq_no: " << seqNo);
   int res = sqlite3_prepare(m_db, "UPDATE SyncNodes SET seq_no=MAX(seq_no,?) WHERE device_id=?;",
                              -1, &stmt, 0);
 
@@ -371,11 +373,11 @@ SyncLog::UpdateLocalLocator(const ndn::Name &forwardingHint)
   return UpdateLocator(m_localName, forwardingHint);
 }
 
-//SyncStateMsgPtr
-//SyncLog::FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq)
-//{
-//  return FindStateDifferences(*Hash::FromString(oldHash), *Hash::FromString(newHash), includeOldSeq);
-//}
+SyncStateMsgPtr
+SyncLog::FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq)
+{
+  return FindStateDifferences(DigestComputer::digestFromString(oldHash), DigestComputer::digestFromString(newHash), includeOldSeq);
+}
 
 SyncStateMsgPtr
 SyncLog::FindStateDifferences(const ndn::Buffer &oldHash, const ndn::Buffer &newHash, bool includeOldSeq)
@@ -445,7 +447,6 @@ SELECT sn.device_name, sn.last_known_locator, s_old.seq_no, s_new.seq_no\
       // locator is optional, so must check if it is null
       if (sqlite3_column_type(stmt, 1) == SQLITE_BLOB)
       {
-        // TODO by lijing
         state->set_locator(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1));
 //        state->set_locator(Name(ndn::Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1))).toUri());
       }

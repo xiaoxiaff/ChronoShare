@@ -8,12 +8,13 @@
 #include <fstream>
 #include <set>
 #include <QtGui>
+// TODO Segmentation Fault and Other Error Exits No time Fix yet 
 
 using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
 
-BOOST_AUTO_TEST_SUITE(TestFsWatcher)
+BOOST_AUTO_TEST_SUITE(TestFsWatchers)
 
 void
 onChange(set<string> &files, const fs::path &file)
@@ -43,13 +44,13 @@ void create_file( const fs::path & ph, const std::string & contents )
 void run(fs::path dir, FsWatcher::LocalFile_Change_Callback c, FsWatcher::LocalFile_Change_Callback d)
 {
   int x = 0;
-  QCoreApplication app (x, 0);
-  FsWatcher watcher (dir.string().c_str(), c, d);
+  QCoreApplication app(x, 0);
+  FsWatcher watcher(dir.string().c_str(), c, d);
   app.exec();
   sleep(100);
 }
 
-BOOST_AUTO_TEST_CASE (TestFsWatcher)
+BOOST_AUTO_TEST_CASE(TestFsWatcher)
 {
   fs::path dir = fs::absolute(fs::path("TestFsWatcher"));
   if (fs::exists(dir))
@@ -61,11 +62,11 @@ BOOST_AUTO_TEST_CASE (TestFsWatcher)
 
   set<string> files;
 
-  FsWatcher::LocalFile_Change_Callback fileChange = boost::bind(onChange,ref(files), _1);
-  FsWatcher::LocalFile_Change_Callback fileDelete = boost::bind(onDelete, ref(files), _1);
+  FsWatcher::LocalFile_Change_Callback fileChange = boost::bind(onChange,std::ref(files), _1);
+  FsWatcher::LocalFile_Change_Callback fileDelete = boost::bind(onDelete, std::ref(files), _1);
 
   thread workThread(run, dir, fileChange, fileDelete);
-  //FsWatcher watcher (dir.string().c_str(), fileChange, fileDelete);
+  //FsWatcher watcher(dir.string().c_str(), fileChange, fileDelete);
 
   // ============ check create file detection ================
   create_file(dir / "test.txt", "hello");
@@ -101,7 +102,7 @@ BOOST_AUTO_TEST_CASE (TestFsWatcher)
   for (int i = 0; i < 5; i++)
   {
     string filename = boost::lexical_cast<string>(i);
-    fs::copy_file(subdir / filename.c_str(), subdir1 / filename.c_str());
+    fs::copy(subdir / filename.c_str(), subdir1 / filename.c_str());
   }
   // have to at least wait 0.5 * 2 seconds
   usleep(1100000);
@@ -175,31 +176,32 @@ BOOST_AUTO_TEST_CASE (TestFsWatcher)
 
   create_file(dir / "add-removal-check.txt", "add-removal-check");
   usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") != files.end());
+  BOOST_CHECK(files.find("add-removal-check.txt") != files.end());
 
-  fs::remove (dir / "add-removal-check.txt");
+  fs::remove(dir / "add-removal-check.txt");
   usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") == files.end());
-
-  create_file(dir / "add-removal-check.txt", "add-removal-check");
-  usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") != files.end());
-
-  fs::remove (dir / "add-removal-check.txt");
-  usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") == files.end());
+  BOOST_CHECK(files.find("add-removal-check.txt") == files.end());
 
   create_file(dir / "add-removal-check.txt", "add-removal-check");
   usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") != files.end());
+  BOOST_CHECK(files.find("add-removal-check.txt") != files.end());
 
-  fs::remove (dir / "add-removal-check.txt");
+  fs::remove(dir / "add-removal-check.txt");
   usleep(1200000);
-  BOOST_CHECK (files.find("add-removal-check.txt") == files.end());
+  BOOST_CHECK(files.find("add-removal-check.txt") == files.end());
+
+  create_file(dir / "add-removal-check.txt", "add-removal-check");
+  usleep(1200000);
+  BOOST_CHECK(files.find("add-removal-check.txt") != files.end());
+
+  fs::remove(dir / "add-removal-check.txt");
+  usleep(1200000);
+  BOOST_CHECK(files.find("add-removal-check.txt") == files.end());
 
   // cleanup
   if (fs::exists(dir))
   {
+    std::cout << "Cleaning all" << std::endl;
     fs::remove_all(dir);
   }
 }

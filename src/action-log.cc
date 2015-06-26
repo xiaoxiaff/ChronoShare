@@ -416,10 +416,12 @@ ActionLog::LookupActionData(const ndn::Name &deviceName, sqlite3_int64 seqno)
   sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC); //ndn version
   sqlite3_bind_int64(stmt, 2, seqno);
 
-  ndn::shared_ptr<ndn::Data> retval = ndn::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> retval;  
+
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       // _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
+      retval = ndn::make_shared<ndn::Data>();
       retval->wireDecode(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
     }
   else
@@ -450,14 +452,15 @@ ActionLog::LookupActionData(const ndn::Name &actionName)
 
   _LOG_DEBUG(actionName);
 
-  _LOG_DEBUG(" <<<<<<< " << actionName.wireEncode().wire() << " " << actionName.wireEncode().size());
+  _LOG_DEBUG(" LookActionData <<<<<<< " << actionName << " " << actionName.wireEncode().size());
 
   sqlite3_bind_blob(stmt, 1, actionName.wireEncode().wire(), actionName.wireEncode().size(), SQLITE_STATIC);
 
-  ndn::shared_ptr<ndn::Data> retval = ndn::make_shared<ndn::Data>();
+  ndn::shared_ptr<ndn::Data> retval;// = ndn::make_shared<ndn::Data>();
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       // _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
+      retval = ndn::make_shared<ndn::Data>();
       retval->wireDecode(ndn::Block(reinterpret_cast<const uint8_t *>(sqlite3_column_blob(stmt, 0)), sqlite3_column_bytes(stmt, 0)));
     }
   else
@@ -882,7 +885,7 @@ ActionLog::apply_action_xFun(sqlite3_context *context, int argc, sqlite3_value *
       int mode = sqlite3_value_int(argv[9]);
       int seg_num = sqlite3_value_int(argv[10]);
 
-      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << DigestComputer::digestToString(hash));
+      _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " " << DigestComputer::shortDigest(hash));
 
       the->m_fileState->UpdateFile(filename, version, hash, device_name, seq_no, atime, mtime, ctime, mode, seg_num);
 

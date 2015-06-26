@@ -17,6 +17,7 @@
  *
  * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
  *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef SYNC_CORE_H
@@ -33,7 +34,9 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/make_shared.hpp>
+#include <thread>
 
+// No use this now 
 template<class Msg>
 ndn::BufferPtr
 serializeMsg(const Msg &msg)
@@ -115,7 +118,10 @@ public:
   ~SyncCore();
 
   void
-  localStateChanged ();
+  updateLocalState(sqlite3_int64);
+
+  void
+  localStateChanged();
 
   /**
    * @brief Schedule an event to update local state with a small delay
@@ -124,12 +130,10 @@ public:
    * are anticipated within a short period of time
    */
   void
-  localStateChangedDelayed ();
-
-  void
-  updateLocalState (sqlite3_int64);
+  localStateChangedDelayed();
 
 // ------------------ only used in test -------------------------
+
 public:
   ndn::ConstBufferPtr
   root() const { return m_rootDigest; }
@@ -139,7 +143,9 @@ public:
 
 private:
   void
-  handleInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
+  listen() {
+    m_face->processEvents();
+  }
 
   void
   onRegisterFailed(const ndn::Name& prefix, const std::string& reason)
@@ -151,26 +157,13 @@ private:
   }
 
   void
-  handleSyncData(const ndn::Interest &interest, ndn::Data &data);
-
-  void
-  handleRecoverData(const ndn::Interest &interest, ndn::Data &data);
-
-  void
-  handleSyncInterestTimeout(const ndn::Interest &interest);
-
-  void
-  handleRecoverInterestTimeout(const ndn::Interest &interest);
-
-  void
-  deregister(const ndn::Name &name);
+  sendSyncInterest();
 
   void
   recover(ndn::ConstBufferPtr digest);
 
-private:
   void
-  sendSyncInterest();
+  handleInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
 
   void
   handleSyncInterest(const ndn::Name &name);
@@ -179,7 +172,24 @@ private:
   handleRecoverInterest(const ndn::Name &name);
 
   void
+  handleSyncInterestTimeout(const ndn::Interest &interest);
+
+  void
+  handleRecoverInterestTimeout(const ndn::Interest &interest);
+
+
+  void
+  handleSyncData(const ndn::Interest &interest, ndn::Data &data);
+
+  void
+  handleRecoverData(const ndn::Interest &interest, ndn::Data &data);
+
+  void
   handleStateData(const ndn::Buffer &content);
+
+  void
+  deregister(const ndn::Name &name);
+
 
 private:
 //  ndn::Face m_face;
@@ -198,6 +208,9 @@ private:
 
   long m_syncInterestInterval;
   ndn::KeyChain m_keyChain;
+  boost::thread m_listeningThread;
+  const ndn::RegisteredPrefixId * m_registeredPrefixId;
+
 };
 
 #endif // SYNC_CORE_H

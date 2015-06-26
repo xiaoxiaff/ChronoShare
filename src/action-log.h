@@ -17,6 +17,7 @@
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
  *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #ifndef ACTION_LOG_H
