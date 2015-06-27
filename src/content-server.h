@@ -48,8 +48,15 @@ public:
   void deregisterPrefix(const ndn::Name &prefix);
 
 private:
+
   void
-  filterAndServe(ndn::Name forwardingHint, const ndn::Name &interest);
+  listen()
+  {
+    m_face->processEvents(ndn::time::milliseconds::zero(), true);
+  }
+
+  void
+  filterAndServe(const ndn::InterestFilter& forwardingHint, const ndn::Interest& interest);
 
   void
   filterAndServeImpl(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
@@ -78,8 +85,8 @@ private:
   typedef boost::unique_lock<Mutex> ScopedLock;
   // typedef std::set<ndn::Name>::iterator PrefixIt;
   // std::set<ndn::Name> m_prefixes;
-  typedef std::map<ndn::Name, const ndn::InterestFilterId*>::iterator FilterIdIt;
-  std::map<ndn::Name, const ndn::InterestFilterId*> m_interestFilterIds;
+  typedef std::map<ndn::Name, const ndn::RegisteredPrefixId *>::iterator FilterIdIt;
+  std::map<ndn::Name, const ndn::RegisteredPrefixId *> m_interestFilterIds;
 
   Mutex m_mutex;
   boost::filesystem::path m_dbFolder;
@@ -90,9 +97,10 @@ private:
   DbCache m_dbCache;
   Mutex m_dbCacheMutex;
 
-  ndn::Name  m_userName;
+  ndn::Name m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
   ndn::KeyChain m_keyChain;
+  boost::thread m_listeningThread;
 };
 #endif // CONTENT_SERVER_H

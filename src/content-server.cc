@@ -54,6 +54,8 @@ ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr act
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
 {
+//  m_listeningThread = boost::thread(boost::bind(&ContentServer::listen, this));
+
   m_scheduler->start();
   TaskPtr flushStaleDbCacheTask = boost::make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this), "flush-state-db-cache", m_scheduler, boost::make_shared<SimpleIntervalGenerator>(DB_CACHE_LIFETIME));
   m_scheduler->addTask(flushStaleDbCacheTask);
@@ -70,6 +72,7 @@ ContentServer::~ContentServer()
   }
 
   m_interestFilterIds.clear();
+  
 }
 
 void
@@ -81,7 +84,10 @@ ContentServer::registerPrefix(const Name &forwardingHint)
   _LOG_DEBUG(">> content server: register " << forwardingHint);
 
   ScopedLock lock(m_mutex);
-  m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), bind(&ContentServer::filterAndServe, this, forwardingHint, _1));
+  m_interestFilterIds[forwardingHint]= m_face->setInterestFilter(ndn::InterestFilter(forwardingHint), 
+                                                                 boost::bind(&ContentServer::filterAndServe, this, _1, _2),
+                                                                 RegisterPrefixSuccessCallback(),
+                                                                 RegisterPrefixFailureCallback());
 
 }
 
@@ -125,16 +131,21 @@ ContentServer::filterAndServeImpl(const Name &forwardingHint, const Name &name, 
 }
 
 void
-ContentServer::filterAndServe(Name forwardingHint, const Name &interest)
+ContentServer::filterAndServe(const InterestFilter& interestFilter, const Interest& interestTrue)
 {
 
+  Name forwardingHint =  Name(interestFilter);
+  Name interest = interestTrue.getName();
+  _LOG_DEBUG("I'm serving ForwardingHint: " << forwardingHint << " Interest: " << interest);
   if (forwardingHint.size() > 0 &&
       m_userName.size() >= forwardingHint.size() &&
       m_userName.getSubName(0, forwardingHint.size()) == forwardingHint)
     {
+      _LOG_DEBUG("Triggered without Forwardinghint!");
       filterAndServeImpl(Name("/"), interest, interest); // try without forwarding hints
     }
 
+  _LOG_DEBUG("Triggered with Forwardinghint~!");
   filterAndServeImpl(forwardingHint, interest.getSubName(forwardingHint.size()), interest); // always try with hint... :( have to
 
 }

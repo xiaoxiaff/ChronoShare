@@ -77,6 +77,7 @@ ObjectManager::localFileToObjects(const fs::path &file, const ndn::Name &deviceN
 
       ndn::Name name = ndn::Name("/");
       name.append(deviceName).append(m_appName).append("file").appendImplicitSha256Digest(fileHash).appendNumber(segment);
+      _LOG_DEBUG("publish Data Name: " << name.toUri());
 
       // cout << *fileHash << endl;
       // cout << name << endl;

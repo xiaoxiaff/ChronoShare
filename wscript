@@ -202,7 +202,7 @@ def build (bld):
           target="unit-tests",
           source = bld.path.ant_glob(['test/main.cc', 
 #                                      'test/test-protobuf.cc', 
-                                      'test/test-sync-core.cc',
+#                                      'test/test-sync-core.cc',
 #                                      'test/test-sync-log.cc',
 #                                      'test/test-object-manager.cc',
 #                                      'test/test-action-log.cc',
