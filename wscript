@@ -202,14 +202,16 @@ def build (bld):
           target="unit-tests",
           source = bld.path.ant_glob(['test/main.cc', 
 #                                      'test/test-protobuf.cc', 
-#                                      'test/test-sync-core.cc',
+                                      'test/test-sync-core.cc',
 #                                      'test/test-sync-log.cc',
 #                                      'test/test-object-manager.cc',
 #                                      'test/test-action-log.cc',
 #                                      'test/test-executor.cc',
 #                                      'test/test-event-scheduler.cc',
 #                                      'test/test-fs-watcher.cc', # Bugs exit
-#                                      
+#                                      'test/test-fetch-task-db.cc',
+#                                      'test/test-fetch-manager.cc',
+                                      'test/test-serve-and-fetch.cc'
                                       ]),
           features=['cxx', 'cxxprogram'],
           use = 'BOOST BOOST_FILESYSTEM chronoshare fs_watcher QTCORE QTGUI',

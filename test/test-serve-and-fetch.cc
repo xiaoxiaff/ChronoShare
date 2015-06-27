@@ -20,8 +20,6 @@
  */
 
 #include "fetch-manager.h"
-#include "ccnx-wrapper.h"
-#include "ccnx-common.h"
 #include "scheduler.h"
 #include "object-db.h"
 #include "object-manager.h"
@@ -40,7 +38,7 @@
 
 INIT_LOGGER("Test.ServerAndFetch");
 
-using namespace Ccnx;
+using namespace ndn;
 using namespace std;
 using namespace boost;
 using namespace boost::filesystem;

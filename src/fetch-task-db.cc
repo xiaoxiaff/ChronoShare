@@ -113,6 +113,7 @@ FetchTaskDb::foreachTask(const FetchTaskCallback &callback)
     ndn::Name deviceName(ndn::Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
     ndn::Name baseName(ndn::Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
 
+    std::cout << "deviceName: " << deviceName << " baseName: " << baseName << std::endl;
     uint64_t minSeqNo = sqlite3_column_int64(stmt, 2);
     uint64_t maxSeqNo = sqlite3_column_int64(stmt, 3);
     int priority = sqlite3_column_int(stmt, 4);
