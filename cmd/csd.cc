@@ -1,6 +1,6 @@
 /* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
 /*
- * Copyright (c) 2013 University of California, Los Angeles
+ * Copyright(c) 2013 University of California, Los Angeles
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -32,7 +32,7 @@ using namespace ndn;
 
 int main(int argc, char *argv[])
 {
-  INIT_LOGGERS ();
+  INIT_LOGGERS();
 
   QCoreApplication app(argc, argv);
 
@@ -48,11 +48,11 @@ int main(int argc, char *argv[])
 
   cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder << "] at [" << path << "]" << endl;
 
-  Dispatcher dispatcher (username, sharedFolder, path, boost::make_shared<ndn::Face> ());
+  Dispatcher dispatcher(username, sharedFolder, path, boost::make_shared<ndn::Face>());
 
-  FsWatcher watcher (path.c_str (),
-                     bind (&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
-                     bind (&Dispatcher::Did_LocalFile_Delete,      &dispatcher, _1));
+  FsWatcher watcher(path.c_str(),
+                     bind(&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
+                     bind(&Dispatcher::Did_LocalFile_Delete,      &dispatcher, _1));
 
-  return app.exec ();
+  return app.exec();
 }

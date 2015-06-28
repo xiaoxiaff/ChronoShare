@@ -66,7 +66,7 @@ SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name 
                                                    boost::bind(&SyncCore::onRegisterFailed, this, _1, _2));
 
   // m_face start listening
-  m_listeningThread = boost::thread(boost::bind(&SyncCore::listen, this));
+//  m_listeningThread = boost::thread(boost::bind(&SyncCore::listen, this));
   // m_log->initYP(m_yp);
   m_log->UpdateLocalLocator(localPrefix);
 
@@ -81,8 +81,8 @@ SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name 
 SyncCore::~SyncCore()
 {
   m_scheduler->shutdown();
-  m_face->shutdown();
-  m_listeningThread.detach();
+//  m_face->shutdown();
+//  m_listeningThread.detach();
   // need to "deregister" closures
   m_face->unsetInterestFilter(m_registeredPrefixId);
 

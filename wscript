@@ -188,10 +188,10 @@ def build (bld):
 #    if bld.env['TEST']:
 #      unittests = bld.program (
 #          target="unit-tests",
-#          features = "cxx cxxprogram",
+#          features = "qt4 cxx cxxprogram",
 #          defines = "WAF",
-#          source = bld.path.ant_glob(['test/test-sync-log.cc']),
-#          use = 'BOOST chronoshare',
+#          source = bld.path.ant_glob(['test/*.cc']),
+#          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
 #          includes = "scheduler src executor gui fs-watcher",
 #          install_prefix = None,
 #          )
@@ -211,13 +211,18 @@ def build (bld):
 #                                      'test/test-fs-watcher.cc', # Bugs exit
 #                                      'test/test-fetch-task-db.cc',
 #                                      'test/test-fetch-manager.cc',
-                                      'test/test-serve-and-fetch.cc'
+#                                      'test/test-serve-and-fetch.cc',
+                                      'test/test-dispatcher.cc',
+#                                      'test/client/client.cc', 'test/daemon/daemon.cc', 'test/daemon/notify-i.cc' #lack of lots of lib now
                                       ]),
-          features=['cxx', 'cxxprogram'],
-          use = 'BOOST BOOST_FILESYSTEM chronoshare fs_watcher QTCORE QTGUI',
+          features=['qt4', 'cxx', 'cxxprogram'],
+          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
+#          use = 'BOOST BOOST_FILESYSTEM chronoshare fs_watcher QTCORE QTGUI',
           includes = "scheduler src executor gui fs-watcher",
-          install_path = None,
-          defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
+          install_prefix = None,
+#          install_path = None,
+          defines = "WAF",
+#          defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
           )
 
     http_server = bld (

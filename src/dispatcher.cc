@@ -55,6 +55,9 @@ Dispatcher::Dispatcher(const std::string &localUserName
            , m_server(NULL)
            , m_enablePrefixDiscovery(enablePrefixDiscovery)
 {
+  // TODO check
+  m_faceListening = boost::thread(boost::bind(&Dispatcher::listen, this));
+
   m_syncLog = boost::make_shared<SyncLog>(m_rootDir, localUserName);
   m_actionLog = boost::make_shared<ActionLog>(m_face, m_rootDir, m_syncLog, sharedFolder, CHRONOSHARE_APP,
                                        // bind(&Dispatcher::Did_ActionLog_ActionApply_AddOrModify, this, _1, _2, _3, _4, _5, _6, _7),
@@ -67,11 +70,15 @@ Dispatcher::Dispatcher(const std::string &localUserName
   syncPrefix.append(sharedFolder);
 
   // m_server needs a different ndn face
-  m_server = new ContentServer(boost::make_shared<ndn::Face>(), m_actionLog, rootDir, m_localUserName, m_sharedFolder, CHRONOSHARE_APP, CONTENT_FRESHNESS);
+  m_face_server = boost::make_shared<ndn::Face>();
+  m_serverListening = boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_server, "contentServer"));
+  m_server = new ContentServer(m_face_server, m_actionLog, rootDir, m_localUserName, m_sharedFolder, CHRONOSHARE_APP, CONTENT_FRESHNESS);
   m_server->registerPrefix(Name("/"));
   m_server->registerPrefix(Name(BROADCAST_DOMAIN));
 
-  m_stateServer = new StateServer(boost::make_shared<ndn::Face>(), m_actionLog, rootDir, m_localUserName, m_sharedFolder, CHRONOSHARE_APP, m_objectManager, CONTENT_FRESHNESS);
+  m_face_stateServer = boost::make_shared<ndn::Face>();
+  m_stateServerListening = boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
+  m_stateServer = new StateServer(m_face_stateServer, m_actionLog, rootDir, m_localUserName, m_sharedFolder, CHRONOSHARE_APP, m_objectManager, CONTENT_FRESHNESS);
   // no need to register, right now only listening on localhost prefix
 
   m_core = new SyncCore(face, m_syncLog, localUserName, Name("/"), syncPrefix,
@@ -110,6 +117,10 @@ Dispatcher::Dispatcher(const std::string &localUserName
 
 Dispatcher::~Dispatcher()
 {
+  m_face->shutdown();
+  m_face_server->shutdown();
+  m_face_stateServer->shutdown();
+  
   _LOG_DEBUG("Enter destructor of dispatcher");
   m_executor.shutdown();
 

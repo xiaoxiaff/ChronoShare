@@ -64,6 +64,15 @@ void checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 //  std::cout << "checking rootDigest Over!!" << std::endl;
 }
 
+void
+listen(boost::shared_ptr<ndn::Face> face, std::string name) {
+  printf("%s start listening ...\n", name.c_str());
+  std::cout << name << "start listening ... " << std::endl;
+  face->processEvents();
+  printf("%s listen Over !!!\n", name.c_str());
+}
+
+
 BOOST_AUTO_TEST_CASE(SyncCoreTest)
 {
   INIT_LOGGERS();
@@ -83,8 +92,12 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   Name user2("/loli");
   Name loc2("/locator2");
   Name syncPrefix("/broadcast/arslan");
+
   boost::shared_ptr<ndn::Face> c1 = boost::make_shared<ndn::Face>();
+  boost::thread c1_listen(listen, c1, "c1");
   boost::shared_ptr<ndn::Face> c2 = boost::make_shared<ndn::Face>();
+  boost::thread c2_listen(listen, c2, "c2");
+
   SyncLogPtr log1(new SyncLog(dir1, user1));
   SyncLogPtr log2(new SyncLog(dir2, user2));
 

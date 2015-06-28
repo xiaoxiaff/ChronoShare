@@ -33,9 +33,9 @@
 
 INIT_LOGGER("StateServer");
 
-using namespace ndn;
 using namespace std;
 using namespace boost;
+using namespace ndn;
 
 namespace fs = boost::filesystem;
 
@@ -86,21 +86,34 @@ StateServer::registerPrefixes()
    // <PREFIX_INFO>/"actions"/"all"/<segment>  get list of all actions
   ndn::Name actionsFolder = ndn::Name(m_PREFIX_INFO);
   actionsFolder.append("actions").append("folder");
-  actionsFolderId = m_face->setInterestFilter(ndn::InterestFilter(actionsFolder), bind(&StateServer::info_actions_folder, this, _1));
+  actionsFolderId = m_face->setInterestFilter(ndn::InterestFilter(actionsFolder), 
+                                              bind(&StateServer::info_actions_folder, this, _1, _2),
+                                              RegisterPrefixSuccessCallback(),
+                                              RegisterPrefixFailureCallback());
 
   ndn::Name actionsFile = ndn::Name(m_PREFIX_INFO);
   actionsFile.append("actions").append("file");
-  actionsFileId = m_face->setInterestFilter(ndn::InterestFilter(actionsFile), bind(&StateServer::info_actions_file, this, _1));
+  actionsFileId = m_face->setInterestFilter(ndn::InterestFilter(actionsFile), 
+                                            bind(&StateServer::info_actions_file, this, _1, _2),
+                                            RegisterPrefixSuccessCallback(),
+                                            RegisterPrefixFailureCallback());                                            
 
   // <PREFIX_INFO>/"filestate"/"all"/<segment>
   ndn::Name filesFolder = ndn::Name(m_PREFIX_INFO);
   filesFolder.append("files").append("folder");
-  filesFolderId = m_face->setInterestFilter(ndn::InterestFilter(filesFolder), bind(&StateServer::info_files_folder, this, _1));
+  filesFolderId = m_face->setInterestFilter(ndn::InterestFilter(filesFolder), 
+                                            bind(&StateServer::info_files_folder, this, _1, _2),
+                                            RegisterPrefixSuccessCallback(),
+                                            RegisterPrefixFailureCallback());
 
   // <PREFIX_CMD>/"restore"/"file"/<one-component-relative-file-name>/<version>/<file-hash>
   ndn::Name restoreFile = ndn::Name(m_PREFIX_CMD);
   restoreFile.append("restore").append("file");
-  restoreFileId = m_face->setInterestFilter(ndn::InterestFilter(restoreFile), bind(&StateServer::cmd_restore_file, this, _1));}
+  restoreFileId = m_face->setInterestFilter(ndn::InterestFilter(restoreFile), 
+                                            bind(&StateServer::cmd_restore_file, this, _1, _2),
+                                            RegisterPrefixSuccessCallback(),
+                                            RegisterPrefixFailureCallback());
+}
 
 void
 StateServer::deregisterPrefixes()
@@ -187,8 +200,9 @@ StateServer::formatActionJson(json_spirit::Array &actions,
 }
 
 void
-StateServer::info_actions_folder(const Name &interest)
+StateServer::info_actions_folder(const InterestFilter& interesFilter, const Interest& interestTrue)
 {
+  Name interest = interestTrue.getName();
   if (interest.size() - m_PREFIX_INFO.size() != 3 &&
       interest.size() - m_PREFIX_INFO.size() != 4)
     {
@@ -201,8 +215,9 @@ StateServer::info_actions_folder(const Name &interest)
 }
 
 void
-StateServer::info_actions_file(const Name &interest)
+StateServer::info_actions_file(const InterestFilter& interesFilter, const Interest& interestTrue)
 {
+  Name interest = interestTrue.getName();
   if (interest.size() - m_PREFIX_INFO.size() != 3 &&
       interest.size() - m_PREFIX_INFO.size() != 4)
     {
@@ -340,8 +355,9 @@ void debugFileState(const FileItem &file)
 }
 
 void
-StateServer::info_files_folder(const ndn::Name &interest)
+StateServer::info_files_folder(const InterestFilter& interesFilter, const Interest& interestTrue)
 {
+  Name interest = interestTrue.getName();
   if (interest.size() - m_PREFIX_INFO.size() != 3 &&
       interest.size() - m_PREFIX_INFO.size() != 4)
     {
@@ -417,8 +433,9 @@ StateServer::info_files_folder_Execute(const ndn::Name &interest)
 
 
 void
-StateServer::cmd_restore_file(const ndn::Name &interest)
+StateServer::cmd_restore_file(const InterestFilter& interesFilter, const Interest& interestTrue)
 {
+  Name interest = interestTrue.getName();
   if (interest.size() - m_PREFIX_CMD.size() != 4 &&
       interest.size() - m_PREFIX_CMD.size() != 5)
     {
