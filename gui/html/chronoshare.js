@@ -96,7 +96,7 @@ $.Class ("CmdRestoreFileClosure", {}, {
 	    this.callback (true, convertedData);
 	}
         else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-	    this.callback (false, "Interest timed out");
+	    this.callback (false, "Interest timed out 99");
         }
         else {
 	    this.callback (false, "Unknown error happened");
@@ -140,7 +140,7 @@ $.Class ("FileGetter", {}, {
             }
         }
         else {
-	    this.callback (false, "Interest timed out");
+	    this.callback (false, "Interest time out 143");
         }
     }
 });
@@ -200,7 +200,7 @@ $.Class ("RestPipelineClosure", {}, {
     },
 
     onTimeout: function () {
-        $("#error").html ("Interest timed out");
+        $("#error").html ("Ha Ha Interest time out");
         $("#error").removeClass ("hidden");
     },
 
