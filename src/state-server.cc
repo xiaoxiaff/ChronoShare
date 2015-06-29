@@ -55,14 +55,14 @@ StateServer::StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionL
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
 {
-  // may be later /localhost should be replaced with /%C1.M.S.localhost
+  // may be later /localhop should be replaced with /%C1.M.S.localhost
 
-  // <PREFIX_INFO> = /localhost/<user's-device-name>/"chronoshare"/"info"
-  m_PREFIX_INFO = ndn::Name("/localhost");
+  // <PREFIX_INFO> = /localhop/<user's-device-name>/"chronoshare"/"info"
+  m_PREFIX_INFO = ndn::Name("/localhop");
   m_PREFIX_INFO.append(m_userName).append("chronoshare").append(m_sharedFolderName).append("info");
 
-  // <PREFIX_CMD> = /localhost/<user's-device-name>/"chronoshare"/"cmd"
-  m_PREFIX_CMD = ndn::Name("/localhost");
+  // <PREFIX_CMD> = /localhop/<user's-device-name>/"chronoshare"/"cmd"
+  m_PREFIX_CMD = ndn::Name("/localhop");
   m_PREFIX_CMD.append(m_userName).append("chronoshare").append(m_sharedFolderName).append("cmd");
 
   m_executor.start();
@@ -91,12 +91,16 @@ StateServer::registerPrefixes()
                                               RegisterPrefixSuccessCallback(),
                                               RegisterPrefixFailureCallback());
 
+  _LOG_DEBUG("Register Prefix: " << actionsFolder);
+
   ndn::Name actionsFile = ndn::Name(m_PREFIX_INFO);
   actionsFile.append("actions").append("file");
   actionsFileId = m_face->setInterestFilter(ndn::InterestFilter(actionsFile), 
                                             bind(&StateServer::info_actions_file, this, _1, _2),
                                             RegisterPrefixSuccessCallback(),
                                             RegisterPrefixFailureCallback());                                            
+
+  _LOG_DEBUG("Register Prefix: " << actionsFile);
 
   // <PREFIX_INFO>/"filestate"/"all"/<segment>
   ndn::Name filesFolder = ndn::Name(m_PREFIX_INFO);
@@ -106,6 +110,8 @@ StateServer::registerPrefixes()
                                             RegisterPrefixSuccessCallback(),
                                             RegisterPrefixFailureCallback());
 
+  _LOG_DEBUG("Register Prefix: " << filesFolder);
+
   // <PREFIX_CMD>/"restore"/"file"/<one-component-relative-file-name>/<version>/<file-hash>
   ndn::Name restoreFile = ndn::Name(m_PREFIX_CMD);
   restoreFile.append("restore").append("file");
@@ -113,6 +119,8 @@ StateServer::registerPrefixes()
                                             bind(&StateServer::cmd_restore_file, this, _1, _2),
                                             RegisterPrefixSuccessCallback(),
                                             RegisterPrefixFailureCallback());
+
+  _LOG_DEBUG("Register Prefix: " << restoreFile);
 }
 
 void
@@ -203,6 +211,7 @@ void
 StateServer::info_actions_folder(const InterestFilter& interesFilter, const Interest& interestTrue)
 {
   Name interest = interestTrue.getName();
+  _LOG_DEBUG(">> info_actions_folder: " << interest);
   if (interest.size() - m_PREFIX_INFO.size() != 3 &&
       interest.size() - m_PREFIX_INFO.size() != 4)
     {
@@ -210,7 +219,6 @@ StateServer::info_actions_folder(const InterestFilter& interesFilter, const Inte
       return;
     }
 
-  _LOG_DEBUG(">> info_actions_folder: " << interest);
   m_executor.execute(bind(&StateServer::info_actions_fileOrFolder_Execute, this, interest, true));
 }
 
@@ -259,6 +267,7 @@ StateServer::info_actions_fileOrFolder_Execute(const ndn::Name &interest, bool i
  * }
  */
 
+   _LOG_DEBUG("info_actions_fileOrFolder_Execute! offset: " << offset);
   using namespace json_spirit;
   Object json;
 
@@ -463,7 +472,10 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
 		      uint64_t version = interest.get(-2).toNumber();
 		      string  filename = interest.get(-3).toUri(); // should be safe even with full relative path
 
+          _LOG_DEBUG("filename: " << filename << " version: " << version);
+
           file = m_actionLog->LookupAction(filename, version, hash);
+
           if (!file)
             {
               _LOG_ERROR("Requested file is not found: [" << filename << "] version [" << version << "] hash [" << DigestComputer::digestToString(hash) << "]");
@@ -499,7 +511,11 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
       ///////////////////
 
     	boost::filesystem::path filePath = m_rootDir / file->filename();
-    	ndn::Name deviceName = ndn::Name(file->device_name().c_str()).getSubName(0, file->device_name().size());
+//    	ndn::Name deviceName = ndn::Name(file->device_name().c_str()).getSubName(0, file->device_name().size());
+      ndn::Name deviceName(ndn::Block((const unsigned char *)file->device_name().c_str(), file->device_name().size()));
+
+      _LOG_DEBUG("filePath" << filePath << " deviceName " << deviceName);
+
 
       try
         {
@@ -533,7 +549,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
           _LOG_ERROR("File operations failed on [" << filePath << "](ignoring)");
         }
 
-      _LOG_TRACE("Restoring file [" << filePath << "]");
+      _LOG_TRACE("Restoring file [" << filePath << "]" << " deviceName " << deviceName);
       if (m_objectManager.objectsToLocalFile(deviceName, hash, filePath))
         {
           last_write_time(filePath, file->mtime());
@@ -547,6 +563,7 @@ StateServer::cmd_restore_file_Execute(const ndn::Name &interest)
       		data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
           m_keyChain.sign(*data);
       		m_face->put(*data);
+          _LOG_DEBUG("Restoring file sucessfully!");
         }
       else
         {

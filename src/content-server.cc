@@ -215,7 +215,8 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
         data->setContent(co->buf(), co->size());
         if (forwardingHint.size() == 0)
           {
-            _LOG_DEBUG(deviceName);
+            _LOG_DEBUG(deviceName << "forwardingHint.size = 0 Name: " << name);
+            data->setName(name);
           }
         else
           {
@@ -227,6 +228,7 @@ ContentServer::serve_File_Execute(const Name &forwardingHint, const Name &name, 
           }
          m_keyChain.sign(*data);
          m_face->put(*data);
+         _LOG_DEBUG("Send File Data Done!");
       }
     else
       {

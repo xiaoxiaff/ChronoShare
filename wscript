@@ -19,7 +19,8 @@ def options(opt):
 def configure(conf):
     conf.load("compiler_c compiler_cxx default-compiler-flags gnu_dirs")
     conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
-               uselib_store='NDN_CXX', mandatory=True)
+               uselib_store='NDN_CXX')
+    conf.define ('NFD_PATH', conf.env.NFD)
 
     if conf.options.debug:
         conf.define ('_DEBUG', 1)

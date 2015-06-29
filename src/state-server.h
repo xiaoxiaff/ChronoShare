@@ -47,7 +47,7 @@
  *
  * Information available:
  *
- * For now serving only locally(using <PREFIX> = /localhost/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
+ * For now serving only locally(using <PREFIX> = /localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
  *
  * - state: get list of SyncNodes, their sequence numbers, and forwarding hint(almost the same as RECOVERY interest)
  *
@@ -138,7 +138,7 @@
  *
  * Commands available:
  *
- * For now serving only locally(using <PREFIX_CMD> = /localhost/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
+ * For now serving only locally(using <PREFIX_CMD> = /localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
  *
  * - restore version of the file
  *

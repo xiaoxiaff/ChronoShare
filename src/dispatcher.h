@@ -93,7 +93,6 @@ private:
   void
   listen_other(boost::shared_ptr<ndn::Face> face, std::string name) {
     printf("%s start listening ...\n", name.c_str());
-    std::cout << name << "start listening ... " << std::endl;
     face->processEvents();
     printf("%s listen Over !!!\n", name.c_str());
   }

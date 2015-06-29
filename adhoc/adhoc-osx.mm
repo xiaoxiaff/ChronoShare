@@ -63,6 +63,7 @@ Adhoc::CreateAdhoc ()
   NSData* data = [networkName dataUsingEncoding:NSUTF8StringEncoding];
   BOOL created = [airport startIBSSModeWithSSID:data security:kCWIBSSModeSecurityNone channel:g_channel password:passphrase error:&error];
 
+
   if (!created)
     {
       return false;
@@ -70,11 +71,14 @@ Adhoc::CreateAdhoc ()
 
   _LOG_DEBUG ("Creating face for the adhoc connection");
 
+//  sleep(30);
+
   // should do a better job later, when Ccnx::Control will be implemented
 
   ostringstream cmd;
 //  cmd << CCNX_PATH << "/bin/ccndc add / udp 169.254.255.255";
-  cmd << "/bin/ccndc add / udp 169.254.255.255";
+//  cmd << "/usr/local/bin/nfdc register / udp://169.254.255.255";
+//  cmd << NFD_PATH << "/bin/nfdc register / udp://192.168.255.255";
   int ret = system (cmd.str ().c_str ());
   if (ret == 0)
     {
