@@ -47,11 +47,14 @@
  *
  * Information available:
  *
- * For now serving only locally(using <PREFIX> = /localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
+ * For now serving only locally(using <PREFIX> =
+ */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
  *
- * - state: get list of SyncNodes, their sequence numbers, and forwarding hint(almost the same as RECOVERY interest)
+ * - state: get list of SyncNodes, their sequence numbers, and forwarding hint(almost the same as
+ *RECOVERY interest)
  *
- *   <PREFIX_INFO>/"state"  (@todo: authentification code or authentication code should in addition somewhere)
+ *   <PREFIX_INFO>/"state"  (@todo: authentification code or authentication code should in addition
+ *somewhere)
  *
  * - action
  *
@@ -138,7 +141,8 @@
  *
  * Commands available:
  *
- * For now serving only locally(using <PREFIX_CMD> = /localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
+ * For now serving only locally(using <PREFIX_CMD> =
+ */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
  *
  * - restore version of the file
  *
@@ -150,13 +154,12 @@
  *  (this may not need to be here, if we implement periodic cleaning)
  * - ? flatten action log(should be supported eventually, but not supported now)
  */
-class StateServer
-{
+class StateServer {
 public:
-  StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog, const boost::filesystem::path &rootDir,
-              const ndn::Name &userName, const std::string &sharedFolderName, const std::string &appName,
-              ObjectManager &objectManager,
-              int freshness = -1);
+  StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
+              const boost::filesystem::path& rootDir, const ndn::Name& userName,
+              const std::string& sharedFolderName, const std::string& appName,
+              ObjectManager& objectManager, int freshness = -1);
   ~StateServer();
 
 private:
@@ -167,19 +170,19 @@ private:
   info_actions_file(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
-  info_actions_fileOrFolder_Execute(const ndn::Name &interest, bool isFolder = true);
+  info_actions_fileOrFolder_Execute(const ndn::Name& interest, bool isFolder = true);
 
   void
   info_files_folder(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
-  info_files_folder_Execute(const ndn::Name &interest);
+  info_files_folder_Execute(const ndn::Name& interest);
 
   void
   cmd_restore_file(const ndn::InterestFilter&, const ndn::Interest&);
 
   void
-  cmd_restore_file_Execute(const ndn::Name &interest);
+  cmd_restore_file_Execute(const ndn::Name& interest);
 
 private:
   void
@@ -189,30 +192,31 @@ private:
   deregisterPrefixes();
 
   static void
-  formatActionJson(json_spirit::Array &actions, const ndn::Name &name, sqlite3_int64 seq_no, const ActionItem &action);
+  formatActionJson(json_spirit::Array& actions, const ndn::Name& name, sqlite3_int64 seq_no,
+                   const ActionItem& action);
 
   static void
-  formatFilestateJson(json_spirit::Array &files, const FileItem &file);
+  formatFilestateJson(json_spirit::Array& files, const FileItem& file);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
   ActionLogPtr m_actionLog;
-  ObjectManager &m_objectManager;
+  ObjectManager& m_objectManager;
 
   ndn::Name m_PREFIX_INFO;
   ndn::Name m_PREFIX_CMD;
 
-  const ndn::RegisteredPrefixId *actionsFolderId;
-  const ndn::RegisteredPrefixId *actionsFileId;
-  const ndn::RegisteredPrefixId *filesFolderId;
-  const ndn::RegisteredPrefixId *restoreFileId;
+  const ndn::RegisteredPrefixId* actionsFolderId;
+  const ndn::RegisteredPrefixId* actionsFileId;
+  const ndn::RegisteredPrefixId* filesFolderId;
+  const ndn::RegisteredPrefixId* restoreFileId;
 
   boost::filesystem::path m_rootDir;
   int m_freshness;
 
-  Executor    m_executor;
+  Executor m_executor;
 
-  ndn::Name  m_userName;
+  ndn::Name m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
   ndn::KeyChain m_keyChain;

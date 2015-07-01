@@ -36,10 +36,10 @@
 #include <boost/make_shared.hpp>
 #include <thread>
 
-// No use this now 
+// No use this now
 template<class Msg>
 ndn::BufferPtr
-serializeMsg(const Msg &msg)
+serializeMsg(const Msg& msg)
 {
   int size = msg.ByteSize();
   ndn::BufferPtr bytes = std::make_shared<ndn::Buffer>(size);
@@ -49,25 +49,24 @@ serializeMsg(const Msg &msg)
 
 template<class Msg>
 boost::shared_ptr<Msg>
-deserializeMsg(const ndn::Buffer &bytes)
+deserializeMsg(const ndn::Buffer& bytes)
 {
   boost::shared_ptr<Msg> retval(new Msg());
-  if (!retval->ParseFromArray(bytes.buf(), bytes.size()))
-    {
-      // to indicate an error
-      return boost::shared_ptr<Msg>();
-    }
+  if (!retval->ParseFromArray(bytes.buf(), bytes.size())) {
+    // to indicate an error
+    return boost::shared_ptr<Msg>();
+  }
   return retval;
 }
 
 template<class Msg>
 ndn::BufferPtr
-serializeGZipMsg(const Msg &msg)
+serializeGZipMsg(const Msg& msg)
 {
-  std::vector<char> bytes;   // Bytes couldn't work
+  std::vector<char> bytes; // Bytes couldn't work
   {
     boost::iostreams::filtering_ostream out;
-    out.push(boost::iostreams::gzip_compressor()); // gzip filter
+    out.push(boost::iostreams::gzip_compressor());    // gzip filter
     out.push(boost::iostreams::back_inserter(bytes)); // back_inserter sink
 
     msg.SerializeToOstream(&out);
@@ -79,46 +78,44 @@ serializeGZipMsg(const Msg &msg)
 
 template<class Msg>
 boost::shared_ptr<Msg>
-deserializeGZipMsg(const ndn::Buffer &bytes)
+deserializeGZipMsg(const ndn::Buffer& bytes)
 {
   std::vector<char> sBytes(bytes.size());
   memcpy(&sBytes[0], &bytes[0], bytes.size());
   boost::iostreams::filtering_istream in;
   in.push(boost::iostreams::gzip_decompressor()); // gzip filter
-  in.push(boost::make_iterator_range(sBytes)); // source
+  in.push(boost::make_iterator_range(sBytes));    // source
 
   boost::shared_ptr<Msg> retval = boost::make_shared<Msg>();
-  if (!retval->ParseFromIstream(&in))
-    {
-      // to indicate an error
-      return boost::shared_ptr<Msg>();
-    }
+  if (!retval->ParseFromIstream(&in)) {
+    // to indicate an error
+    return boost::shared_ptr<Msg>();
+  }
 
   return retval;
 }
 
-class SyncCore
-{
+class SyncCore {
 public:
-  typedef boost::function<void (SyncStateMsgPtr stateMsg) > StateMsgCallback;
+  typedef boost::function<void(SyncStateMsgPtr stateMsg)> StateMsgCallback;
 
   static const int FRESHNESS; // seconds
   static const string RECOVER;
-  static const double WAIT; // seconds;
+  static const double WAIT;           // seconds;
   static const double RANDOM_PERCENT; // seconds;
 
 public:
-  SyncCore(  boost::shared_ptr<ndn::Face> face
-           , SyncLogPtr syncLog
-           , const ndn::Name &userName
-           , const ndn::Name &localPrefix      // routable name used by the local user
-           , const ndn::Name &syncPrefix       // the prefix for the sync collection
-           , const StateMsgCallback &callback   // callback when state change is detected
-           , long syncInterestInterval = -1);
+  SyncCore(boost::shared_ptr<ndn::Face> face, SyncLogPtr syncLog, const ndn::Name& userName,
+           const ndn::Name& localPrefix // routable name used by the local user
+           ,
+           const ndn::Name& syncPrefix // the prefix for the sync collection
+           ,
+           const StateMsgCallback& callback // callback when state change is detected
+           ,
+           long syncInterestInterval = -1);
   ~SyncCore();
 
-  void
-  updateLocalState(sqlite3_int64);
+  void updateLocalState(sqlite3_int64);
 
   void
   localStateChanged();
@@ -132,27 +129,30 @@ public:
   void
   localStateChangedDelayed();
 
-// ------------------ only used in test -------------------------
+  // ------------------ only used in test -------------------------
 
 public:
   ndn::ConstBufferPtr
-  root() const { return m_rootDigest; }
+  root() const
+  {
+    return m_rootDigest;
+  }
 
   sqlite3_int64
-  seq (const ndn::Name &name);
+  seq(const ndn::Name& name);
 
 private:
   void
-  listen() {
+  listen()
+  {
     m_face->processEvents();
   }
 
   void
   onRegisterFailed(const ndn::Name& prefix, const std::string& reason)
   {
-    std::cerr << "ERROR: Failed to register prefix \""
-              << prefix << "\" in local hub's daemon (" << reason << ")"
-              << std::endl;
+    std::cerr << "ERROR: Failed to register prefix \"" << prefix << "\" in local hub's daemon ("
+              << reason << ")" << std::endl;
     m_face->shutdown();
   }
 
@@ -166,33 +166,31 @@ private:
   handleInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
 
   void
-  handleSyncInterest(const ndn::Name &name);
+  handleSyncInterest(const ndn::Name& name);
 
   void
-  handleRecoverInterest(const ndn::Name &name);
+  handleRecoverInterest(const ndn::Name& name);
 
   void
-  handleSyncInterestTimeout(const ndn::Interest &interest);
+  handleSyncInterestTimeout(const ndn::Interest& interest);
 
   void
-  handleRecoverInterestTimeout(const ndn::Interest &interest);
-
-
-  void
-  handleSyncData(const ndn::Interest &interest, ndn::Data &data);
+  handleRecoverInterestTimeout(const ndn::Interest& interest);
 
   void
-  handleRecoverData(const ndn::Interest &interest, ndn::Data &data);
+  handleSyncData(const ndn::Interest& interest, ndn::Data& data);
 
   void
-  handleStateData(const ndn::Buffer &content);
+  handleRecoverData(const ndn::Interest& interest, ndn::Data& data);
 
   void
-  deregister(const ndn::Name &name);
+  handleStateData(const ndn::Buffer& content);
 
+  void
+  deregister(const ndn::Name& name);
 
 private:
-//  ndn::Face m_face;
+  //  ndn::Face m_face;
   boost::shared_ptr<ndn::Face> m_face;
 
   SyncLogPtr m_log;
@@ -209,8 +207,7 @@ private:
   long m_syncInterestInterval;
   ndn::KeyChain m_keyChain;
   boost::thread m_listeningThread;
-  const ndn::RegisteredPrefixId * m_registeredPrefixId;
-
+  const ndn::RegisteredPrefixId* m_registeredPrefixId;
 };
 
 #endif // SYNC_CORE_H

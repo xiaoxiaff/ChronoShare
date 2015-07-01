@@ -25,19 +25,18 @@
 #include "config.h"
 
 #if (__APPLE__ && HAVE_COREWLAN)
-    #define ADHOC_SUPPORTED 1
+#define ADHOC_SUPPORTED 1
 #endif
 
 #ifdef ADHOC_SUPPORTED
 
-class Adhoc
-{
+class Adhoc {
 public:
   static bool
-  CreateAdhoc ();
+  CreateAdhoc();
 
   static void
-  DestroyAdhoc ();
+  DestroyAdhoc();
 };
 
 #endif

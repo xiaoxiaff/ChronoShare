@@ -34,60 +34,52 @@
 #include <list>
 #include <stdint.h>
 
-
-class FetchManager
-{
+class FetchManager {
 public:
-  enum
-    {
-      PRIORITY_NORMAL,
-      PRIORITY_HIGH
-    };
+  enum { PRIORITY_NORMAL, PRIORITY_HIGH };
 
-  typedef boost::function<ndn::Name(const ndn::Name &)> Mapping;
-  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName, uint64_t seq, ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
-  typedef boost::function<void(ndn::Name &deviceName, ndn::Name &baseName)> FinishCallback;
-  FetchManager(boost::shared_ptr<ndn::Face> face,
-                const Mapping &mapping,
-                const ndn::Name &broadcastForwardingHint,
-                uint32_t parallelFetches = 3,
-                const SegmentCallback &defaultSegmentCallback = SegmentCallback(),
-                const FinishCallback &defaultFinishCallback = FinishCallback(),
-                const FetchTaskDbPtr &taskDb = FetchTaskDbPtr()
-                );
+  typedef boost::function<ndn::Name(const ndn::Name&)> Mapping;
+  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName, uint64_t seq,
+                               ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
+  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName)> FinishCallback;
+  FetchManager(boost::shared_ptr<ndn::Face> face, const Mapping& mapping,
+               const ndn::Name& broadcastForwardingHint, uint32_t parallelFetches = 3,
+               const SegmentCallback& defaultSegmentCallback = SegmentCallback(),
+               const FinishCallback& defaultFinishCallback = FinishCallback(),
+               const FetchTaskDbPtr& taskDb = FetchTaskDbPtr());
   virtual ~FetchManager();
 
   void
-  Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
-           const SegmentCallback &segmentCallback, const FinishCallback &finishCallback,
-           uint64_t minSeqNo, uint64_t maxSeqNo, int priority=PRIORITY_NORMAL);
+  Enqueue(const ndn::Name& deviceName, const ndn::Name& baseName,
+          const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
+          uint64_t minSeqNo, uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
 
   // Enqueue using default callbacks
   void
-  Enqueue(const ndn::Name &deviceName, const ndn::Name &baseName,
-           uint64_t minSeqNo, uint64_t maxSeqNo, int priority=PRIORITY_NORMAL);
+  Enqueue(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+          uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
 
   // only for Fetcher
-  inline boost::shared_ptr<ndn::Face>  
+  inline boost::shared_ptr<ndn::Face>
   GetFace();
 
 private:
   // Fetch Events
   void
-  DidDataSegmentFetched(Fetcher &fetcher, uint64_t seqno, const ndn::Name &basename,
-                         const ndn::Name &name, ndn::shared_ptr<ndn::Data> data);
+  DidDataSegmentFetched(Fetcher& fetcher, uint64_t seqno, const ndn::Name& basename,
+                        const ndn::Name& name, ndn::shared_ptr<ndn::Data> data);
 
   void
-  DidNoDataTimeout(Fetcher &fetcher);
+  DidNoDataTimeout(Fetcher& fetcher);
 
   void
-  DidFetchComplete(Fetcher &fetcher, const ndn::Name &deviceName, const ndn::Name &baseName);
+  DidFetchComplete(Fetcher& fetcher, const ndn::Name& deviceName, const ndn::Name& baseName);
 
   void
   ScheduleFetches();
 
   void
-  TimedWait(Fetcher &fetcher);
+  TimedWait(Fetcher& fetcher);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
@@ -98,8 +90,8 @@ private:
   boost::mutex m_parellelFetchMutex;
 
   // optimized list structure for fetch queue
-  typedef boost::intrusive::member_hook< Fetcher,
-                                         boost::intrusive::list_member_hook<>, &Fetcher::m_managerListHook> MemberOption;
+  typedef boost::intrusive::member_hook<Fetcher, boost::intrusive::list_member_hook<>,
+                                        &Fetcher::m_managerListHook> MemberOption;
   typedef boost::intrusive::list<Fetcher, MemberOption> FetchList;
 
   FetchList m_fetchList;
@@ -121,10 +113,10 @@ FetchManager::GetFace()
 
 typedef boost::error_info<struct tag_errmsg, std::string> errmsg_info_str;
 namespace Error {
-struct FetchManager : virtual boost::exception, virtual std::exception { };
+struct FetchManager : virtual boost::exception, virtual std::exception {
+};
 }
 
 typedef boost::shared_ptr<FetchManager> FetchManagerPtr;
-
 
 #endif // FETCHER_H

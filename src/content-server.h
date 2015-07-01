@@ -32,11 +32,11 @@
 #include <boost/thread/locks.hpp>
 #include "scheduler.h"
 
-class ContentServer
-{
+class ContentServer {
 public:
-  ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog, const boost::filesystem::path &rootDir,
-                const ndn::Name &userName, const std::string &sharedFolderName, const std::string &appName,
+  ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
+                const boost::filesystem::path& rootDir, const ndn::Name& userName,
+                const std::string& sharedFolderName, const std::string& appName,
                 int freshness = -1);
   ~ContentServer();
 
@@ -44,11 +44,12 @@ public:
   // /some-prefix/topology-independent-name
   // currently /topology-independent-name must begin with /action or /file
   // so that ContentServer knows where to look for the content object
-  void registerPrefix(const ndn::Name &prefix);
-  void deregisterPrefix(const ndn::Name &prefix);
+  void
+  registerPrefix(const ndn::Name& prefix);
+  void
+  deregisterPrefix(const ndn::Name& prefix);
 
 private:
-
   void
   listen()
   {
@@ -59,23 +60,25 @@ private:
   filterAndServe(const ndn::InterestFilter& forwardingHint, const ndn::Interest& interest);
 
   void
-  filterAndServeImpl(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  filterAndServeImpl(const ndn::Name& forwardingHint, const ndn::Name& name,
+                     const ndn::Name& interest);
 
   void
-  serve_Action(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_Action(const ndn::Name& forwardingHint, const ndn::Name& name, const ndn::Name& interest);
 
   void
-  serve_File(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_File(const ndn::Name& forwardingHint, const ndn::Name& name, const ndn::Name& interest);
 
   void
-  serve_Action_Execute(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_Action_Execute(const ndn::Name& forwardingHint, const ndn::Name& name,
+                       const ndn::Name& interest);
 
   void
-  serve_File_Execute(const ndn::Name &forwardingHint, const ndn::Name &name, const ndn::Name &interest);
+  serve_File_Execute(const ndn::Name& forwardingHint, const ndn::Name& name,
+                     const ndn::Name& interest);
 
   void
   flushStaleDbCache();
-
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
@@ -85,8 +88,8 @@ private:
   typedef boost::unique_lock<Mutex> ScopedLock;
   // typedef std::set<ndn::Name>::iterator PrefixIt;
   // std::set<ndn::Name> m_prefixes;
-  typedef std::map<ndn::Name, const ndn::RegisteredPrefixId *>::iterator FilterIdIt;
-  std::map<ndn::Name, const ndn::RegisteredPrefixId *> m_interestFilterIds;
+  typedef std::map<ndn::Name, const ndn::RegisteredPrefixId*>::iterator FilterIdIt;
+  std::map<ndn::Name, const ndn::RegisteredPrefixId*> m_interestFilterIds;
 
   Mutex m_mutex;
   boost::filesystem::path m_dbFolder;

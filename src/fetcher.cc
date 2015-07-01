@@ -35,14 +35,13 @@ using namespace boost;
 using namespace std;
 using namespace ndn;
 
-Fetcher::Fetcher(boost::shared_ptr<ndn::Face> face,
-                  ExecutorPtr executor,
-                  const SegmentCallback &segmentCallback,
-                  const FinishCallback &finishCallback,
-                  OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
-                  const ndn::Name &deviceName, const ndn::Name &name, int64_t minSeqNo, int64_t maxSeqNo,
-                  boost::posix_time::time_duration timeout/* = boost::posix_time::seconds(30)*/,
-                  const ndn::Name &forwardingHint/* = ndn::Name()*/)
+Fetcher::Fetcher(boost::shared_ptr<ndn::Face> face, ExecutorPtr executor,
+                 const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
+                 OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
+                 const ndn::Name& deviceName, const ndn::Name& name, int64_t minSeqNo,
+                 int64_t maxSeqNo,
+                 boost::posix_time::time_duration timeout /* = boost::posix_time::seconds(30)*/,
+                 const ndn::Name& forwardingHint /* = ndn::Name()*/)
   : m_face(face)
 
   , m_segmentCallback(segmentCallback)
@@ -57,8 +56,8 @@ Fetcher::Fetcher(boost::shared_ptr<ndn::Face> face,
   , m_forwardingHint(forwardingHint)
   , m_maximumNoActivityPeriod(timeout)
 
-  , m_minSendSeqNo(minSeqNo-1)
-  , m_maxInOrderRecvSeqNo(minSeqNo-1)
+  , m_minSendSeqNo(minSeqNo - 1)
+  , m_maxInOrderRecvSeqNo(minSeqNo - 1)
   , m_minSeqNo(minSeqNo)
   , m_maxSeqNo(maxSeqNo)
 
@@ -86,7 +85,7 @@ Fetcher::RestartPipeline()
 }
 
 void
-Fetcher::SetForwardingHint(const ndn::Name &forwardingHint)
+Fetcher::SetForwardingHint(const ndn::Name& forwardingHint)
 {
   m_forwardingHint = forwardingHint;
 }
@@ -94,36 +93,39 @@ Fetcher::SetForwardingHint(const ndn::Name &forwardingHint)
 void
 Fetcher::FillPipeline()
 {
-  for (; m_minSendSeqNo < m_maxSeqNo && m_activePipeline < m_pipeline; m_minSendSeqNo++)
-    {
-      boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
+  for (; m_minSendSeqNo < m_maxSeqNo && m_activePipeline < m_pipeline; m_minSendSeqNo++) {
+    boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
 
-      if (m_outOfOrderRecvSeqNo.find(m_minSendSeqNo+1) != m_outOfOrderRecvSeqNo.end())
-        continue;
+    if (m_outOfOrderRecvSeqNo.find(m_minSendSeqNo + 1) != m_outOfOrderRecvSeqNo.end())
+      continue;
 
-      if (m_inActivePipeline.find(m_minSendSeqNo+1) != m_inActivePipeline.end())
-        continue;
+    if (m_inActivePipeline.find(m_minSendSeqNo + 1) != m_inActivePipeline.end())
+      continue;
 
-      m_inActivePipeline.insert(m_minSendSeqNo+1);
+    m_inActivePipeline.insert(m_minSendSeqNo + 1);
 
-      _LOG_DEBUG(" >>> i " << ndn::Name(m_forwardingHint).append(m_name) << ", seq = " <<(m_minSendSeqNo + 1 ));
+    _LOG_DEBUG(" >>> i " << ndn::Name(m_forwardingHint).append(m_name)
+                         << ", seq = " << (m_minSendSeqNo + 1));
 
-      // cout << ">>> " << m_minSendSeqNo+1 << endl;
+    // cout << ">>> " << m_minSendSeqNo+1 << endl;
 
-      ndn::Interest interest(ndn::Name(m_forwardingHint).append(m_name).appendNumber(m_minSendSeqNo+1)); // Alex: this lifetime should be changed to RTO
-      _LOG_DEBUG("interest Name: " << interest);
-      interest.setInterestLifetime(time::seconds(1));
-      m_face->expressInterest(interest,
-    		  	  	              boost::bind(&Fetcher::OnData, this, m_minSendSeqNo+1, _1, _2),
-    				                  boost::bind(&Fetcher::OnTimeout, this, m_minSendSeqNo+1, _1));
+    ndn::Interest interest(
+      ndn::Name(m_forwardingHint)
+        .append(m_name)
+        .appendNumber(m_minSendSeqNo + 1)); // Alex: this lifetime should be changed to RTO
+    _LOG_DEBUG("interest Name: " << interest);
+    interest.setInterestLifetime(time::seconds(1));
+    m_face->expressInterest(interest,
+                            boost::bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
+                            boost::bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
 
-      _LOG_DEBUG(" >>> i ok");
+    _LOG_DEBUG(" >>> i ok");
 
-      m_activePipeline ++;
-    }
+    m_activePipeline++;
+  }
 }
 void
-Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data) 
+Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
 {
   m_executor->execute(boost::bind(&Fetcher::OnData_Execute, this, seqno, interest, data));
 }
@@ -131,49 +133,41 @@ Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
 void
 Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
 {
-  const ndn::Name &name = data.getName();
+  const ndn::Name& name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
   ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.wireEncode());
-  
-  if (m_forwardingHint == Name())
-  {
+
+  if (m_forwardingHint == Name()) {
     // TODO: check verified!!!!
-    if (true)
-    {
-      if (!m_segmentCallback.empty())
-      {
+    if (true) {
+      if (!m_segmentCallback.empty()) {
         m_segmentCallback(m_deviceName, m_name, seqno, pco);
       }
     }
-    else
-    {
+    else {
       _LOG_ERROR("Can not verify signature content. Name = " << data.getName());
       // probably needs to do more in the future
     }
     // we don't have to tell FetchManager about this
   }
-  else
-    {
-      // in this case we don't care whether "data" is verified,  in fact, we expect it is unverified
+  else {
+    // in this case we don't care whether "data" is verified,  in fact, we expect it is unverified
 
-        // we need to verify this pco and apply callback only when verified
-        // TODO: check verified !!!
-        if (true)
-        {
-          if (!m_segmentCallback.empty())
-            {
-              m_segmentCallback(m_deviceName, m_name, seqno, pco);
-            }
-        }
-        else
-        {
-          _LOG_ERROR("Can not verify signature content. Name = " << pco->getName());
-          // probably needs to do more in the future
-        }
+    // we need to verify this pco and apply callback only when verified
+    // TODO: check verified !!!
+    if (true) {
+      if (!m_segmentCallback.empty()) {
+        m_segmentCallback(m_deviceName, m_name, seqno, pco);
+      }
     }
+    else {
+      _LOG_ERROR("Can not verify signature content. Name = " << pco->getName());
+      // probably needs to do more in the future
+    }
+  }
 
-  m_activePipeline --;
+  m_activePipeline--;
   m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
   ////////////////////////////////////////////////////////////////////////////
@@ -183,61 +177,55 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
   m_inActivePipeline.erase(seqno);
   _LOG_DEBUG("Total segments received: " << m_outOfOrderRecvSeqNo.size());
   set<int64_t>::iterator inOrderSeqNo = m_outOfOrderRecvSeqNo.begin();
-  for (; inOrderSeqNo != m_outOfOrderRecvSeqNo.end();
-       inOrderSeqNo++)
-    {
-      _LOG_TRACE("Checking " << *inOrderSeqNo << " and " << m_maxInOrderRecvSeqNo+1);
-      if (*inOrderSeqNo == m_maxInOrderRecvSeqNo+1)
-        {
-          m_maxInOrderRecvSeqNo = *inOrderSeqNo;
-        }
-      else if (*inOrderSeqNo < m_maxInOrderRecvSeqNo+1) // not possible anymore, but just in case
-        {
-          continue;
-        }
-      else
-        break;
+  for (; inOrderSeqNo != m_outOfOrderRecvSeqNo.end(); inOrderSeqNo++) {
+    _LOG_TRACE("Checking " << *inOrderSeqNo << " and " << m_maxInOrderRecvSeqNo + 1);
+    if (*inOrderSeqNo == m_maxInOrderRecvSeqNo + 1) {
+      m_maxInOrderRecvSeqNo = *inOrderSeqNo;
     }
+    else if (*inOrderSeqNo < m_maxInOrderRecvSeqNo + 1) // not possible anymore, but just in case
+    {
+      continue;
+    }
+    else
+      break;
+  }
   m_outOfOrderRecvSeqNo.erase(m_outOfOrderRecvSeqNo.begin(), inOrderSeqNo);
   ////////////////////////////////////////////////////////////////////////////
 
-  _LOG_TRACE("Max in order received: " << m_maxInOrderRecvSeqNo << ", max seqNo to request: " << m_maxSeqNo);
+  _LOG_TRACE("Max in order received: " << m_maxInOrderRecvSeqNo
+                                       << ", max seqNo to request: " << m_maxSeqNo);
 
-  if (m_maxInOrderRecvSeqNo == m_maxSeqNo)
-    {
-      _LOG_TRACE("Fetch finished: " << m_name);
-      m_active = false;
-      // invoke callback
-      if (!m_finishCallback.empty())
-        {
-          _LOG_TRACE("Notifying callback");
-          m_finishCallback(m_deviceName, m_name);
-        }
+  if (m_maxInOrderRecvSeqNo == m_maxSeqNo) {
+    _LOG_TRACE("Fetch finished: " << m_name);
+    m_active = false;
+    // invoke callback
+    if (!m_finishCallback.empty()) {
+      _LOG_TRACE("Notifying callback");
+      m_finishCallback(m_deviceName, m_name);
+    }
 
-      // tell FetchManager that we have finish our job
-      // m_onFetchComplete(*this);
-      // using executor, so we won't be deleted if there is scheduled FillPipeline call
-      if (!m_onFetchComplete.empty())
-        {
-          m_timedwait = true;
-          m_executor->execute(boost::bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
-        }
+    // tell FetchManager that we have finish our job
+    // m_onFetchComplete(*this);
+    // using executor, so we won't be deleted if there is scheduled FillPipeline call
+    if (!m_onFetchComplete.empty()) {
+      m_timedwait = true;
+      m_executor->execute(boost::bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
     }
-  else
-    {
-      m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
-    }
+  }
+  else {
+    m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
+  }
 }
 
 void
-Fetcher::OnTimeout(uint64_t seqno, const ndn::Interest &interest)
+Fetcher::OnTimeout(uint64_t seqno, const ndn::Interest& interest)
 {
   _LOG_DEBUG(this << ", " << m_executor.get());
   m_executor->execute(boost::bind(&Fetcher::OnTimeout_Execute, this, seqno, interest));
 }
 
 void
-Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest &interest)
+Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
 {
   const ndn::Name name = interest.getName();
   _LOG_DEBUG(" <<< :( timeout " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
@@ -245,43 +233,40 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest &interest)
   // cout << "Fetcher::OnTimeout: " << name << endl;
   // cout << "Last: " << m_lastPositiveActivity << ", config: " << m_maximumNoActivityPeriod
   //      << ", now: " << date_time::second_clock<boost::posix_time::ptime>::universal_time()
-  //      << ", oldest: " <<(date_time::second_clock<boost::posix_time::ptime>::universal_time() - m_maximumNoActivityPeriod) << endl;
+  //      << ", oldest: " <<(date_time::second_clock<boost::posix_time::ptime>::universal_time() -
+  //      m_maximumNoActivityPeriod) << endl;
 
-  if (m_lastPositiveActivity <
-     (date_time::second_clock<boost::posix_time::ptime>::universal_time() - m_maximumNoActivityPeriod))
+  if (m_lastPositiveActivity < (date_time::second_clock<boost::posix_time::ptime>::universal_time()
+                                - m_maximumNoActivityPeriod)) {
+    bool done = false;
     {
-      bool done = false;
+      boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
+      m_inActivePipeline.erase(seqno);
+      m_activePipeline--;
+
+      if (m_activePipeline == 0) {
+        done = true;
+      }
+    }
+
+    if (done) {
       {
         boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
-        m_inActivePipeline.erase(seqno);
-        m_activePipeline --;
-
-        if (m_activePipeline == 0)
-          {
-          done = true;
-          }
+        _LOG_DEBUG("Telling that fetch failed");
+        _LOG_DEBUG("Active pipeline size should be zero: " << m_inActivePipeline.size());
       }
 
-      if (done)
-        {
-          {
-            boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
-            _LOG_DEBUG("Telling that fetch failed");
-            _LOG_DEBUG("Active pipeline size should be zero: " << m_inActivePipeline.size());
-          }
-
-          m_active = false;
-          if (!m_onFetchFailed.empty())
-            {
-              m_onFetchFailed(boost::ref(*this));
-            }
-          // this is not valid anymore, but we still should be able finish work
-        }
+      m_active = false;
+      if (!m_onFetchFailed.empty()) {
+        m_onFetchFailed(boost::ref(*this));
+      }
+      // this is not valid anymore, but we still should be able finish work
     }
-  else
-    {
-      _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
-      m_face->expressInterest(interest, boost::bind(&Fetcher::OnData, this, seqno, _1, _2), //TODO: correct? 
-                                       boost::bind(&Fetcher::OnTimeout, this, seqno, _1)); //TODO: correct?
-    }
+  }
+  else {
+    _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
+    m_face->expressInterest(interest,
+                            boost::bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
+                            boost::bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
+  }
 }

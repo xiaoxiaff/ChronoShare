@@ -42,20 +42,20 @@ INIT_LOGGERS()
 {
   static bool configured = false;
 
-  if (configured) return;
+  if (configured)
+    return;
 
-  if (access("log4cxx.properties", R_OK)==0)
+  if (access("log4cxx.properties", R_OK) == 0)
     PropertyConfigurator::configureAndWatch("log4cxx.properties");
-  else
-    {
-      PatternLayoutPtr layout(new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
-      ConsoleAppenderPtr appender(new ConsoleAppender(layout));
+  else {
+    PatternLayoutPtr layout(new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
+    ConsoleAppenderPtr appender(new ConsoleAppender(layout));
 
-      BasicConfigurator::configure(appender);
-      Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
-    }
+    BasicConfigurator::configure(appender);
+    Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
+  }
 
-//  _LOG_DEBUG("Hello World!");    // Debug level
+  //  _LOG_DEBUG("Hello World!");    // Debug level
   configured = true;
 }
 

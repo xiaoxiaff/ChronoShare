@@ -55,19 +55,18 @@ boost::condition_variable cond;
 bool finished;
 int ack;
 
-void setup()
+void
+setup()
 {
-  if (exists(root))
-  {
+  if (exists(root)) {
     remove_all(root);
   }
 
   create_directory(root);
 
   // create file
-  FILE *fp = fopen(filePath.string().c_str(), "w");
-  for(int i = 0; i < repeat; i++)
-  {
+  FILE* fp = fopen(filePath.string().c_str(), "w");
+  for (int i = 0; i < repeat; i++) {
     fwrite(&magic, 1, sizeof(magic), fp);
   }
   fclose(fp);
@@ -76,10 +75,10 @@ void setup()
   finished = false;
 }
 
-void teardown()
+void
+teardown()
 {
-  if (exists(root))
-  {
+  if (exists(root)) {
     remove_all(root);
   }
 
@@ -88,31 +87,33 @@ void teardown()
 }
 
 Name
-simpleMap(const Name &deviceName)
+simpleMap(const Name& deviceName)
 {
   return Name("/local");
 }
 
-void 
+void
 listen(boost::shared_ptr<ndn::Face> face, std::string name)
 {
-  _LOG_DEBUG("I'm listening!!!" << "for Name " << name);
-//  while(1) {
+  _LOG_DEBUG("I'm listening!!!"
+             << "for Name " << name);
+  //  while(1) {
   face->processEvents(ndn::time::milliseconds::zero(), true);
-//  }
-  _LOG_DEBUG("Listening Over!!!" << "for Name " << name);
+  //  }
+  _LOG_DEBUG("Listening Over!!!"
+             << "for Name " << name);
 }
 
 void
-segmentCallback(const Name &deviceName, const Name &baseName, uint64_t seq, ndn::shared_ptr<ndn::Data> data)
+segmentCallback(const Name& deviceName, const Name& baseName, uint64_t seq,
+                ndn::shared_ptr<ndn::Data> data)
 {
   ack++;
   ndn::Block block = data->getContent();
 
   int size = block.value_size();
-  const uint8_t *co = block.value();
-  for(int i = 0; i < size; i++)
-  {
+  const uint8_t* co = block.value();
+  for (int i = 0; i < size; i++) {
     BOOST_CHECK_EQUAL(co[i], magic);
   }
 
@@ -120,7 +121,7 @@ segmentCallback(const Name &deviceName, const Name &baseName, uint64_t seq, ndn:
 }
 
 void
-finishCallback(Name &deviceName, Name &baseName)
+finishCallback(Name& deviceName, Name& baseName)
 {
   BOOST_CHECK_EQUAL(ack, repeat / 1024);
   boost::unique_lock<boost::mutex> lock(mut);
@@ -141,7 +142,6 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
   boost::shared_ptr<ndn::Face> face_fetch = boost::make_shared<ndn::Face>();
   boost::thread fetch(listen, face_fetch, "fetch");
 
-
   Name deviceName("/test/device");
   Name localPrefix("/local");
   Name broadcastPrefix("/broadcast");
@@ -154,7 +154,8 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
   ObjectManager om(face_serve, root, APPNAME);
   boost::tuple<ConstBufferPtr, size_t> pub = om.localFileToObjects(filePath, deviceName);
   time_t end = std::time(NULL);
-  _LOG_DEBUG("At time " << end <<", publish finally finished, used " << end - start << " seconds ...");
+  _LOG_DEBUG("At time " << end << ", publish finally finished, used " << end - start
+                        << " seconds ...");
 
   ActionLogPtr dummyLog;
   ContentServer server(face_serve, dummyLog, root, deviceName, "pentagon's secrets", APPNAME, 5);
@@ -166,24 +167,23 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
   Name baseName = Name(deviceName);
   baseName.append(APPNAME).append("file").appendImplicitSha256Digest(hash);
 
-  fm.Enqueue(deviceName, baseName, bind(segmentCallback, _1, _2, _3, _4), bind(finishCallback, _1, _2), 0, pub.get<1>() - 1);
+  fm.Enqueue(deviceName, baseName, bind(segmentCallback, _1, _2, _3, _4),
+             bind(finishCallback, _1, _2), 0, pub.get<1>() - 1);
 
   boost::unique_lock<boost::mutex> lock(mut);
   system_time timeout = get_system_time() + posix_time::milliseconds(5000);
-  while (!finished)
-    {
-      if (!cond.timed_wait(lock, timeout))
-        {
-          BOOST_FAIL("Fetching has not finished after 5 seconds");
-          break;
-        }
+  while (!finished) {
+    if (!cond.timed_wait(lock, timeout)) {
+      BOOST_FAIL("Fetching has not finished after 5 seconds");
+      break;
     }
+  }
   face_fetch->shutdown();
   face_serve->shutdown();
 
   _LOG_DEBUG("Finish");
   usleep(100000);
-//  sleep(2);
+  //  sleep(2);
 
   teardown();
 }

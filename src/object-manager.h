@@ -33,10 +33,10 @@
 
 // everything related to managing object files
 
-class ObjectManager
-{
+class ObjectManager {
 public:
-  ObjectManager(boost::shared_ptr<ndn::Face> face, const boost::filesystem::path &folder, const std::string &appName);
+  ObjectManager(boost::shared_ptr<ndn::Face> face, const boost::filesystem::path& folder,
+                const std::string& appName);
   virtual ~ObjectManager();
 
   /**
@@ -45,10 +45,11 @@ public:
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
   boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
-  localFileToObjects(const boost::filesystem::path &file, const ndn::Name &deviceName);
+  localFileToObjects(const boost::filesystem::path& file, const ndn::Name& deviceName);
 
   bool
-  objectsToLocalFile(/*in*/const ndn::Name &deviceName, /*in*/const ndn::Buffer &hash, /*out*/ const boost::filesystem::path &file);
+  objectsToLocalFile(/*in*/ const ndn::Name& deviceName, /*in*/ const ndn::Buffer& hash,
+                     /*out*/ const boost::filesystem::path& file);
 
 private:
   boost::shared_ptr<ndn::Face> m_face;
@@ -61,7 +62,8 @@ private:
 typedef boost::shared_ptr<ObjectManager> ObjectManagerPtr;
 
 namespace Error {
-struct ObjectManager : virtual boost::exception, virtual std::exception { };
+struct ObjectManager : virtual boost::exception, virtual std::exception {
+};
 }
 
 #endif // OBJECT_MANAGER_H

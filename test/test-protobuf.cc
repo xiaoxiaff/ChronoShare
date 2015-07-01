@@ -13,12 +13,11 @@ using namespace boost;
 
 BOOST_AUTO_TEST_SUITE(ProtobufTests)
 
-
-BOOST_AUTO_TEST_CASE (TestGzipProtobuf)
+BOOST_AUTO_TEST_CASE(TestGzipProtobuf)
 {
   SyncStateMsgPtr msg = boost::make_shared<SyncStateMsg>();
 
-  SyncState *state = msg->add_state();
+  SyncState* state = msg->add_state();
   state->set_type(SyncState::UPDATE);
   state->set_seq(100);
   char x[100] = {'a'};
@@ -29,7 +28,7 @@ BOOST_AUTO_TEST_CASE (TestGzipProtobuf)
 
   ndn::ConstBufferPtr cb = serializeGZipMsg<SyncStateMsg>(*msg);
   BOOST_CHECK(cb->size() < bb->size());
-  cout << cb->size() <<", " << bb->size() << endl;
+  cout << cb->size() << ", " << bb->size() << endl;
 
   SyncStateMsgPtr msg1 = deserializeGZipMsg<SyncStateMsg>(*cb);
 

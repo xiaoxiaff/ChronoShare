@@ -33,27 +33,27 @@ using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
 
-INIT_LOGGER ("Test.Dispatcher");
+INIT_LOGGER("Test.Dispatcher");
 
 BOOST_AUTO_TEST_SUITE(TestDispatcher)
 
-
-void cleanDir(fs::path dir)
+void
+cleanDir(fs::path dir)
 {
-  if (fs::exists(dir))
-  {
+  if (fs::exists(dir)) {
     fs::remove_all(dir);
   }
 }
 
-void checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
+void
+checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 {
   BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
 }
 
 BOOST_AUTO_TEST_CASE(DispatcherTest)
 {
-  INIT_LOGGERS ();
+  INIT_LOGGERS();
 
   fs::path dir1("./TestDispatcher/test-white-house");
   fs::path dir2("./TestDispatcher/test-black-house");
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   usleep(14900000);
 
-  _LOG_DEBUG ("checking obama vs romney");
+  _LOG_DEBUG("checking obama vs romney");
   checkRoots(d1.SyncRoot(), d2.SyncRoot());
 
   fs::path filename("a_letter_to_romney.txt");
@@ -87,8 +87,7 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   ofstream ofs;
   ofs.open(abf.string().c_str());
-  for (int i = 0; i < 5000; i ++)
-  {
+  for (int i = 0; i < 5000; i++) {
     ofs << words;
   }
   ofs.close();
@@ -98,7 +97,8 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
   sleep(5);
 
   fs::path ef = dir2 / filename;
-  BOOST_REQUIRE_MESSAGE(fs::exists(ef), user1 << " failed to notify " << user2 << " about " << filename.string());
+  BOOST_REQUIRE_MESSAGE(fs::exists(ef), user1 << " failed to notify " << user2 << " about "
+                                              << filename.string());
   BOOST_CHECK_EQUAL(fs::file_size(abf), fs::file_size(ef));
   DigestComputer digestComputer1;
   DigestComputer digestComputer2;
@@ -107,8 +107,8 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   checkRoots(fileHash1, fileHash2);
 
-//  cleanDir(dir1);
-//  cleanDir(dir2);
+  //  cleanDir(dir1);
+  //  cleanDir(dir2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

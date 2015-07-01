@@ -28,18 +28,15 @@
 #include "scheduler.h"
 #include <boost/filesystem.hpp>
 
-
-class FsWatcher : public QObject
-{
+class FsWatcher : public QObject {
   Q_OBJECT
 
 public:
-  typedef boost::function<void(const boost::filesystem::path &)> LocalFile_Change_Callback;
+  typedef boost::function<void(const boost::filesystem::path&)> LocalFile_Change_Callback;
 
   // constructor
-  FsWatcher(QString dirPath,
-             LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
-             QObject* parent = 0);
+  FsWatcher(QString dirPath, LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
+            QObject* parent = 0);
 
   // destructor
   ~FsWatcher();
@@ -69,16 +66,16 @@ private:
   initFileStateDb();
 
   bool
-  fileExists(const boost::filesystem::path &filename);
+  fileExists(const boost::filesystem::path& filename);
 
   void
-  addFile(const boost::filesystem::path &filename);
+  addFile(const boost::filesystem::path& filename);
 
   void
-  deleteFile(const boost::filesystem::path &filename);
+  deleteFile(const boost::filesystem::path& filename);
 
   void
-  getFilesInDir(const boost::filesystem::path &dir, std::vector<std::string> &files);
+  getFilesInDir(const boost::filesystem::path& dir, std::vector<std::string>& files);
 
 private:
   QFileSystemWatcher* m_watcher; // filesystem watcher
@@ -89,7 +86,7 @@ private:
   LocalFile_Change_Callback m_onChange;
   LocalFile_Change_Callback m_onDelete;
 
-  sqlite3 *m_db;
+  sqlite3* m_db;
 };
 
 #endif // FILESYSTEMWATCHER_H

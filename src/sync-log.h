@@ -32,15 +32,14 @@
 
 typedef boost::shared_ptr<SyncStateMsg> SyncStateMsgPtr;
 
-class SyncLog : public DbHelper
-{
+class SyncLog : public DbHelper {
 public:
-  SyncLog(const boost::filesystem::path &path, const ndn::Name &localName);
+  SyncLog(const boost::filesystem::path& path, const ndn::Name& localName);
 
   /**
    * @brief Get local username
    */
-  inline const ndn::Name &
+  inline const ndn::Name&
   GetLocalName() const;
 
   sqlite3_int64
@@ -48,22 +47,22 @@ public:
 
   // done
   void
-  UpdateDeviceSeqNo(const ndn::Name &name, sqlite3_int64 seqNo);
+  UpdateDeviceSeqNo(const ndn::Name& name, sqlite3_int64 seqNo);
 
   void
   UpdateLocalSeqNo(sqlite3_int64 seqNo);
 
   ndn::Name
-  LookupLocator(const ndn::Name &deviceName);
+  LookupLocator(const ndn::Name& deviceName);
 
   ndn::Name
   LookupLocalLocator();
 
   void
-  UpdateLocator(const ndn::Name &deviceName, const ndn::Name &locator);
+  UpdateLocator(const ndn::Name& deviceName, const ndn::Name& locator);
 
   void
-  UpdateLocalLocator(const ndn::Name &locator);
+  UpdateLocalLocator(const ndn::Name& locator);
 
   // done
   /**
@@ -74,22 +73,24 @@ public:
 
   // done
   sqlite3_int64
-  LookupSyncLog(const std::string &stateHash);
+  LookupSyncLog(const std::string& stateHash);
 
   // done
   sqlite3_int64
-  LookupSyncLog(const ndn::Buffer &stateHash);
+  LookupSyncLog(const ndn::Buffer& stateHash);
 
   // How difference is exposed will be determined later by the actual protocol
   SyncStateMsgPtr
-  FindStateDifferences(const std::string &oldHash, const std::string &newHash, bool includeOldSeq = false);
+  FindStateDifferences(const std::string& oldHash, const std::string& newHash,
+                       bool includeOldSeq = false);
 
   SyncStateMsgPtr
-  FindStateDifferences(const ndn::Buffer &oldHash, const ndn::Buffer &newHash, bool includeOldSeq = false);
+  FindStateDifferences(const ndn::Buffer& oldHash, const ndn::Buffer& newHash,
+                       bool includeOldSeq = false);
 
   //-------- only used in test -----------------
   sqlite3_int64
-  SeqNo(const ndn::Name &name);
+  SeqNo(const ndn::Name& name);
 
   sqlite3_int64
   LogSize();
@@ -112,7 +113,7 @@ protected:
 
 typedef boost::shared_ptr<SyncLog> SyncLogPtr;
 
-const ndn::Name &
+const ndn::Name&
 SyncLog::GetLocalName() const
 {
   return m_localName;

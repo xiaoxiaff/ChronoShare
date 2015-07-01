@@ -27,27 +27,28 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 
-class FetchTaskDb
-{
+class FetchTaskDb {
 public:
-  FetchTaskDb(const boost::filesystem::path &folder, const std::string &tag);
+  FetchTaskDb(const boost::filesystem::path& folder, const std::string& tag);
   ~FetchTaskDb();
 
   // task with same deviceName and baseName combination will be added only once
   // if task already exists, this call does nothing
   void
-  addTask(const ndn::Name &deviceName, const ndn::Name &baseName, uint64_t minSeqNo, uint64_t maxSeqNo, int priority);
+  addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+          uint64_t maxSeqNo, int priority);
 
   void
-  deleteTask(const ndn::Name &deviceName, const ndn::Name &baseName);
+  deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName);
 
-  typedef boost::function<void(const ndn::Name &, const ndn::Name &, uint64_t, uint64_t, int)> FetchTaskCallback;
+  typedef boost::function<void(const ndn::Name&, const ndn::Name&, uint64_t, uint64_t, int)>
+    FetchTaskCallback;
 
   void
-  foreachTask(const FetchTaskCallback &callback);
+  foreachTask(const FetchTaskCallback& callback);
 
 private:
-  sqlite3 *m_db;
+  sqlite3* m_db;
 };
 
 typedef boost::shared_ptr<FetchTaskDb> FetchTaskDbPtr;

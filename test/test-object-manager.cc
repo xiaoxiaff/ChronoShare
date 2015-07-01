@@ -50,12 +50,12 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
   _LOG_DEBUG("tmpdir: " << tmpdir);
   Name deviceName("/device");
 
-  
   boost::shared_ptr<ndn::Face> face = boost::make_shared<ndn::Face>();
 
   ObjectManager manager(face, tmpdir, "test-chronoshare");
 
-  boost::tuple<ndn::ConstBufferPtr, int> hash_segments = manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
+  boost::tuple<ndn::ConstBufferPtr, int> hash_segments =
+    manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
 
   BOOST_CHECK_EQUAL(hash_segments.get<1>(), 3);
 
@@ -66,22 +66,17 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
     fs::ifstream origFile(fs::path("test") / "test-object-manager.cc");
     fs::ifstream newFile(tmpdir / "test.cc");
 
-    istream_iterator<char> eof,
-      origFileI(origFile),
-      newFileI(newFile);
+    istream_iterator<char> eof, origFileI(origFile), newFileI(newFile);
 
     BOOST_CHECK_EQUAL_COLLECTIONS(origFileI, eof, newFileI, eof);
   }
 
-  if (exists(tmpdir))
-  {
+  if (exists(tmpdir)) {
     std::cout << "Clear ALLLLLLLL" << std::endl;
     face->shutdown();
 
     remove_all(tmpdir);
   }
-
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()

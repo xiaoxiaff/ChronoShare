@@ -34,8 +34,7 @@ using namespace boost;
 
 BOOST_AUTO_TEST_SUITE(TestFetchManager)
 
-struct FetcherTestData
-{
+struct FetcherTestData {
   set<uint64_t> recvData;
   set<uint64_t> recvContent;
 
@@ -64,15 +63,15 @@ struct FetcherTestData
   }
 
   void
-  listen(boost::shared_ptr<ndn::Face> face) {
-//    face->registerPrefix(Name("/base"),
-//                         RegisterPrefixSuccessCallback(),
-//                         RegisterPrefixFailureCallback());	
-    
-    face->setInterestFilter("/base",
-                             bind(&FetcherTestData::onInterest, this, _1, _2),
-                             RegisterPrefixSuccessCallback(),
-                             bind(&FetcherTestData::onRegisterFailed, this, _1, _2));
+  listen(boost::shared_ptr<ndn::Face> face)
+  {
+    //    face->registerPrefix(Name("/base"),
+    //                         RegisterPrefixSuccessCallback(),
+    //                         RegisterPrefixFailureCallback());
+
+    face->setInterestFilter("/base", bind(&FetcherTestData::onInterest, this, _1, _2),
+                            RegisterPrefixSuccessCallback(),
+                            bind(&FetcherTestData::onRegisterFailed, this, _1, _2));
     std::cout << "Set Filter OK!" << std::endl;
     face->processEvents();
   }
@@ -86,13 +85,13 @@ struct FetcherTestData
   void
   onRegisterFailed(const Name& prefix, const std::string& reason)
   {
-    std::cerr << "ERROR: Failed to register prefix \""
-              << prefix << "\" in local hub's daemon (" << reason << ")"
-              << std::endl;
+    std::cerr << "ERROR: Failed to register prefix \"" << prefix << "\" in local hub's daemon ("
+              << reason << ")" << std::endl;
   }
 
   void
-  onData(const ndn::Name &deviceName, const ndn::Name &basename, uint64_t seqno, ndn::shared_ptr<ndn::Data> data)
+  onData(const ndn::Name& deviceName, const ndn::Name& basename, uint64_t seqno,
+         ndn::shared_ptr<ndn::Data> data)
   {
     _LOG_TRACE("onData: " << seqno);
 
@@ -104,40 +103,38 @@ struct FetcherTestData
 
     ndn::Block block = data->getContent();
 
-    if (block.value_size() == sizeof(int))
-      {
-        recvContent.insert(*reinterpret_cast<const int*>(block.value()));
-      }
+    if (block.value_size() == sizeof(int)) {
+      recvContent.insert(*reinterpret_cast<const int*>(block.value()));
+    }
 
-     cout << "onData Called!! <<< " << basename << ", " << name << ", " << seqno << endl;
+    cout << "onData Called!! <<< " << basename << ", " << name << ", " << seqno << endl;
   }
 
   void
-  finish(const ndn::Name &deviceName, const ndn::Name &baseName)
+  finish(const ndn::Name& deviceName, const ndn::Name& baseName)
   {
   }
 
   void
-  onComplete(Fetcher &fetcher)
+  onComplete(Fetcher& fetcher)
   {
     m_done = true;
     // cout << "Done" << endl;
   }
 
   void
-  onFail(Fetcher &fetcher)
+  onFail(Fetcher& fetcher)
   {
     m_failed = true;
     // cout << "Failed" << endl;
   }
 };
 
-
 BOOST_AUTO_TEST_CASE(TestFetcher)
 {
   INIT_LOGGERS();
 
-  boost::shared_ptr<ndn::Face> face = boost::make_shared<ndn::Face>(); 
+  boost::shared_ptr<ndn::Face> face = boost::make_shared<ndn::Face>();
 
   Name baseName("/base");
   Name deviceName("/device");
@@ -147,36 +144,35 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
 
   boost::thread m_listeningThread(boost::bind(&FetcherTestData::listen, ftData, face));
 
-  /* publish seqnos:  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, <gap 5>, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, <gap 1>, 26 */
+  /* publish seqnos:  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, <gap 5>, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+   * <gap 1>, 26 */
   // this will allow us to test our pipeline of 6
 
-  for (int i = 0; i < 10; i++)
-    {
-      ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
-      Name name(baseName);
-      name.appendNumber(i);
-      std::cout << "Put name " << name << std::endl;
-      data->setName(name);
-      data->setFreshnessPeriod(time::seconds(30));
-      data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
-      keyChain.sign(*data);
-      face->put(*data);
-      std::cout << "Put data i---" << i << std::endl;
-    }
+  for (int i = 0; i < 10; i++) {
+    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    Name name(baseName);
+    name.appendNumber(i);
+    std::cout << "Put name " << name << std::endl;
+    data->setName(name);
+    data->setFreshnessPeriod(time::seconds(30));
+    data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
+    keyChain.sign(*data);
+    face->put(*data);
+    std::cout << "Put data i---" << i << std::endl;
+  }
 
-  for (int i = 15; i < 25; i++)
-    {
-      ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
-      Name name(baseName);
-      name.appendNumber(i);
-      data->setName(name);
-      std::cout << "Put name " << name << std::endl;
-      data->setFreshnessPeriod(time::seconds(30));
-      data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
-      keyChain.sign(*data);
-      face->put(*data);
-      std::cout << "Put data i---" << i << std::endl;
-    }
+  for (int i = 15; i < 25; i++) {
+    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    Name name(baseName);
+    name.appendNumber(i);
+    data->setName(name);
+    std::cout << "Put name " << name << std::endl;
+    data->setFreshnessPeriod(time::seconds(30));
+    data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
+    keyChain.sign(*data);
+    face->put(*data);
+    std::cout << "Put data i---" << i << std::endl;
+  }
 
   int oneMore = 26;
 
@@ -196,21 +192,17 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
   std::cout << "baseName " << baseName << std::endl;
 
   ndn::Interest interest(ndn::Name("/base").appendNumber(0));
-  face->expressInterest(interest,
-		                    boost::bind(&FetcherTestData::on_Data, &ftData, _1, _2),
-		                    boost::bind(&FetcherTestData::on_Timeout, &ftData, _1));
+  face->expressInterest(interest, boost::bind(&FetcherTestData::on_Data, &ftData, _1, _2),
+                        boost::bind(&FetcherTestData::on_Timeout, &ftData, _1));
 
   std::cout << "Express Interest " << interest << std::endl;
   ExecutorPtr executor = boost::make_shared<Executor>(1);
   executor->start();
 
-  Fetcher fetcher(face,
-                  executor,
-                  bind(&FetcherTestData::onData, &ftData, _1, _2, _3, _4),
+  Fetcher fetcher(face, executor, bind(&FetcherTestData::onData, &ftData, _1, _2, _3, _4),
                   bind(&FetcherTestData::finish, &ftData, _1, _2),
                   bind(&FetcherTestData::onComplete, &ftData, _1),
-                  bind(&FetcherTestData::onFail, &ftData, _1),
-                  deviceName, Name("/base"), 0, 26,
+                  bind(&FetcherTestData::onFail, &ftData, _1), deviceName, Name("/base"), 0, 26,
                   boost::posix_time::seconds(5)); // this time is not precise
 
   BOOST_CHECK_EQUAL(fetcher.IsActive(), false);
@@ -233,7 +225,8 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
     for (set<uint64_t>::iterator i = ftData.recvContent.begin(); i != ftData.recvContent.end(); i++)
       recvContent << *i << ", ";
 
-    BOOST_CHECK_EQUAL(recvData.str(), "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, ");
+    BOOST_CHECK_EQUAL(recvData.str(),
+                      "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, ");
     BOOST_CHECK_EQUAL(recvData.str(), recvContent.str());
   }
 
@@ -244,18 +237,17 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
   usleep(7000000);
   BOOST_CHECK_EQUAL(ftData.m_failed, true);
 
-// publishing missing pieces
-  for (int i = 0; i < 27; i++)
-    {
-      ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
-      Name name(baseName);
-      name.appendNumber(i);
-      data->setName(name);
-      data->setFreshnessPeriod(time::seconds(1));
-      data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
-      keyChain.sign(*data);
-      face->put(*data);
-    }
+  // publishing missing pieces
+  for (int i = 0; i < 27; i++) {
+    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    Name name(baseName);
+    name.appendNumber(i);
+    data->setName(name);
+    data->setFreshnessPeriod(time::seconds(1));
+    data->setContent(reinterpret_cast<const unsigned char*>(&i), sizeof(int));
+    keyChain.sign(*data);
+    face->put(*data);
+  }
   BOOST_CHECK_EQUAL(fetcher.IsActive(), false);
   fetcher.RestartPipeline();
   BOOST_CHECK_EQUAL(fetcher.IsActive(), true);
@@ -272,7 +264,8 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
     for (set<uint64_t>::iterator i = ftData.recvContent.begin(); i != ftData.recvContent.end(); i++)
       recvContent << *i << ", ";
 
-    BOOST_CHECK_EQUAL(recvData.str(), "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, ");
+    BOOST_CHECK_EQUAL(recvData.str(), "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, "
+                                      "17, 18, 19, 20, 21, 22, 23, 24, 25, 26, ");
     BOOST_CHECK_EQUAL(recvData.str(), recvContent.str());
   }
 

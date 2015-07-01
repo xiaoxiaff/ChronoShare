@@ -25,15 +25,16 @@
 #include "auto-update.h"
 #include <QString>
 
-class SparkleAutoUpdate : public AutoUpdate
-{
+class SparkleAutoUpdate : public AutoUpdate {
 public:
-  SparkleAutoUpdate (const QString &url);
-  virtual ~SparkleAutoUpdate ();
-  virtual void checkForUpdates();
+  SparkleAutoUpdate(const QString& url);
+  virtual ~SparkleAutoUpdate();
+  virtual void
+  checkForUpdates();
+
 private:
   class Private;
-  Private *d;
+  Private* d;
 };
 
 #endif

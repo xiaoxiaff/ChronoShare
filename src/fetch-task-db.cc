@@ -36,80 +36,81 @@ CREATE TABLE IF NOT EXISTS                                      \n\
 CREATE INDEX identifier ON Task(deviceName, baseName);         \n\
 ";
 
-FetchTaskDb::FetchTaskDb(const boost::filesystem::path &folder, const std::string &tag)
+FetchTaskDb::FetchTaskDb(const boost::filesystem::path& folder, const std::string& tag)
 {
   fs::path actualFolder = folder / ".chronoshare" / "fetch_tasks";
   fs::create_directories(actualFolder);
 
   int res = sqlite3_open((actualFolder / tag).c_str(), &m_db);
-  if (res != SQLITE_OK)
-  {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot open database: " +(actualFolder / tag).string()));
+  if (res != SQLITE_OK) {
+    BOOST_THROW_EXCEPTION(
+      Error::Db() << errmsg_info_str("Cannot open database: " + (actualFolder / tag).string()));
   }
 
-  char *errmsg = 0;
+  char* errmsg = 0;
   res = sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, &errmsg);
-  if (res != SQLITE_OK && errmsg != 0)
-  {
-      // _LOG_TRACE("Init \"error\": " << errmsg);
-      sqlite3_free(errmsg);
+  if (res != SQLITE_OK && errmsg != 0) {
+    // _LOG_TRACE("Init \"error\": " << errmsg);
+    sqlite3_free(errmsg);
   }
-  else
-  {
+  else {
   }
 }
 
 FetchTaskDb::~FetchTaskDb()
 {
   int res = sqlite3_close(m_db);
-  if (res != SQLITE_OK)
-  {
+  if (res != SQLITE_OK) {
     // _LOG_ERROR
   }
 }
 
 void
-FetchTaskDb::addTask(const ndn::Name &deviceName, const ndn::Name &baseName, uint64_t minSeqNo, uint64_t maxSeqNo, int priority)
+FetchTaskDb::addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+                     uint64_t maxSeqNo, int priority)
 {
-  sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(m_db, "INSERT OR IGNORE INTO Task(deviceName, baseName, minSeqNo, maxSeqNo, priority) VALUES(?, ?, ?, ?, ?)", -1, &stmt, 0);
+  sqlite3_stmt* stmt;
+  sqlite3_prepare_v2(m_db, "INSERT OR IGNORE INTO Task(deviceName, baseName, minSeqNo, maxSeqNo, "
+                           "priority) VALUES(?, ?, ?, ?, ?)",
+                     -1, &stmt, 0);
 
-  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
-  sqlite3_bind_blob(stmt, 2, baseName.wireEncode().wire(), baseName.wireEncode().size(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(),
+                    SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 2, baseName.wireEncode().wire(), baseName.wireEncode().size(),
+                    SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 3, minSeqNo);
   sqlite3_bind_int64(stmt, 4, maxSeqNo);
   sqlite3_bind_int(stmt, 5, priority);
   int res = sqlite3_step(stmt);
 
-  if (res == SQLITE_OK)
-  {
+  if (res == SQLITE_OK) {
   }
   sqlite3_finalize(stmt);
 }
 
 void
-FetchTaskDb::deleteTask(const ndn::Name &deviceName, const ndn::Name &baseName)
+FetchTaskDb::deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName)
 {
-  sqlite3_stmt *stmt;
+  sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "DELETE FROM Task WHERE deviceName = ? AND baseName = ?;", -1, &stmt, 0);
 
-  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(), SQLITE_STATIC);
-  sqlite3_bind_blob(stmt, 2, baseName.wireEncode().wire(), baseName.wireEncode().size(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 1, deviceName.wireEncode().wire(), deviceName.wireEncode().size(),
+                    SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 2, baseName.wireEncode().wire(), baseName.wireEncode().size(),
+                    SQLITE_STATIC);
 
   int res = sqlite3_step(stmt);
-  if (res == SQLITE_OK)
-  {
+  if (res == SQLITE_OK) {
   }
   sqlite3_finalize(stmt);
 }
 
 void
-FetchTaskDb::foreachTask(const FetchTaskCallback &callback)
+FetchTaskDb::foreachTask(const FetchTaskCallback& callback)
 {
-  sqlite3_stmt *stmt;
+  sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Task;", -1, &stmt, 0);
-  while (sqlite3_step(stmt) == SQLITE_ROW)
-  {
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
     ndn::Name deviceName(ndn::Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
     ndn::Name baseName(ndn::Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
 

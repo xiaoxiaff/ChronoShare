@@ -24,36 +24,34 @@
 
 #include "sync-state.pb.h"
 
-inline std::ostream &
-operator << (std::ostream &os, const SyncStateMsgPtr &msg)
+inline std::ostream&
+operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
 {
   os << "\n ===== start Msg ======" << std::endl;
 
   int size = msg->state_size();
-  if (size > 0)
-  {
+  if (size > 0) {
     int index = 0;
-    while (index < size)
-    {
+    while (index < size) {
       SyncState state = msg->state(index);
       string strName = state.name();
       string strLocator = state.locator();
       sqlite3_int64 seq = state.seq();
 
-      os << "Name: " << ndn::Name(ndn::Block((const unsigned char *)strName.c_str(), strName.size())).toUri()
-         << ", Locator: " << ndn::Name(ndn::Block((const unsigned char *)strLocator.c_str(), strLocator.size())).toUri()
-         << ", seq: " << seq << std::endl;
-      index ++;
+      os << "Name: "
+         << ndn::Name(ndn::Block((const unsigned char*)strName.c_str(), strName.size())).toUri()
+         << ", Locator: "
+         << ndn::Name(ndn::Block((const unsigned char*)strLocator.c_str(), strLocator.size()))
+              .toUri() << ", seq: " << seq << std::endl;
+      index++;
     }
   }
-  else
-  {
+  else {
     os << "Msg size 0" << std::endl;
   }
   os << " ++++++++ end Msg  ++++++++ " << std::endl;
 
   return os;
 }
-
 
 #endif // SYNC_STATE_HELPER_H

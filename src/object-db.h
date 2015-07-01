@@ -31,18 +31,17 @@
 #include <ndn-cxx/name.hpp>
 #include <ndn-cxx/face.hpp>
 
-class ObjectDb
-{
+class ObjectDb {
 public:
   // database will be create in <folder>/<first-pair-of-hash-bytes>/<rest-of-hash>
-  ObjectDb (const boost::filesystem::path &folder, const std::string &hash);
-  ~ObjectDb ();
+  ObjectDb(const boost::filesystem::path& folder, const std::string& hash);
+  ~ObjectDb();
 
   void
-  saveContentObject (const ndn::Name &deviceName, sqlite3_int64 segment, const ndn::Data &data);
+  saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment, const ndn::Data& data);
 
   ndn::BufferPtr
-  fetchSegment (const ndn::Name &deviceName, sqlite3_int64 segment);
+  fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment);
 
   // sqlite3_int64
   // getNumberOfSegments (const ndn::Name &deviceName);
@@ -51,17 +50,18 @@ public:
   secondsSinceLastUse();
 
   static bool
-  DoesExist (const boost::filesystem::path &folder, const ndn::Name &deviceName, const std::string &hash);
+  DoesExist(const boost::filesystem::path& folder, const ndn::Name& deviceName,
+            const std::string& hash);
 
 private:
   void
-  willStartSave ();
+  willStartSave();
 
   void
-  didStopSave ();
+  didStopSave();
 
 private:
-  sqlite3 *m_db;
+  sqlite3* m_db;
   time_t m_lastUsed;
 };
 
