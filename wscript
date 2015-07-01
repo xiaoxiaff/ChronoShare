@@ -68,73 +68,33 @@ def configure(conf):
     conf.write_config_header('src/config.h')
 
 def build (bld):
-    adhoc = bld (
-        target = "adhoc",
+    adhoc = bld(
+        target="adhoc",
         features=['cxx'],
-        includes = "src",
+        includes="src",
     )
 
-    if Utils.unversioned_sys_platform () == "darwin":
+    if Utils.unversioned_sys_platform() == "darwin":
         adhoc.mac_app = True
         adhoc.source = 'adhoc/adhoc-osx.mm'
         adhoc.use = "BOOST LOG4CXX OSX_FOUNDATION OSX_COREWLAN"
 
     chornoshare = bld(
         target="chronoshare",
-        features='qt4 cxx',
-        source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.proto']),
+        features=['cxx'],
+        source = bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.proto']),
         use = "BOOST SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML SSL",
-        includes = "scheduler src executor",
-        defines='WAF=1',
+        includes = "src",
         )
 
     fs_watcher = bld (
         target = "fs_watcher",
         features = "qt4 cxx",
         defines = "WAF=1",
-        source = bld.path.ant_glob(['fs-watcher/*.cc']),
+        source = bld.path.ant_glob(['fs-watcher/*.cpp']),
         use = "SQLITE3 LOG4CXX scheduler executor QTCORE",
         includes = "fs-watcher scheduler executor src",
         )
-
-    # Unit tests
-#    if bld.env['TEST']:
-#      unittests = bld.program (
-#          target="unit-tests",
-#          features = "qt4 cxx cxxprogram",
-#          defines = "WAF",
-#          source = bld.path.ant_glob(['test/*.cc']),
-#          use = 'BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
-#          includes = "scheduler src executor gui fs-watcher",
-#          install_prefix = None,
-#          )
-
-    # Unit tests
-    if bld.env["TEST"]:
-      unittests = bld.program (
-          target="unit-tests",
-          source = bld.path.ant_glob(['test/main.cc',
-#                                      'test/test-protobuf.cc',
-#                                      'test/test-sync-core.cc',
-#                                      'test/test-sync-log.cc',
-#                                      'test/test-object-manager.cc',
-#                                      'test/test-action-log.cc',
-#                                      'test/test-executor.cc',
-#                                      'test/test-event-scheduler.cc',
-#                                      'test/test-fs-watcher.cc', # Bugs exit
-#                                      'test/test-fetch-task-db.cc',
-#                                      'test/test-fetch-manager.cc',
-#                                      'test/test-serve-and-fetch.cc',
-                                      'test/test-dispatcher.cc',
-#                                      'test/client/client.cc', 'test/daemon/daemon.cc', 'test/daemon/notify-i.cc' #lack of lots of lib now
-                                      ]),
-          features=['qt4', 'cxx', 'cxxprogram'],
-          use='BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
-          includes="scheduler src executor gui fs-watcher",
-          install_path=None,
-          defines="WAF",
-#          defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
-          )
 
     http_server = bld(
           target="http_server",
@@ -212,7 +172,7 @@ def build (bld):
         defines = "WAF",
         source = "cmd/csd.cc",
         includes = "scheduler executor gui fs-watcher src . ",
-        use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
+        use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
         )
 
     dump_db = bld (
@@ -220,8 +180,10 @@ def build (bld):
         features = "cxx cxxprogram",
         source = "cmd/dump-db.cc",
         includes = "scheduler executor gui fs-watcher src . ",
-        use = "BOOST SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
+        use = "BOOST SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
         )
+
+    recurse('tests');
 
 from waflib import TaskGen
 @TaskGen.extension('.mm')
