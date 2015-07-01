@@ -1,33 +1,53 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
+
 #ifndef FETCH_TASK_DB_H
 #define FETCH_TASK_DB_H
 
-#include <ndn-cxx/name.hpp>
-#include <sqlite3.h>
-#include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
+#include "core/chronoshare-common.hpp"
+#include "db-helper.hpp"
 
-class FetchTaskDb {
+#include <ndn-cxx/name.hpp>
+
+#include <sqlite3.h>
+
+#include <boost/filesystem.hpp>
+
+namespace ndn {
+namespace chronoshare {
+
+class FetchTaskDb
+{
+public:
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+  typedef function<void(const Name&, const Name&, uint64_t, uint64_t, int)> FetchTaskCallback;
+
 public:
   FetchTaskDb(const boost::filesystem::path& folder, const std::string& tag);
   ~FetchTaskDb();
@@ -35,14 +55,11 @@ public:
   // task with same deviceName and baseName combination will be added only once
   // if task already exists, this call does nothing
   void
-  addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+  addTask(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
           uint64_t maxSeqNo, int priority);
 
   void
-  deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName);
-
-  typedef boost::function<void(const ndn::Name&, const ndn::Name&, uint64_t, uint64_t, int)>
-    FetchTaskCallback;
+  deleteTask(const Name& deviceName, const Name& baseName);
 
   void
   foreachTask(const FetchTaskCallback& callback);
@@ -51,6 +68,9 @@ private:
   sqlite3* m_db;
 };
 
-typedef boost::shared_ptr<FetchTaskDb> FetchTaskDbPtr;
+typedef shared_ptr<FetchTaskDb> FetchTaskDbPtr;
+
+} // chronoshare
+} // ndn
 
 #endif // FETCH_TASK_DB_H

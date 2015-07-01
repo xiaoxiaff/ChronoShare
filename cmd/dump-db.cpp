@@ -1,41 +1,49 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "dispatcher.h"
-#include "logging.h"
-#include "fs-watcher.h"
-#include "sync-core.h"
+#include "dispatcher.hpp"
+#include "fs-watcher.hpp"
+#include "sync-core.hpp"
 
-#include <boost/make_shared.hpp>
+#include "core/logging.hpp"
+
+#include <ndn-cxx/util/string-helper.hpp>
+
 #include <boost/lexical_cast.hpp>
 
-using namespace boost;
-using namespace std;
-using namespace ndn;
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("DumpDb");
 
-class StateLogDumper : public DbHelper {
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::setw;
+
+namespace fs = boost::filesystem;
+
+class StateLogDumper : public DbHelper
+{
 public:
-  StateLogDumper(const filesystem::path& path)
+  StateLogDumper(const fs::path& path)
     : DbHelper(path / ".chronoshare", "sync-log.db")
   {
   }
@@ -57,7 +65,7 @@ public:
                        -1, &stmt, 0);
 
     cout.setf(std::ios::left, std::ios::adjustfield);
-    cout << ">> SYNC NODES(" << DigestComputer::shortDigest(hash) << ") <<" << endl;
+    cout << ">> SYNC NODES(" << toHex(hash).substr(0, 8) << ") <<" << endl;
     cout << "===================================================================================="
          << endl;
     cout << setw(30) << "device_name"
@@ -110,8 +118,8 @@ public:
          << endl;
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      cout << setw(10) << DigestComputer::shortDigest(ndn::Buffer(sqlite3_column_blob(stmt, 0),
-                                                                  sqlite3_column_bytes(stmt, 0)))
+      cout << setw(10) << toHex(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
+                                sqlite3_column_bytes(stmt, 0)).substr(0, 8)
            << " | "; // state hash
 
       sqlite3_stmt* stmt2;
@@ -139,9 +147,10 @@ public:
   }
 };
 
-class ActionLogDumper : public DbHelper {
+class ActionLogDumper : public DbHelper
+{
 public:
-  ActionLogDumper(const filesystem::path& path)
+  ActionLogDumper(const fs::path& path)
     : DbHelper(path / ".chronoshare", "action-log.db")
   {
   }
@@ -180,8 +189,8 @@ public:
       cout << setw(7) << sqlite3_column_int64(stmt, 4) << " | "; // version
 
       if (sqlite3_column_int(stmt, 2) == 0) {
-        cout << setw(10) << DigestComputer::shortDigest(ndn::Buffer(sqlite3_column_blob(stmt, 5),
-                                                                    sqlite3_column_bytes(stmt, 5)))
+        cout << setw(10) << toHex(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 5)),
+                                  sqlite3_column_bytes(stmt, 5)).substr(0, 8)
              << " | ";
         cout << setw(7) << sqlite3_column_int64(stmt, 6) << " | "; // seg_num
       }
@@ -226,18 +235,18 @@ public:
         if (action) {
           cout << "Action data size : " << data->getContent().size() << endl;
           cout << "Action data name : " << actionName << endl;
-          string type = action->action() == ActionItem::UPDATE ? "UPDATE" : "DELETE";
+          std::string type = action->action() == ActionItem::UPDATE ? "UPDATE" : "DELETE";
           cout << "Action Type = " << type << endl;
           cout << "Timestamp = " << action->timestamp() << endl;
-          string filename = action->filename();
+          std::string filename = action->filename();
           cout << "Filename = " << filename << endl;
           if (action->has_seg_num()) {
             cout << "Segment number = " << action->seg_num() << endl;
           }
           if (action->has_file_hash()) {
             cout << "File hash = "
-                 << DigestComputer::shortDigest(
-                      ndn::Buffer(action->file_hash().c_str(), action->file_hash().size())) << endl;
+                 << toHex(reinterpret_cast<const uint8_t*>(action->file_hash().data()),
+                          action->file_hash().size()).substr(0, 8) << endl;
           }
         }
         else {
@@ -257,7 +266,7 @@ public:
 
 class FileStateDumper : public DbHelper {
 public:
-  FileStateDumper(const filesystem::path& path)
+  FileStateDumper(const fs::path& path)
     : DbHelper(path / ".chronoshare", "file-state.db")
   {
   }
@@ -288,8 +297,8 @@ public:
            << " | ";
       cout << setw(6) << sqlite3_column_int64(stmt, 2) << " | ";
       cout << setw(10)
-           << DigestComputer::shortDigest(
-                ndn::Buffer(sqlite3_column_blob(stmt, 3), sqlite3_column_bytes(stmt, 3))) << " | ";
+           << toHex(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 3)),
+                    sqlite3_column_bytes(stmt, 3)).substr(0, 8) << " | ";
       cout << setw(6) << sqlite3_column_int64(stmt, 6) << " | ";
       if (sqlite3_column_bytes(stmt, 7) == 0)
         cout << setw(20) << "<NULL>"
@@ -312,13 +321,13 @@ main(int argc, char* argv[])
 {
   INIT_LOGGERS();
 
-  if (argc != 3 && !(argc == 5 && string(argv[1]) == "action")) {
+  if (argc != 3 && !(argc == 5 && std::string(argv[1]) == "action")) {
     cerr << "Usage: ./dump-db state|action|file|all <path-to-shared-folder>" << endl;
     cerr << "   or: ./dump-db action <path-to-shared-folder> <device-name> <seq-no>" << endl;
     return 1;
   }
 
-  string type = argv[1];
+  std::string type = argv[1];
   if (type == "state") {
     StateLogDumper dumper(argv[2]);
     dumper.DumpState();
@@ -327,7 +336,7 @@ main(int argc, char* argv[])
   else if (type == "action") {
     ActionLogDumper dumper(argv[2]);
     if (argc == 5) {
-      dumper.DumpActionData(string(argv[3]), boost::lexical_cast<int64_t>(argv[4]));
+      dumper.DumpActionData(std::string(argv[3]), boost::lexical_cast<int64_t>(argv[4]));
     }
     else {
       dumper.Dump();
@@ -361,4 +370,13 @@ main(int argc, char* argv[])
   }
 
   return 0;
+}
+
+} // chronoshare
+} // ndn
+
+int
+main(int argc, char* argv[])
+{
+  return ndn::chronoshare::main(argc, argv);
 }

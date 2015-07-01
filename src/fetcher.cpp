@@ -1,47 +1,42 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "fetcher.h"
-#include "fetch-manager.h"
-#include "logging.h"
+#include "fetcher.hpp"
+#include "fetch-manager.hpp"
+#include "core/logging.hpp"
 
-#include <boost/make_shared.hpp>
-#include <boost/ref.hpp>
-#include <boost/throw_exception.hpp>
+#include <boost/asio/io_service.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/bind.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Fetcher");
 
-using namespace boost;
-using namespace std;
-using namespace ndn;
-
-Fetcher::Fetcher(boost::shared_ptr<ndn::Face> face, ExecutorPtr executor,
+Fetcher::Fetcher(Face& face,
                  const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
                  OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
-                 const ndn::Name& deviceName, const ndn::Name& name, int64_t minSeqNo,
+                 const Name& deviceName, const Name& name, int64_t minSeqNo,
                  int64_t maxSeqNo,
                  boost::posix_time::time_duration timeout /* = boost::posix_time::seconds(30)*/,
-                 const ndn::Name& forwardingHint /* = ndn::Name()*/)
+                 const Name& forwardingHint /* = Name()*/)
   : m_face(face)
 
   , m_segmentCallback(segmentCallback)
@@ -58,14 +53,15 @@ Fetcher::Fetcher(boost::shared_ptr<ndn::Face> face, ExecutorPtr executor,
 
   , m_minSendSeqNo(minSeqNo - 1)
   , m_maxInOrderRecvSeqNo(minSeqNo - 1)
-  , m_minSeqNo(minSeqNo)
+  // , m_minSeqNo(minSeqNo)
   , m_maxSeqNo(maxSeqNo)
 
   , m_pipeline(6) // initial "congestion window"
   , m_activePipeline(0)
   , m_retryPause(0)
-  , m_nextScheduledRetry(date_time::second_clock<boost::posix_time::ptime>::universal_time())
-  , m_executor(executor) // must be 1
+  , m_nextScheduledRetry(boost::date_time::second_clock<boost::posix_time::ptime>::universal_time())
+
+  , m_ioService(m_face.getIoService())
 {
 }
 
@@ -79,13 +75,13 @@ Fetcher::RestartPipeline()
   m_active = true;
   m_minSendSeqNo = m_maxInOrderRecvSeqNo;
   // cout << "Restart: " << m_minSendSeqNo << endl;
-  m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
+  m_lastPositiveActivity = boost::date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
-  m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
+  m_ioService.post(bind(&Fetcher::FillPipeline, this));
 }
 
 void
-Fetcher::SetForwardingHint(const ndn::Name& forwardingHint)
+Fetcher::SetForwardingHint(const Name& forwardingHint)
 {
   m_forwardingHint = forwardingHint;
 }
@@ -104,20 +100,20 @@ Fetcher::FillPipeline()
 
     m_inActivePipeline.insert(m_minSendSeqNo + 1);
 
-    _LOG_DEBUG(" >>> i " << ndn::Name(m_forwardingHint).append(m_name)
+    _LOG_DEBUG(" >>> i " << Name(m_forwardingHint).append(m_name)
                          << ", seq = " << (m_minSendSeqNo + 1));
 
     // cout << ">>> " << m_minSendSeqNo+1 << endl;
 
-    ndn::Interest interest(
-      ndn::Name(m_forwardingHint)
+    Interest interest(
+      Name(m_forwardingHint)
         .append(m_name)
         .appendNumber(m_minSendSeqNo + 1)); // Alex: this lifetime should be changed to RTO
     _LOG_DEBUG("interest Name: " << interest);
     interest.setInterestLifetime(time::seconds(1));
-    m_face->expressInterest(interest,
-                            boost::bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
-                            boost::bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
+    m_face.expressInterest(interest,
+                           bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
+                           bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
 
     _LOG_DEBUG(" >>> i ok");
 
@@ -125,23 +121,23 @@ Fetcher::FillPipeline()
   }
 }
 void
-Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
+Fetcher::OnData(uint64_t seqno, const Interest& interest, Data& data)
 {
-  m_executor->execute(boost::bind(&Fetcher::OnData_Execute, this, seqno, interest, data));
+  m_ioService.post(bind(&Fetcher::OnData_Execute, this, seqno, interest, data));
 }
 
 void
-Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
+Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
 {
-  const ndn::Name& name = data.getName();
+  const Name& name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
-  ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.wireEncode());
+  shared_ptr<Data> pco = make_shared<Data>(data.wireEncode());
 
   if (m_forwardingHint == Name()) {
     // TODO: check verified!!!!
     if (true) {
-      if (!m_segmentCallback.empty()) {
+      if (m_segmentCallback != nullptr) {
         m_segmentCallback(m_deviceName, m_name, seqno, pco);
       }
     }
@@ -157,7 +153,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
     // we need to verify this pco and apply callback only when verified
     // TODO: check verified !!!
     if (true) {
-      if (!m_segmentCallback.empty()) {
+      if (m_segmentCallback != nullptr) {
         m_segmentCallback(m_deviceName, m_name, seqno, pco);
       }
     }
@@ -168,7 +164,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
   }
 
   m_activePipeline--;
-  m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
+  m_lastPositiveActivity = boost::date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
   ////////////////////////////////////////////////////////////////////////////
   boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
@@ -176,7 +172,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
   m_outOfOrderRecvSeqNo.insert(seqno);
   m_inActivePipeline.erase(seqno);
   _LOG_DEBUG("Total segments received: " << m_outOfOrderRecvSeqNo.size());
-  set<int64_t>::iterator inOrderSeqNo = m_outOfOrderRecvSeqNo.begin();
+  std::set<int64_t>::iterator inOrderSeqNo = m_outOfOrderRecvSeqNo.begin();
   for (; inOrderSeqNo != m_outOfOrderRecvSeqNo.end(); inOrderSeqNo++) {
     _LOG_TRACE("Checking " << *inOrderSeqNo << " and " << m_maxInOrderRecvSeqNo + 1);
     if (*inOrderSeqNo == m_maxInOrderRecvSeqNo + 1) {
@@ -199,7 +195,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
     _LOG_TRACE("Fetch finished: " << m_name);
     m_active = false;
     // invoke callback
-    if (!m_finishCallback.empty()) {
+    if (m_finishCallback != nullptr) {
       _LOG_TRACE("Notifying callback");
       m_finishCallback(m_deviceName, m_name);
     }
@@ -207,27 +203,27 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
     // tell FetchManager that we have finish our job
     // m_onFetchComplete(*this);
     // using executor, so we won't be deleted if there is scheduled FillPipeline call
-    if (!m_onFetchComplete.empty()) {
+    if (m_onFetchComplete != nullptr) {
       m_timedwait = true;
-      m_executor->execute(boost::bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
+      m_ioService.post(bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
     }
   }
   else {
-    m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
+    m_ioService.post(bind(&Fetcher::FillPipeline, this));
   }
 }
 
 void
-Fetcher::OnTimeout(uint64_t seqno, const ndn::Interest& interest)
+Fetcher::OnTimeout(uint64_t seqno, const Interest& interest)
 {
-  _LOG_DEBUG(this << ", " << m_executor.get());
-  m_executor->execute(boost::bind(&Fetcher::OnTimeout_Execute, this, seqno, interest));
+  _LOG_DEBUG(this);
+  m_ioService.post(bind(&Fetcher::OnTimeout_Execute, this, seqno, interest));
 }
 
 void
-Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
+Fetcher::OnTimeout_Execute(uint64_t seqno, const Interest& interest)
 {
-  const ndn::Name name = interest.getName();
+  const Name name = interest.getName();
   _LOG_DEBUG(" <<< :( timeout " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
   // cout << "Fetcher::OnTimeout: " << name << endl;
@@ -236,7 +232,7 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
   //      << ", oldest: " <<(date_time::second_clock<boost::posix_time::ptime>::universal_time() -
   //      m_maximumNoActivityPeriod) << endl;
 
-  if (m_lastPositiveActivity < (date_time::second_clock<boost::posix_time::ptime>::universal_time()
+  if (m_lastPositiveActivity < (boost::date_time::second_clock<boost::posix_time::ptime>::universal_time()
                                 - m_maximumNoActivityPeriod)) {
     bool done = false;
     {
@@ -257,7 +253,7 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
       }
 
       m_active = false;
-      if (!m_onFetchFailed.empty()) {
+      if (m_onFetchFailed != nullptr) {
         m_onFetchFailed(boost::ref(*this));
       }
       // this is not valid anymore, but we still should be able finish work
@@ -265,8 +261,11 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
   }
   else {
     _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
-    m_face->expressInterest(interest,
-                            boost::bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
-                            boost::bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
+    m_face.expressInterest(interest,
+                           bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
+                           bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
   }
 }
+
+} // chronoshare
+} // ndn

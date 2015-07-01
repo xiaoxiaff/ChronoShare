@@ -1,28 +1,31 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef SYNC_STATE_HELPER_H
-#define SYNC_STATE_HELPER_H
+#ifndef CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP
+#define CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP
 
+#include "core/chronoshare-common.hpp"
 #include "sync-state.pb.h"
+
+namespace ndn {
+namespace chronoshare {
 
 inline std::ostream&
 operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
@@ -34,15 +37,13 @@ operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
     int index = 0;
     while (index < size) {
       SyncState state = msg->state(index);
-      string strName = state.name();
-      string strLocator = state.locator();
+      std::string strName = state.name();
+      std::string strLocator = state.locator();
       sqlite3_int64 seq = state.seq();
 
-      os << "Name: "
-         << ndn::Name(ndn::Block((const unsigned char*)strName.c_str(), strName.size())).toUri()
-         << ", Locator: "
-         << ndn::Name(ndn::Block((const unsigned char*)strLocator.c_str(), strLocator.size()))
-              .toUri() << ", seq: " << seq << std::endl;
+      os << "Name: " << Name(Block((const unsigned char*)strName.c_str(), strName.size())).toUri()
+         << ", Locator: " << Name(Block((const unsigned char*)strLocator.c_str(), strLocator.size()))
+         << ", seq: " << seq << std::endl;
       index++;
     }
   }
@@ -54,4 +55,7 @@ operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
   return os;
 }
 
-#endif // SYNC_STATE_HELPER_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP

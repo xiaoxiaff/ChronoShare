@@ -1,42 +1,35 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "sync-log.h"
-#include "logging.h"
-#include <utility>
+#include "sync-log.hpp"
+#include "core/logging.hpp"
 
-#include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
+#include <ndn-cxx/util/sqlite3-statement.hpp>
+#include <ndn-cxx/util/string-helper.hpp>
+
+namespace ndn {
+namespace chronoshare {
+
+using util::Sqlite3Statement;
 
 INIT_LOGGER("Sync.Log");
-
-using namespace boost;
-using namespace std;
-using namespace ndn;
-
-// static  void xTrace(void*, const char* q)
-// {
-//   cout << q << endl;
-// }
 
 const std::string INIT_DATABASE = "\
 CREATE TABLE                                                    \n\
@@ -97,7 +90,7 @@ CREATE TRIGGER SyncLogGuard_trigger                                     \n\
     END;                                                                \n\
 ";
 
-SyncLog::SyncLog(const boost::filesystem::path& path, const ndn::Name& localName)
+SyncLog::SyncLog(const boost::filesystem::path& path, const Name& localName)
   : DbHelper(path / ".chronoshare", "sync-log.db")
   , m_localName(localName)
 {
@@ -106,14 +99,14 @@ SyncLog::SyncLog(const boost::filesystem::path& path, const ndn::Name& localName
 
   UpdateDeviceSeqNo(localName, 0);
 
-  util::Sqlite3Statement stmt(m_db, "SELECT device_id, seq_no FROM SyncNodes WHERE device_name=?");
+  Sqlite3Statement stmt(m_db, "SELECT device_id, seq_no FROM SyncNodes WHERE device_name=?");
   stmt.bind(1, m_localName.wireEncode(), SQLITE_STATIC);
 
   if (sqlite3_step(stmt) == SQLITE_ROW) {
     m_localDeviceId = stmt.getInt(0);
   }
   else {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Impossible thing in SyncLog::SyncLog"));
+    BOOST_THROW_EXCEPTION(Error("Impossible thing in SyncLog::SyncLog"));
   }
   sqlite3_finalize(stmt);
 }
@@ -121,27 +114,24 @@ SyncLog::SyncLog(const boost::filesystem::path& path, const ndn::Name& localName
 sqlite3_int64
 SyncLog::GetNextLocalSeqNo()
 {
-  sqlite3_stmt* stmt_seq;
-  sqlite3_prepare_v2(m_db, "SELECT seq_no FROM SyncNodes WHERE device_id = ?", -1, &stmt_seq, 0);
-  sqlite3_bind_int64(stmt_seq, 1, m_localDeviceId);
+  Sqlite3Statement stmt_seq(m_db, "SELECT seq_no FROM SyncNodes WHERE device_id = ?");
+  stmt_seq.bind(1, m_localDeviceId);
 
   if (sqlite3_step(stmt_seq) != SQLITE_ROW) {
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Impossible thing in SyncLog::GetNextLocalSeqNo"));
+    BOOST_THROW_EXCEPTION(Error("Impossible thing in SyncLog::GetNextLocalSeqNo"));
   }
 
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE,
                   "DB GetNextLocalSeqNo: " << sqlite3_errmsg(m_db));
 
-  sqlite3_int64 seq_no = sqlite3_column_int64(stmt_seq, 0) + 1;
-  sqlite3_finalize(stmt_seq);
+  sqlite3_int64 seq_no = stmt_seq.getInt(0) + 1;
 
   UpdateDeviceSeqNo(m_localDeviceId, seq_no);
 
   return seq_no;
 }
 
-ndn::ConstBufferPtr
+ConstBufferPtr
 SyncLog::RememberStateInStateLog()
 {
   WriteLock lock(m_stateUpdateMutex);
@@ -162,7 +152,7 @@ INSERT INTO SyncLog                                                \
 
   if (res != SQLITE_OK) {
     sqlite3_exec(m_db, "ROLLBACK TRANSACTION;", 0, 0, 0);
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str(sqlite3_errmsg(m_db)));
+    BOOST_THROW_EXCEPTION(Error(sqlite3_errmsg(m_db)));
   }
 
   sqlite3_int64 rowId = sqlite3_last_insert_rowid(m_db);
@@ -182,7 +172,7 @@ INSERT INTO SyncStateNodes                              \
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, "DbError: " << sqlite3_errmsg(m_db));
   if (res != SQLITE_OK) {
     sqlite3_exec(m_db, "ROLLBACK TRANSACTION;", 0, 0, 0);
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str(sqlite3_errmsg(m_db)));
+    BOOST_THROW_EXCEPTION(Error(sqlite3_errmsg(m_db)));
   }
   sqlite3_finalize(insertStmt);
 
@@ -193,10 +183,10 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
                          -1, &getHashStmt, 0);
   res += sqlite3_bind_int64(getHashStmt, 1, rowId);
 
-  ndn::BufferPtr retval;
+  BufferPtr retval;
   int stepRes = sqlite3_step(getHashStmt);
   if (stepRes == SQLITE_ROW) {
-    retval = ndn::make_shared<ndn::Buffer>(static_cast<const uint8_t*>(
+    retval = make_shared<Buffer>(static_cast<const uint8_t*>(
                                              sqlite3_column_blob(getHashStmt, 0)),
                                            sqlite3_column_bytes(getHashStmt, 0));
   }
@@ -204,42 +194,40 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
     sqlite3_exec(m_db, "ROLLBACK TRANSACTION;", 0, 0, 0);
 
     _LOG_ERROR("DbError: " << sqlite3_errmsg(m_db));
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Not a valid hash in rememberStateInStateLog"));
+    BOOST_THROW_EXCEPTION(Error("Not a valid hash in rememberStateInStateLog"));
   }
   sqlite3_finalize(getHashStmt);
   res += sqlite3_exec(m_db, "COMMIT;", 0, 0, 0);
 
   if (res != SQLITE_OK) {
     sqlite3_exec(m_db, "ROLLBACK TRANSACTION;", 0, 0, 0);
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Some error with rememberStateInStateLog"));
+    BOOST_THROW_EXCEPTION(Error("Some error with rememberStateInStateLog"));
   }
 
-  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::shortDigest(*retval));
+  _LOG_DEBUG("rememberinStateLog rootDigest: " << toHex(*retval));
   return retval;
 }
 
 sqlite3_int64
 SyncLog::LookupSyncLog(const std::string& stateHash)
 {
-  return LookupSyncLog(DigestComputer::digestFromString(stateHash));
+  return LookupSyncLog(*fromHex(stateHash));
 }
 
 sqlite3_int64
-SyncLog::LookupSyncLog(const ndn::Buffer& stateHash)
+SyncLog::LookupSyncLog(const Buffer& stateHash)
 {
   sqlite3_stmt* stmt;
   int res =
     sqlite3_prepare(m_db, "SELECT state_id FROM SyncLog WHERE state_hash = ?", -1, &stmt, 0);
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot prepare statement"));
+    BOOST_THROW_EXCEPTION(Error("Cannot prepare statement"));
   }
 
   res = sqlite3_bind_blob(stmt, 1, stateHash.buf(), stateHash.size(), SQLITE_STATIC);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot bind"));
+    BOOST_THROW_EXCEPTION(Error("Cannot bind"));
   }
 
   sqlite3_int64 row = 0; // something bad
@@ -254,7 +242,7 @@ SyncLog::LookupSyncLog(const ndn::Buffer& stateHash)
 }
 
 void
-SyncLog::UpdateDeviceSeqNo(const ndn::Name& name, sqlite3_int64 seqNo)
+SyncLog::UpdateDeviceSeqNo(const Name& name, sqlite3_int64 seqNo)
 {
   sqlite3_stmt* stmt;
   _LOG_DEBUG("UpdateDeviceSeqNo Name: " << name << " seq_no: " << seqNo);
@@ -268,8 +256,7 @@ SyncLog::UpdateDeviceSeqNo(const ndn::Name& name, sqlite3_int64 seqNo)
   sqlite3_step(stmt);
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Some error with UpdateDeviceSeqNo(name)"));
+    BOOST_THROW_EXCEPTION(Error("Some error with UpdateDeviceSeqNo(name)"));
   }
   sqlite3_finalize(stmt);
 }
@@ -294,7 +281,7 @@ SyncLog::UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo)
   sqlite3_step(stmt);
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Some error with UpdateDeviceSeqNo(id)"));
+    BOOST_THROW_EXCEPTION(Error("Some error with UpdateDeviceSeqNo(id)"));
   }
 
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK,
@@ -321,7 +308,7 @@ SyncLog::LookupLocator(const Name& deviceName)
   case SQLITE_DONE:
     break;
   default:
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Error in LookupLocator()"));
+    BOOST_THROW_EXCEPTION(Error("Error in LookupLocator()"));
   }
 
   sqlite3_finalize(stmt);
@@ -329,7 +316,7 @@ SyncLog::LookupLocator(const Name& deviceName)
   return locator;
 }
 
-ndn::Name
+Name
 SyncLog::LookupLocalLocator()
 {
   return LookupLocator(m_localName);
@@ -351,14 +338,14 @@ SyncLog::UpdateLocator(const Name& deviceName, const Name& locator)
   int res = sqlite3_step(stmt);
 
   if (res != SQLITE_OK && res != SQLITE_DONE) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Error in UpdateLoactor()"));
+    BOOST_THROW_EXCEPTION(Error("Error in UpdateLoactor()"));
   }
 
   sqlite3_finalize(stmt);
 }
 
 void
-SyncLog::UpdateLocalLocator(const ndn::Name& forwardingHint)
+SyncLog::UpdateLocalLocator(const Name& forwardingHint)
 {
   return UpdateLocator(m_localName, forwardingHint);
 }
@@ -367,12 +354,11 @@ SyncStateMsgPtr
 SyncLog::FindStateDifferences(const std::string& oldHash, const std::string& newHash,
                               bool includeOldSeq)
 {
-  return FindStateDifferences(DigestComputer::digestFromString(oldHash),
-                              DigestComputer::digestFromString(newHash), includeOldSeq);
+  return FindStateDifferences(*fromHex(oldHash), *fromHex(newHash), includeOldSeq);
 }
 
 SyncStateMsgPtr
-SyncLog::FindStateDifferences(const ndn::Buffer& oldHash, const ndn::Buffer& newHash,
+SyncLog::FindStateDifferences(const Buffer& oldHash, const Buffer& newHash,
                               bool includeOldSeq)
 {
   sqlite3_stmt* stmt;
@@ -418,13 +404,13 @@ SELECT sn.device_name, sn.last_known_locator, s_old.seq_no, s_new.seq_no\
                                -1, &stmt, 0);
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Some error with FindStateDifferences"));
+    BOOST_THROW_EXCEPTION(Error("Some error with FindStateDifferences"));
   }
 
   res += sqlite3_bind_blob(stmt, 1, oldHash.buf(), oldHash.size(), SQLITE_STATIC);
   res += sqlite3_bind_blob(stmt, 2, newHash.buf(), newHash.size(), SQLITE_STATIC);
 
-  SyncStateMsgPtr msg = boost::make_shared<SyncStateMsg>();
+  SyncStateMsgPtr msg = make_shared<SyncStateMsg>();
 
   // sqlite3_trace(m_db, xTrace, NULL);
 
@@ -434,14 +420,14 @@ SELECT sn.device_name, sn.last_known_locator, s_old.seq_no, s_new.seq_no\
     // set name
     state->set_name(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 0)),
                     sqlite3_column_bytes(stmt, 0));
-    //      state->set_name(Name(ndn::Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt,
+    //      state->set_name(Name(Block(reinterpret_cast<const char*>(sqlite3_column_blob(stmt,
     //      0)), sqlite3_column_bytes(stmt, 0))).toUri());
 
     // locator is optional, so must check if it is null
     if (sqlite3_column_type(stmt, 1) == SQLITE_BLOB) {
       state->set_locator(reinterpret_cast<const char*>(sqlite3_column_blob(stmt, 1)),
                          sqlite3_column_bytes(stmt, 1));
-      //        state->set_locator(Name(ndn::Block(reinterpret_cast<const
+      //        state->set_locator(Name(Block(reinterpret_cast<const
       //        char*>(sqlite3_column_blob(stmt, 1)), sqlite3_column_bytes(stmt, 1))).toUri());
     }
 
@@ -509,3 +495,6 @@ SyncLog::LogSize()
 
   return retval;
 }
+
+} // chronoshare
+} // ndn

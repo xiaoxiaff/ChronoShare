@@ -1,44 +1,42 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Jared Lindblom <lindblom@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "db-helper.h"
-#include "logging.h"
-
-#include "fs-watcher.h"
-#include <boost/bind.hpp>
+#include "fs-watcher.hpp"
+#include "core/logging.hpp"
 
 #include <QDirIterator>
 #include <QRegExp>
 
-using namespace std;
-using namespace boost;
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("FsWatcher");
 
-FsWatcher::FsWatcher(QString dirPath, LocalFile_Change_Callback onChange,
+namespace fs = boost::filesystem;
+
+FsWatcher::FsWatcher(boost::asio::io_service& io,
+                     QString dirPath, LocalFile_Change_Callback onChange,
                      LocalFile_Change_Callback onDelete, QObject* parent)
   : QObject(parent)
   , m_watcher(new QFileSystemWatcher())
-  , m_scheduler(new Scheduler())
+  , m_scheduler(io)
   , m_dirPath(dirPath)
   , m_onChange(onChange)
   , m_onDelete(onDelete)
@@ -54,25 +52,30 @@ FsWatcher::FsWatcher(QString dirPath, LocalFile_Change_Callback onChange,
   connect(m_watcher, SIGNAL(directoryChanged(QString)), this, SLOT(DidDirectoryChanged(QString)));
   connect(m_watcher, SIGNAL(fileChanged(QString)), this, SLOT(DidFileChanged(QString)));
 
-  m_scheduler->start();
+  rescheduleEvent("rescan", m_dirPath.toStdString(), time::seconds(0),
+                  bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this, m_dirPath));
 
-  Scheduler::scheduleOneTimeTask(m_scheduler, 0,
-                                 bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this,
-                                      m_dirPath),
-                                 "rescan-r-" + m_dirPath.toStdString()); // only one task will be
-                                                                         // scheduled per directory
-
-  Scheduler::scheduleOneTimeTask(m_scheduler, 0,
-                                 bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this,
-                                      m_dirPath),
-                                 "rescan-" + m_dirPath.toStdString()); // only one task will be
-                                                                       // scheduled per directory
+  rescheduleEvent("rescan-r", m_dirPath.toStdString(), time::seconds(0),
+                  bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this, m_dirPath));
 }
 
 FsWatcher::~FsWatcher()
 {
-  m_scheduler->shutdown();
   sqlite3_close(m_db);
+}
+
+void
+FsWatcher::rescheduleEvent(const std::string& eventType, const std::string& path,
+                           const time::milliseconds& period,
+                           const Scheduler::Event& callback)
+{
+  util::scheduler::ScopedEventId event(m_scheduler);
+  event = m_scheduler.scheduleEvent(time::milliseconds(500), callback);
+
+  // only one task per directory/file
+  std::string key = eventType + ":" + path;
+  m_events.erase(key);
+  m_events.insert(std::make_pair(key, std::move(event)));
 }
 
 void
@@ -80,35 +83,23 @@ FsWatcher::DidDirectoryChanged(QString dirPath)
 {
   _LOG_DEBUG("Triggered DirPath: " << dirPath.toStdString());
 
-  filesystem::path absPathTriggeredDir(dirPath.toStdString());
-  if (!filesystem::exists(filesystem::path(absPathTriggeredDir))) {
-    Scheduler::scheduleOneTimeTask(m_scheduler, 0.5,
-                                   bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this,
-                                        dirPath),
-                                   "r-" + dirPath.toStdString()); // only one task will be scheduled
-                                                                  // per directory
+  fs::path absPathTriggeredDir(dirPath.toStdString());
+  if (!fs::exists(fs::path(absPathTriggeredDir))) {
+    rescheduleEvent("r-", dirPath.toStdString(), time::milliseconds(500),
+                    bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this, dirPath));
   }
   else {
-    // m_executor.execute(bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this, dirPath));
-    Scheduler::scheduleOneTimeTask(m_scheduler, 0.5,
-                                   bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this,
-                                        dirPath),
-                                   dirPath.toStdString()); // only one task will be scheduled per
-                                                           // directory
 
-    // m_executor.execute(bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this, dirPath));
-    Scheduler::scheduleOneTimeTask(m_scheduler, 300,
-                                   bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this,
-                                        dirPath),
-                                   "rescan-" + dirPath.toStdString()); // only one task will be
-                                                                       // scheduled per directory
+    rescheduleEvent("", dirPath.toStdString(), time::milliseconds(500),
+                    bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this, dirPath));
 
-    Scheduler::scheduleOneTimeTask(m_scheduler, 300,
-                                   bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this,
-                                        m_dirPath),
-                                   "rescan-r-" + m_dirPath.toStdString()); // only one task will be
-                                                                           // scheduled per
-                                                                           // directory
+    // rescan updated folder for updates
+    rescheduleEvent("rescan", dirPath.toStdString(), time::seconds(300),
+                  bind(&FsWatcher::ScanDirectory_NotifyUpdates_Execute, this, dirPath));
+
+    // rescan whole folder for deletions
+    rescheduleEvent("rescan-r", m_dirPath.toStdString(), time::seconds(300),
+                    bind(&FsWatcher::ScanDirectory_NotifyRemovals_Execute, this, m_dirPath));
   }
 }
 
@@ -122,20 +113,19 @@ FsWatcher::DidFileChanged(QString filePath)
   }
   QString absFilePath = filePath;
 
-  filesystem::path absPathTriggeredFile(filePath.toStdString());
+  fs::path absPathTriggeredFile(filePath.toStdString());
   filePath.remove(0, m_dirPath.size());
 
-  filesystem::path triggeredFile(filePath.toStdString());
-  if (filesystem::exists(filesystem::path(absPathTriggeredFile))) {
+  fs::path triggeredFile(filePath.toStdString());
+  if (fs::exists(fs::path(absPathTriggeredFile))) {
     _LOG_DEBUG("Triggered UPDATE of file:  " << triggeredFile.relative_path().generic_string());
     // m_onChange(triggeredFile.relative_path());
 
     m_watcher->removePath(absFilePath);
     m_watcher->addPath(absFilePath);
 
-    Scheduler::scheduleOneTimeTask(m_scheduler, 0.5,
-                                   bind(m_onChange, triggeredFile.relative_path()),
-                                   triggeredFile.relative_path().string());
+    rescheduleEvent("", triggeredFile.relative_path().string(), time::milliseconds(500),
+                    bind(m_onChange, triggeredFile.relative_path()));
   }
   else {
     _LOG_DEBUG("Triggered DELETE of file: " << triggeredFile.relative_path().generic_string());
@@ -144,9 +134,9 @@ FsWatcher::DidFileChanged(QString filePath)
     m_watcher->removePath(absFilePath);
 
     deleteFile(triggeredFile.relative_path());
-    Scheduler::scheduleOneTimeTask(m_scheduler, 0.5,
-                                   bind(m_onDelete, triggeredFile.relative_path()),
-                                   "r-" + triggeredFile.relative_path().string());
+
+    rescheduleEvent("r", triggeredFile.relative_path().string(), time::milliseconds(500),
+                    bind(m_onDelete, triggeredFile.relative_path()));
   }
 }
 
@@ -184,7 +174,7 @@ FsWatcher::ScanDirectory_NotifyUpdates_Execute(QString dirPath)
       if (fileInfo.isFile()) {
         QString relFile = absFilePath;
         relFile.remove(0, m_dirPath.size());
-        filesystem::path aFile(relFile.toStdString());
+        fs::path aFile(relFile.toStdString());
 
         if (
           //!m_fileState->LookupFile(aFile.relative_path().generic_string()) /* file does not exist
@@ -207,20 +197,20 @@ FsWatcher::ScanDirectory_NotifyRemovals_Execute(QString dirPath)
 {
   _LOG_DEBUG("Triggered DirPath: " << dirPath.toStdString());
 
-  filesystem::path absPathTriggeredDir(dirPath.toStdString());
+  fs::path absPathTriggeredDir(dirPath.toStdString());
   dirPath.remove(0, m_dirPath.size());
 
-  filesystem::path triggeredDir(dirPath.toStdString());
+  fs::path triggeredDir(dirPath.toStdString());
 
   /*
   FileItemsPtr files =
   m_fileState->LookupFilesInFolderRecursively(triggeredDir.relative_path().generic_string());
   for (std::list<FileItem>::iterator file = files->begin(); file != files->end(); file ++)
     {
-      filesystem::path testFile = filesystem::path(m_dirPath.toStdString()) / file->filename();
+      fs::path testFile = fs::path(m_dirPath.toStdString()) / file->filename();
       _LOG_DEBUG("Check file for deletion [" << testFile.generic_string() << "]");
 
-      if (!filesystem::exists(testFile))
+      if (!fs::exists(testFile))
         {
           if (removeIncomplete || file->is_complete())
             {
@@ -231,50 +221,49 @@ FsWatcher::ScanDirectory_NotifyRemovals_Execute(QString dirPath)
     }
     */
 
-  vector<string> files;
+  std::vector<std::string> files;
   getFilesInDir(triggeredDir.relative_path(), files);
-  for (vector<string>::iterator file = files.begin(); file != files.end(); file++) {
-    filesystem::path targetFile = filesystem::path(m_dirPath.toStdString()) / *file;
-    if (!filesystem::exists(targetFile)) {
+  for (std::vector<std::string>::iterator file = files.begin(); file != files.end(); file++) {
+    fs::path targetFile = fs::path(m_dirPath.toStdString()) / *file;
+    if (!fs::exists(targetFile)) {
       deleteFile(*file);
       m_onDelete(*file);
     }
   }
 }
 
-const string INIT_DATABASE = "\
-CREATE TABLE IF NOT EXISTS                                      \n\
-    Files(                                                      \n\
-    filename      TEXT NOT NULL,                                \n\
+const std::string INIT_DATABASE = "\
+CREATE TABLE IF NOT EXISTS                                     \n\
+    Files(                                                     \n\
+    filename      TEXT NOT NULL,                               \n\
     PRIMARY KEY(filename)                                      \n\
-);                                                              \n\
+);                                                             \n\
 CREATE INDEX filename_index ON Files(filename);                \n\
 ";
 
 void
 FsWatcher::initFileStateDb()
 {
-  filesystem::path dbFolder =
-    filesystem::path(m_dirPath.toStdString()) / ".chronoshare" / "fs_watcher";
-  filesystem::create_directories(dbFolder);
+  fs::path dbFolder =
+    fs::path(m_dirPath.toStdString()) / ".chronoshare" / "fs_watcher";
+  fs::create_directories(dbFolder);
 
   int res = sqlite3_open((dbFolder / "filestate.db").string().c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot open database: "
-                                                         + (dbFolder / "filestate.db").string()));
+    BOOST_THROW_EXCEPTION(Error("Cannot open database: " + (dbFolder / "filestate.db").string()));
   }
 
   char* errmsg = 0;
   res = sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, &errmsg);
   if (res != SQLITE_OK && errmsg != 0) {
     // _LOG_TRACE("Init \"error\": " << errmsg);
-    cout << "FS-Watcher DB error: " << errmsg << endl;
+    std::cout << "FS-Watcher DB error: " << errmsg << std::endl;
     sqlite3_free(errmsg);
   }
 }
 
 bool
-FsWatcher::fileExists(const filesystem::path& filename)
+FsWatcher::fileExists(const fs::path& filename)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Files WHERE filename = ?;", -1, &stmt, 0);
@@ -289,7 +278,7 @@ FsWatcher::fileExists(const filesystem::path& filename)
 }
 
 void
-FsWatcher::addFile(const filesystem::path& filename)
+FsWatcher::addFile(const fs::path& filename)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "INSERT OR IGNORE INTO Files(filename) VALUES(?);", -1, &stmt, 0);
@@ -299,7 +288,7 @@ FsWatcher::addFile(const filesystem::path& filename)
 }
 
 void
-FsWatcher::deleteFile(const filesystem::path& filename)
+FsWatcher::deleteFile(const fs::path& filename)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "DELETE FROM Files WHERE filename = ?;", -1, &stmt, 0);
@@ -309,14 +298,14 @@ FsWatcher::deleteFile(const filesystem::path& filename)
 }
 
 void
-FsWatcher::getFilesInDir(const filesystem::path& dir, vector<string>& files)
+FsWatcher::getFilesInDir(const fs::path& dir, std::vector<std::string>& files)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Files WHERE filename LIKE ?;", -1, &stmt, 0);
 
-  string dirStr = dir.string();
-  ostringstream escapedDir;
-  for (string::const_iterator ch = dirStr.begin(); ch != dirStr.end(); ch++) {
+  std::string dirStr = dir.string();
+  std::ostringstream escapedDir;
+  for (std::string::const_iterator ch = dirStr.begin(); ch != dirStr.end(); ch++) {
     if (*ch == '%')
       escapedDir << "\\%";
     else
@@ -324,20 +313,22 @@ FsWatcher::getFilesInDir(const filesystem::path& dir, vector<string>& files)
   }
   escapedDir << "/"
              << "%";
-  string escapedDirStr = escapedDir.str();
+  std::string escapedDirStr = escapedDir.str();
   sqlite3_bind_text(stmt, 1, escapedDirStr.c_str(), escapedDirStr.size(), SQLITE_STATIC);
 
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    string
-    filename(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)),
-             sqlite3_column_bytes(stmt, 0));
+    std::string filename(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)),
+                         sqlite3_column_bytes(stmt, 0));
     files.push_back(filename);
   }
 
   sqlite3_finalize(stmt);
 }
 
-#if WAF
+} // chronoshare
+} // ndn
+
+#ifdef WAF
 #include "fs-watcher.moc"
-#include "fs-watcher.cc.moc"
+// #include "fs-watcher.cpp.moc"
 #endif

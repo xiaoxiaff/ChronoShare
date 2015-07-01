@@ -1,25 +1,28 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-#include "fetch-task-db.h"
-#include "db-helper.h"
+
+#include "fetch-task-db.hpp"
+#include "db-helper.hpp"
+
+namespace ndn {
+namespace chronoshare {
 
 namespace fs = boost::filesystem;
 
@@ -43,8 +46,7 @@ FetchTaskDb::FetchTaskDb(const boost::filesystem::path& folder, const std::strin
 
   int res = sqlite3_open((actualFolder / tag).c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(
-      Error::Db() << errmsg_info_str("Cannot open database: " + (actualFolder / tag).string()));
+    BOOST_THROW_EXCEPTION(Error("Cannot open database: " + (actualFolder / tag).string()));
   }
 
   char* errmsg = 0;
@@ -66,7 +68,7 @@ FetchTaskDb::~FetchTaskDb()
 }
 
 void
-FetchTaskDb::addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+FetchTaskDb::addTask(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
                      uint64_t maxSeqNo, int priority)
 {
   sqlite3_stmt* stmt;
@@ -89,7 +91,7 @@ FetchTaskDb::addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uin
 }
 
 void
-FetchTaskDb::deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName)
+FetchTaskDb::deleteTask(const Name& deviceName, const Name& baseName)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "DELETE FROM Task WHERE deviceName = ? AND baseName = ?;", -1, &stmt, 0);
@@ -111,8 +113,8 @@ FetchTaskDb::foreachTask(const FetchTaskCallback& callback)
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Task;", -1, &stmt, 0);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    ndn::Name deviceName(ndn::Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
-    ndn::Name baseName(ndn::Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
+    Name deviceName(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+    Name baseName(Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
 
     std::cout << "deviceName: " << deviceName << " baseName: " << baseName << std::endl;
     uint64_t minSeqNo = sqlite3_column_int64(stmt, 2);
@@ -123,3 +125,6 @@ FetchTaskDb::foreachTask(const FetchTaskCallback& callback)
 
   sqlite3_finalize(stmt);
 }
+
+} // chronoshare
+} // ndn

@@ -15,8 +15,6 @@ def options(opt):
 
     opt.add_option('--with-tests', action='store_true', default=False, dest='with_tests',
                    help='''build unit tests''')
-    opt.add_option('--with-log4cxx', action='store_true', default=False, dest='log4cxx',
-                   help='''Compile with log4cxx logging support''')
 
     opt.add_option('--without-sqlite-locking', action='store_false', default=True,
                    dest='with_sqlite_locking',
@@ -46,9 +44,7 @@ def configure(conf):
     if Utils.unversioned_sys_platform() == "linux":
         conf.define("TRAY_ICON", "chronoshare-ubuntu.png")
 
-    if conf.options.log4cxx:
-        conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
-        conf.define ("HAVE_LOG4CXX", 1)
+    conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
 
     boost_libs = 'system random thread filesystem'
     if conf.options.with_tests:
@@ -65,51 +61,71 @@ def configure(conf):
 
     conf.define('SYSCONFDIR', conf.env['SYSCONFDIR'])
 
-    conf.write_config_header('src/config.h')
+    conf.write_config_header('core/chronoshare-config.hpp')
 
-def build (bld):
-    adhoc = bld(
-        target="adhoc",
+def build(bld):
+    bld(name='core-objects',
+        target='core-objects',
         features=['cxx'],
-        includes="src",
-    )
+        source=bld.path.ant_glob('core/**/*.cpp'),
+        use=['LOG4CXX', 'BOOST'],
+        includes='.',
+        export_includes='.',
+        )
+
+    contrib = bld(
+        name='contrib',
+        target='contrib',
+        features=['qt4', 'cxx'],
+        source=bld.path.ant_glob('contrib/**/*.cpp'),
+        defines='WAF=1',
+        use=['QTCORE'],
+        )
+    
+    adhoc = bld(
+        name='adhoc',
+        target='adhoc',
+        features=['cxx'],
+        use=['core-objects'],
+        )
 
     if Utils.unversioned_sys_platform() == "darwin":
         adhoc.mac_app = True
         adhoc.source = 'adhoc/adhoc-osx.mm'
-        adhoc.use = "BOOST LOG4CXX OSX_FOUNDATION OSX_COREWLAN"
+        adhoc.use += ['OSX_FOUNDATION', 'OSX_COREWLAN']
 
     chornoshare = bld(
         target="chronoshare",
         features=['cxx'],
-        source = bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.proto']),
-        use = "BOOST SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML SSL",
-        includes = "src",
+        source=bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.cc', 'src/**/*.proto']),
+        use=['adhoc', 'NDN_CXX', 'TINYXML'],
+        includes="src",
+        export_includes="src",
         )
 
     fs_watcher = bld (
-        target = "fs_watcher",
-        features = "qt4 cxx",
-        defines = "WAF=1",
-        source = bld.path.ant_glob(['fs-watcher/*.cpp']),
-        use = "SQLITE3 LOG4CXX scheduler executor QTCORE",
-        includes = "fs-watcher scheduler executor src",
+        features=['qt4', 'cxx'],
+        target='fs-watcher',
+        defines='WAF=1',
+        source=bld.path.ant_glob('fs-watcher/*.cpp'),
+        use=['chronoshare', 'QTCORE'],
+        includes="fs-watcher",
+        export_includes="fs-watcher",
         )
 
     http_server = bld(
           target="http_server",
           features="qt4 cxx",
-          source=bld.path.ant_glob(['server/*.cpp']),
+          source=bld.path.ant_glob('server/*.cpp'),
           includes="server src .",
           use="BOOST QTCORE")
 
     qt = bld(
         target="ChronoShare",
         features="qt4 cxx cxxprogram html_resources",
-        defines="WAF=1",
-        source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
+        source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cpp', 'gui/images.qrc']),
         includes="scheduler executor fs-watcher gui src adhoc server . ",
-        use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server TINYXML",
+        use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX database chronoshare http_server TINYXML",
 
         html_resources = bld.path.find_dir("gui/html").ant_glob([
                 '**/*.js', '**/*.png', '**/*.css',
@@ -117,78 +133,77 @@ def build (bld):
                 ]),
         )
 
-    if Utils.unversioned_sys_platform() == "darwin":
-        app_plist = '''<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
-<plist version="0.9">
-<dict>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleIconFile</key>
-    <string>chronoshare.icns</string>
-    <key>CFBundleGetInfoString</key>
-    <string>Created by Waf</string>
-    <key>CFBundleIdentifier</key>
-    <string>edu.ucla.cs.irl.Chronoshare</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-    <key>NOTE</key>
-    <string>THIS IS A GENERATED FILE, DO NOT MODIFY</string>
-    <key>CFBundleExecutable</key>
-    <string>%s</string>
-    <key>LSUIElement</key>
-    <string>1</string>
-    <key>SUPublicDSAKeyFile</key>
-    <string>dsa_pub.pem</string>
-    <key>CFBundleIconFile</key>
-    <string>chronoshare.icns</string>
-</dict>
-</plist>'''
-        qt.mac_app = "ChronoShare.app"
-        qt.mac_plist = app_plist % "ChronoShare"
-        qt.mac_resources = 'chronoshare.icns'
-        qt.use += " OSX_FOUNDATION OSX_COREWLAN adhoc"
+#     if Utils.unversioned_sys_platform() == "darwin":
+#         app_plist = '''<?xml version="1.0" encoding="UTF-8"?>
+# <!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
+# <plist version="0.9">
+# <dict>
+#     <key>CFBundlePackageType</key>
+#     <string>APPL</string>
+#     <key>CFBundleIconFile</key>
+#     <string>chronoshare.icns</string>
+#     <key>CFBundleGetInfoString</key>
+#     <string>Created by Waf</string>
+#     <key>CFBundleIdentifier</key>
+#     <string>edu.ucla.cs.irl.Chronoshare</string>
+#     <key>CFBundleSignature</key>
+#     <string>????</string>
+#     <key>NOTE</key>
+#     <string>THIS IS A GENERATED FILE, DO NOT MODIFY</string>
+#     <key>CFBundleExecutable</key>
+#     <string>%s</string>
+#     <key>LSUIElement</key>
+#     <string>1</string>
+#     <key>SUPublicDSAKeyFile</key>
+#     <string>dsa_pub.pem</string>
+#     <key>CFBundleIconFile</key>
+#     <string>chronoshare.icns</string>
+# </dict>
+# </plist>'''
+#         qt.mac_app = "ChronoShare.app"
+#         qt.mac_plist = app_plist % "ChronoShare"
+#         qt.mac_resources = 'chronoshare.icns'
+#         qt.use += " OSX_FOUNDATION OSX_COREWLAN adhoc"
 
-        if bld.env['HAVE_SPARKLE']:
-            qt.use += " OSX_SPARKLE"
-            qt.source += ["osx/auto-update/sparkle-auto-update.mm"]
-            qt.includes += " osx/auto-update"
-            if bld.env['HAVE_LOCAL_SPARKLE']:
-                qt.mac_frameworks = "osx/Frameworks/Sparkle.framework"
+#         if bld.env['HAVE_SPARKLE']:
+#             qt.use += " OSX_SPARKLE"
+#             qt.source += ["osx/auto-update/sparkle-auto-update.mm"]
+#             qt.includes += " osx/auto-update"
+#             if bld.env['HAVE_LOCAL_SPARKLE']:
+#                 qt.mac_frameworks = "osx/Frameworks/Sparkle.framework"
 
-    if Utils.unversioned_sys_platform () == "linux":
-        bld(
-            features = "process_in",
-            target = "ChronoShare.desktop",
-            source = "ChronoShare.desktop.in",
-            install_prefix = "${DATADIR}/applications",
-            )
-        bld.install_files ("${DATADIR}/applications", "ChronoShare.desktop")
-        bld.install_files ("${DATADIR}/ChronoShare", "gui/images/chronoshare-big.png")
+#     if Utils.unversioned_sys_platform () == "linux":
+#         bld(
+#             features = "process_in",
+#             target = "ChronoShare.desktop",
+#             source = "ChronoShare.desktop.in",
+#             install_prefix = "${DATADIR}/applications",
+#             )
+#         bld.install_files ("${DATADIR}/applications", "ChronoShare.desktop")
+#         bld.install_files ("${DATADIR}/ChronoShare", "gui/images/chronoshare-big.png")
 
     cmdline = bld (
-        target = "csd",
-        features = "qt4 cxx cxxprogram",
-        defines = "WAF",
-        source = "cmd/csd.cc",
-        includes = "scheduler executor gui fs-watcher src . ",
-        use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
+        target="csd",
+        features="qt4 cxx cxxprogram",
+        defines="WAF=1",
+        source="cmd/csd.cpp",
+        use="chronoshare fs-watcher contrib",
+        includes="cmd"
         )
 
     dump_db = bld (
         target = "dump-db",
         features = "cxx cxxprogram",
-        source = "cmd/dump-db.cc",
-        includes = "scheduler executor gui fs-watcher src . ",
-        use = "BOOST SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
+        source = "cmd/dump-db.cpp",
+        use = "chronoshare fs-watcher"
         )
 
-    recurse('tests');
+#    bld.recurse('tests');
 
 from waflib import TaskGen
 @TaskGen.extension('.mm')
 def m_hook(self, node):
-    """Alias .mm files to be compiled the same as .cc files, gcc/clang will do the right thing."""
+    """Alias .mm files to be compiled the same as .cpp files, gcc/clang will do the right thing."""
     return self.create_compiled_task('cxx', node)
 
 @TaskGen.extension('.js', '.png', '.css', '.html', '.gif', '.ico', '.in')

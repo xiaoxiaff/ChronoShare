@@ -1,45 +1,52 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef SYNC_LOG_H
-#define SYNC_LOG_H
+#ifndef CHRONOSHARE_SRC_SYNC_LOG_HPP
+#define CHRONOSHARE_SRC_SYNC_LOG_HPP
 
-#include "db-helper.h"
-#include "digest-computer.h"
-#include <sync-state.pb.h>
+#include "core/chronoshare-common.hpp"
+#include "db-helper.hpp"
+#include "sync-state.pb.h"
+
 #include <ndn-cxx/name.hpp>
+
 #include <map>
+
+// @todo Replace with std::thread
+#include <boost/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
-typedef boost::shared_ptr<SyncStateMsg> SyncStateMsgPtr;
+namespace ndn {
+namespace chronoshare {
 
-class SyncLog : public DbHelper {
+typedef shared_ptr<SyncStateMsg> SyncStateMsgPtr;
+
+class SyncLog : public DbHelper
+{
 public:
-  SyncLog(const boost::filesystem::path& path, const ndn::Name& localName);
+  SyncLog(const boost::filesystem::path& path, const Name& localName);
 
   /**
    * @brief Get local username
    */
-  inline const ndn::Name&
+  const Name&
   GetLocalName() const;
 
   sqlite3_int64
@@ -47,28 +54,28 @@ public:
 
   // done
   void
-  UpdateDeviceSeqNo(const ndn::Name& name, sqlite3_int64 seqNo);
+  UpdateDeviceSeqNo(const Name& name, sqlite3_int64 seqNo);
 
   void
   UpdateLocalSeqNo(sqlite3_int64 seqNo);
 
-  ndn::Name
-  LookupLocator(const ndn::Name& deviceName);
+  Name
+  LookupLocator(const Name& deviceName);
 
-  ndn::Name
+  Name
   LookupLocalLocator();
 
   void
-  UpdateLocator(const ndn::Name& deviceName, const ndn::Name& locator);
+  UpdateLocator(const Name& deviceName, const Name& locator);
 
   void
-  UpdateLocalLocator(const ndn::Name& locator);
+  UpdateLocalLocator(const Name& locator);
 
   // done
   /**
    * Create an 1ntry in SyncLog and SyncStateNodes corresponding to the current state of SyncNodes
    */
-  ndn::ConstBufferPtr
+  ConstBufferPtr
   RememberStateInStateLog();
 
   // done
@@ -77,7 +84,7 @@ public:
 
   // done
   sqlite3_int64
-  LookupSyncLog(const ndn::Buffer& stateHash);
+  LookupSyncLog(const Buffer& stateHash);
 
   // How difference is exposed will be determined later by the actual protocol
   SyncStateMsgPtr
@@ -85,12 +92,12 @@ public:
                        bool includeOldSeq = false);
 
   SyncStateMsgPtr
-  FindStateDifferences(const ndn::Buffer& oldHash, const ndn::Buffer& newHash,
+  FindStateDifferences(const Buffer& oldHash, const Buffer& newHash,
                        bool includeOldSeq = false);
 
   //-------- only used in test -----------------
   sqlite3_int64
-  SeqNo(const ndn::Name& name);
+  SeqNo(const Name& name);
 
   sqlite3_int64
   LogSize();
@@ -100,7 +107,7 @@ protected:
   UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo);
 
 protected:
-  ndn::Name m_localName;
+  Name m_localName;
 
   sqlite3_int64 m_localDeviceId;
 
@@ -108,15 +115,17 @@ protected:
   typedef boost::unique_lock<Mutex> WriteLock;
 
   Mutex m_stateUpdateMutex;
-  DigestComputer m_digestComputer;
 };
 
-typedef boost::shared_ptr<SyncLog> SyncLogPtr;
+typedef shared_ptr<SyncLog> SyncLogPtr;
 
-const ndn::Name&
+inline const Name&
 SyncLog::GetLocalName() const
 {
   return m_localName;
 }
 
-#endif // SYNC_LOG_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_SRC_SYNC_LOG_HPP

@@ -18,58 +18,46 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHARE_SRC_DB_HELPER_HPP
-#define CHRONOSHARE_SRC_DB_HELPER_HPP
+#include "logging.hpp"
 
-#include "core/chronoshare-common.hpp"
+#include <log4cxx/logger.h>
+#include <log4cxx/basicconfigurator.h>
+#include <log4cxx/consoleappender.h>
+#include <log4cxx/patternlayout.h>
+#include <log4cxx/level.h>
+#include <log4cxx/propertyconfigurator.h>
+#include <log4cxx/defaultconfigurator.h>
+#include <log4cxx/helpers/exception.h>
 
-#include <sqlite3.h>
-#include <boost/filesystem.hpp>
+#include <unistd.h>
 
 namespace ndn {
 namespace chronoshare {
 
-class DbHelper
+using namespace log4cxx;
+using namespace log4cxx::helpers;
+
+void
+INIT_LOGGERS()
 {
-public:
-  class Error : public boost::exception,
-                public std::runtime_error
-  {
-  public:
-    explicit
-    Error(const std::string& what)
-      : std::runtime_error(what)
-    {
-    }
-  };
+  static bool configured = false;
 
-public:
-  DbHelper(const boost::filesystem::path& path, const std::string& dbname);
-  virtual ~DbHelper();
+  if (configured)
+    return;
 
-private:
-  static void
-  hash_xStep(sqlite3_context* context, int argc, sqlite3_value** argv);
+  if (access("log4cxx.properties", R_OK) == 0)
+    PropertyConfigurator::configureAndWatch("log4cxx.properties");
+  else {
+    PatternLayoutPtr layout(new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
+    ConsoleAppenderPtr appender(new ConsoleAppender(layout));
 
-  static void
-  hash_xFinal(sqlite3_context* context);
+    BasicConfigurator::configure(appender);
+    Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
+  }
 
-  static void
-  is_prefix_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-  static void
-  directory_name_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-  static void
-  is_dir_prefix_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-protected:
-  sqlite3* m_db;
-};
-
-typedef shared_ptr<DbHelper> DbHelperPtr;
+  //  _LOG_DEBUG("Hello World!");    // Debug level
+  configured = true;
+}
 
 } // chronoshare
 } // ndn
-
-#endif // CHRONOSHARE_SRC_DB_HELPER_HPP

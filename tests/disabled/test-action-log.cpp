@@ -1,30 +1,28 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <lijingander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #include <boost/test/unit_test.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "logging.h"
-#include "action-log.h"
+#include "logging.hpp"
+#include "action-log.hpp"
 
 #include <unistd.h>
 #include <iostream>
@@ -51,12 +49,12 @@ BOOST_AUTO_TEST_CASE(ActionLogTest)
   if (exists(tmpdir)) {
     remove_all(tmpdir);
   }
-  boost::shared_ptr<ndn::Face> face = boost::make_shared<ndn::Face>();
+  shared_ptr<Face> face = make_shared<Face>();
 
-  SyncLogPtr syncLog = boost::make_shared<SyncLog>(tmpdir, localName);
+  SyncLogPtr syncLog = make_shared<SyncLog>(tmpdir, localName);
 
   ActionLogPtr actionLog =
-    boost::make_shared<ActionLog>(face, tmpdir, syncLog, "top-secret", "test-chronoshare",
+    make_shared<ActionLog>(face, tmpdir, syncLog, "top-secret", "test-chronoshare",
                                   ActionLog::OnFileAddedOrChangedCallback(),
                                   ActionLog::OnFileRemovedCallback());
 
@@ -135,7 +133,7 @@ BOOST_AUTO_TEST_CASE(ActionLogTest)
   BOOST_CHECK_EQUAL(actionLog->LogSize(), 2);
 
   // create a real remote action
-  ActionItemPtr item = boost::make_shared<ActionItem>();
+  ActionItemPtr item = make_shared<ActionItem>();
   item->set_action(ActionItem::UPDATE);
   item->set_filename("file.txt");
   item->set_version(2);

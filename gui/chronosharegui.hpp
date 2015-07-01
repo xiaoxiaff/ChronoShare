@@ -1,34 +1,27 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Jared Lindblom <lindblom@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHAREGUI_H
-#define CHRONOSHAREGUI_H
+#ifndef CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
+#define CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
 
-#include "adhoc.h"
-
-#if __APPLE__ && HAVE_SPARKLE
-#define SPARKLE_SUPPORTED 1
-#include "sparkle-auto-update.h"
-#endif
+#include "core/chronoshare-common.hpp"
 
 #include <QtGui>
 #include <QWidget>
@@ -43,12 +36,25 @@
 #include <QMessageBox>
 #include <QApplication>
 
-#include "dispatcher.h"
-#include "fs-watcher.h"
+#ifndef Q_MOC_RUN
+#include "dispatcher.hpp"
+#include "fs-watcher.hpp"
 #include "server.hpp"
-#include <boost/thread/thread.hpp>
+#include "adhoc.hpp"
+#endif // Q_MOC_RUN
 
-class ChronoShareGui : public QDialog {
+#if __APPLE__ && HAVE_SPARKLE
+#define SPARKLE_SUPPORTED 1
+#include "sparkle-auto-update.hpp"
+#endif
+
+#include <thread>
+
+namespace ndn {
+namespace chronoshare {
+
+class ChronoShareGui : public QDialog
+{
   Q_OBJECT
 
 public:
@@ -154,10 +160,8 @@ private:
   QString m_username;         // username
   QString m_sharedFolderName; // shared folder name
 
-  FsWatcher* m_watcher;
-  Dispatcher* m_dispatcher;
   http::server::server* m_httpServer;
-  boost::thread m_httpServerThread;
+  std::thread m_httpServerThread;
 
   QLabel* labelUsername;
   QPushButton* button;
@@ -178,6 +182,15 @@ private:
 #endif
   // QString m_settingsFilePath; // settings file path
   // QString m_settings;
+
+  std::thread m_chronoshareThread;
+  std::unique_ptr<boost::asio::io_service> m_ioService;
+  std::unique_ptr<Face> m_face;
+  std::unique_ptr<FsWatcher> m_watcher;
+  std::unique_ptr<Dispatcher> m_dispatcher;
 };
 
-#endif // CHRONOSHAREGUI_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP

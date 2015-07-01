@@ -1,45 +1,44 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef DISPATCHER_H
-#define DISPATCHER_H
+#ifndef CHRONOSHARE_SRC_DISPATCHER_HPP
+#define CHRONOSHARE_SRC_DISPATCHER_HPP
 
-#include "digest-computer.h"
-#include "action-log.h"
-#include "sync-core.h"
-#include "executor.h"
-#include "object-db.h"
-#include "object-manager.h"
-#include "content-server.h"
-#include "state-server.h"
-#include "fetch-manager.h"
+#include "core/chronoshare-common.hpp"
 
-#include <boost/function.hpp>
+#include "action-log.hpp"
+#include "sync-core.hpp"
+#include "object-db.hpp"
+#include "object-manager.hpp"
+#include "content-server.hpp"
+#include "state-server.hpp"
+#include "fetch-manager.hpp"
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/shared_ptr.hpp>
 #include <map>
 
-typedef boost::shared_ptr<ActionItem> ActionItemPtr;
+namespace ndn {
+namespace chronoshare {
+
+typedef shared_ptr<ActionItem> ActionItemPtr;
 
 // TODO:
 // This class lacks a permanent table to store the files in fetching process
@@ -49,7 +48,7 @@ public:
   // sharedFolder is the name to be used in NDN name;
   // rootDir is the shared folder dir in local file system;
   Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-             const boost::filesystem::path& rootDir, boost::shared_ptr<ndn::Face> face,
+             const boost::filesystem::path& rootDir, Face& face,
              bool enablePrefixDiscovery = true);
   ~Dispatcher();
 
@@ -70,7 +69,7 @@ public:
   Restore_LocalFile(FileItemPtr file);
 
   // for test
-  ndn::ConstBufferPtr
+  ConstBufferPtr
   SyncRoot()
   {
     return m_core->root();
@@ -84,22 +83,6 @@ public:
   }
 
 private:
-  void
-  listen()
-  {
-    printf("m_face start listening ...\n");
-    m_face->processEvents();
-    printf("m_face listen Over !!! \n");
-  }
-
-  void
-  listen_other(boost::shared_ptr<ndn::Face> face, std::string name)
-  {
-    printf("%s start listening ...\n", name.c_str());
-    face->processEvents();
-    printf("%s listen Over !!!\n", name.c_str());
-  }
-
   void
   Did_LocalFile_AddOrModify_Execute(boost::filesystem::path relativeFilepath); // cannot be const &
                                                                                // for Execute
@@ -145,8 +128,8 @@ private:
   Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg);
 
   void
-  Did_FetchManager_ActionFetch(const ndn::Name& deviceName, const ndn::Name& actionName,
-                               uint32_t seqno, ndn::shared_ptr<ndn::Data> actionData);
+  Did_FetchManager_ActionFetch(const Name& deviceName, const Name& actionName,
+                               uint32_t seqno, shared_ptr<Data> actionData);
 
   void
   Did_ActionLog_ActionApply_Delete(const std::string& filename);
@@ -155,32 +138,32 @@ private:
   Did_ActionLog_ActionApply_Delete_Execute(std::string filename);
 
   // void
-  // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, ndn::Name device_name,
+  // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, Name device_name,
   // sqlite3_int64 seq_no,
-  //                                        ndn::ConstBufferPtr hash, time_t m_time, int mode, int
+  //                                        ConstBufferPtr hash, time_t m_time, int mode, int
   //                                        seg_num);
 
   void
-  Did_FetchManager_FileSegmentFetch(const ndn::Name& deviceName, const ndn::Name& fileSegmentName,
-                                    uint32_t segment, ndn::shared_ptr<ndn::Data> fileSegmentData);
+  Did_FetchManager_FileSegmentFetch(const Name& deviceName, const Name& fileSegmentName,
+                                    uint32_t segment, shared_ptr<Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName,
+  Did_FetchManager_FileSegmentFetch_Execute(Name deviceName, Name fileSegmentName,
                                             uint32_t segment,
-                                            ndn::shared_ptr<ndn::Data> fileSegmentData);
+                                            shared_ptr<Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileFetchComplete(const ndn::Name& deviceName, const ndn::Name& fileBaseName);
+  Did_FetchManager_FileFetchComplete(const Name& deviceName, const Name& fileBaseName);
 
   void
-  Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn::Name fileBaseName);
+  Did_FetchManager_FileFetchComplete_Execute(Name deviceName, Name fileBaseName);
 
   void
-  Did_LocalPrefix_Updated(const ndn::Name& prefix);
+  Did_LocalPrefix_Updated(const Name& prefix);
 
 private:
   void
-  AssembleFile_Execute(const ndn::Name& deviceName, const ndn::Buffer& filehash,
+  AssembleFile_Execute(const Name& deviceName, const Buffer& filehash,
                        const boost::filesystem::path& relativeFilepath);
 
   // void
@@ -193,26 +176,27 @@ private:
   // actionReceived(const ActionItemPtr &actionItem);
 
   // void
-  // fileSegmentReceived(const ndn::Name &name, const Ccnx::Bytes &content);
+  // fileSegmentReceived(const Name &name, const Ccnx::Bytes &content);
 
   // void
-  // fileReady(const ndn::Name &fileNamePrefix);
+  // fileReady(const Name &fileNamePrefix);
 
 private:
-  boost::shared_ptr<ndn::Face> m_face;
+  Face& m_face;
   SyncCore* m_core;
   SyncLogPtr m_syncLog;
   ActionLogPtr m_actionLog;
   FileStatePtr m_fileState;
 
   boost::filesystem::path m_rootDir;
-  Executor m_executor;
+  boost::asio::io_service& m_ioService;
+
   ObjectManager m_objectManager;
-  ndn::Name m_localUserName;
+  Name m_localUserName;
   // maintain object db ptrs so that we don't need to create them
   // for every fetched segment of a file
 
-  std::map<ndn::Buffer, ObjectDbPtr> m_objectDbMap;
+  std::map<Buffer, ObjectDbPtr> m_objectDbMap;
 
   std::string m_sharedFolder;
   ContentServer* m_server;
@@ -221,13 +205,6 @@ private:
 
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
-  DigestComputer m_digestComputer;
-
-  boost::shared_ptr<ndn::Face> m_face_server;
-  boost::shared_ptr<ndn::Face> m_face_stateServer;
-  boost::thread m_faceListening;
-  boost::thread m_serverListening;
-  boost::thread m_stateServerListening;
 };
 
 namespace Error {
@@ -236,4 +213,7 @@ struct Dispatcher : virtual boost::exception, virtual std::exception {
 typedef boost::error_info<struct tag_errmsg, std::string> error_info_str;
 }
 
-#endif // DISPATCHER_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_SRC_DISPATCHER_HPP

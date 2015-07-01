@@ -1,41 +1,61 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Jared Lindblom <lindblom@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-#ifndef FS_WATCHER_H
-#define FS_WATCHER_H
+
+#ifndef CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP
+#define CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP
+
+#include "core/chronoshare-common.hpp"
+#include "db-helper.hpp"
 
 #include <vector>
 #include <QFileSystemWatcher>
 #include <sqlite3.h>
-#include "scheduler.h"
+
+#include <ndn-cxx/util/scheduler.hpp>
+#include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
+
 #include <boost/filesystem.hpp>
+#include <boost/asio/io_service.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 class FsWatcher : public QObject {
   Q_OBJECT
 
 public:
-  typedef boost::function<void(const boost::filesystem::path&)> LocalFile_Change_Callback;
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+  typedef std::function<void(const boost::filesystem::path&)> LocalFile_Change_Callback;
 
   // constructor
-  FsWatcher(QString dirPath, LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
+  FsWatcher(boost::asio::io_service& io,
+            QString dirPath, LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
             QObject* parent = 0);
 
   // destructor
@@ -77,9 +97,15 @@ private:
   void
   getFilesInDir(const boost::filesystem::path& dir, std::vector<std::string>& files);
 
+
+  void
+  rescheduleEvent(const std::string& eventType, const std::string& dirPath,
+                  const time::milliseconds& period,
+                  const Scheduler::Event& callback);
+
 private:
   QFileSystemWatcher* m_watcher; // filesystem watcher
-  SchedulerPtr m_scheduler;
+  Scheduler m_scheduler;
 
   QString m_dirPath; // monitored path
 
@@ -87,6 +113,11 @@ private:
   LocalFile_Change_Callback m_onDelete;
 
   sqlite3* m_db;
+
+  std::map<std::string, util::scheduler::ScopedEventId> m_events;
 };
 
-#endif // FILESYSTEMWATCHER_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP

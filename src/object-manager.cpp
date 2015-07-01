@@ -1,47 +1,45 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "object-manager.h"
-#include "object-db.h"
-#include "logging.h"
+#include "object-manager.hpp"
+#include "object-db.hpp"
+#include "core/logging.hpp"
 
 #include <sys/stat.h>
 
-#include <fstream>
 #include <boost/lexical_cast.hpp>
-#include <boost/throw_exception.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/make_shared.hpp>
+
+#include <ndn-cxx/util/string-helper.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Object.Manager");
 
-using namespace ndn;
-using namespace boost;
-using namespace std;
 namespace fs = boost::filesystem;
+using util::Sha256;
 
 const int MAX_FILE_SEGMENT_SIZE = 1024;
 
-ObjectManager::ObjectManager(boost::shared_ptr<ndn::Face> face, const fs::path& folder,
+ObjectManager::ObjectManager(Face& face, const fs::path& folder,
                              const std::string& appName)
   : m_face(face)
   , m_folder(folder / ".chronoshare")
@@ -55,15 +53,15 @@ ObjectManager::~ObjectManager()
 }
 
 // /<devicename>/<appname>/file/<hash>/<segment>
-boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
-ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceName)
+std::tuple<ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
+ObjectManager::localFileToObjects(const fs::path& file, const Name& deviceName)
 {
-  ndn::ConstBufferPtr fileHash = m_digestComputer.digestFromFile(file);
-  _LOG_DEBUG("fileHash size " << fileHash->size() << " fileHash content "
-                              << DigestComputer::digestToString(*fileHash));
+  fs::ifstream input1(file, std::ios::in | std::ios::binary);
+  Sha256 fileHash(input1);
+  _LOG_DEBUG("fileHash content " << fileHash.toString());
 
   _LOG_DEBUG("file " << file);
-  ObjectDb fileDb(m_folder, DigestComputer::digestToString(*fileHash));
+  ObjectDb fileDb(m_folder, fileHash.toString());
 
   fs::ifstream iff(file, std::ios::in | std::ios::binary);
   sqlite3_int64 segment = 0;
@@ -75,11 +73,11 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
       break;
     }
 
-    ndn::Name name = ndn::Name("/");
+    Name name = Name("/");
     name.append(deviceName)
       .append(m_appName)
       .append("file")
-      .appendImplicitSha256Digest(fileHash)
+      .appendImplicitSha256Digest(fileHash.computeDigest())
       .appendNumber(segment);
     _LOG_DEBUG("publish Data Name: " << name.toUri());
 
@@ -87,12 +85,12 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
     // cout << name << endl;
     //_LOG_DEBUG("Read " << iff.gcount() << " from " << file << " for segment " << segment);
 
-    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    shared_ptr<Data> data = make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(60));
     data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     fileDb.saveContentObject(deviceName, segment, *data);
 
@@ -100,33 +98,33 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
   }
   if (segment == 0) // handle empty files
   {
-    ndn::Name name = ndn::Name("/");
+    Name name = Name("/");
     name.append(m_appName)
       .append("file")
-      .appendImplicitSha256Digest(fileHash)
+      .appendImplicitSha256Digest(fileHash.computeDigest())
       .append(deviceName)
       .appendNumber(0);
 
-    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    shared_ptr<Data> data = make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(0));
     data->setContent(0, 0);
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     fileDb.saveContentObject(deviceName, 0, *data);
 
     segment++;
   }
 
-  return boost::make_tuple(fileHash, segment);
+  return std::make_tuple(fileHash.computeDigest(), segment);
 }
 
 bool
-ObjectManager::objectsToLocalFile(/*in*/ const ndn::Name& deviceName,
-                                  /*in*/ const ndn::Buffer& fileHash, /*out*/ const fs::path& file)
+ObjectManager::objectsToLocalFile(/*in*/const Name& deviceName,
+                                  /*in*/const Buffer& fileHash, /*out*/const fs::path& file)
 {
-  string hashStr = DigestComputer::digestToString(fileHash);
+  std::string hashStr = toHex(fileHash);
   if (!ObjectDb::DoesExist(m_folder, deviceName, hashStr)) {
     _LOG_ERROR("ObjectDb for [" << m_folder << ", " << deviceName << ", " << hashStr
                                 << "] does not exist or not all segments are available");
@@ -141,7 +139,7 @@ ObjectManager::objectsToLocalFile(/*in*/ const ndn::Name& deviceName,
   ObjectDb fileDb(m_folder, hashStr);
 
   sqlite3_int64 segment = 0;
-  ndn::BufferPtr bytes = fileDb.fetchSegment(deviceName, 0);
+  BufferPtr bytes = fileDb.fetchSegment(deviceName, 0);
   while (bytes) {
 
     if (bytes->buf()) {
@@ -157,3 +155,6 @@ ObjectManager::objectsToLocalFile(/*in*/ const ndn::Name& deviceName,
 
   return true;
 }
+
+} // chronoshare
+} // ndn

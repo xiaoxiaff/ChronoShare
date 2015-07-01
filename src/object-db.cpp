@@ -1,37 +1,35 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "object-db.h"
+#include "object-db.hpp"
+#include "db-helper.hpp"
+#include "core/logging.hpp"
+
 #include <iostream>
-#include <boost/make_shared.hpp>
-#include "db-helper.h"
 #include <sys/stat.h>
-#include "logging.h"
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Object.Db");
 
-using namespace std;
-using namespace ndn;
-using namespace boost;
 namespace fs = boost::filesystem;
 
 const std::string INIT_DATABASE = "\
@@ -57,7 +55,7 @@ ObjectDb::ObjectDb(const fs::path& folder, const std::string& hash)
 
   int res = sqlite3_open((actualFolder / hash.substr(2, hash.size() - 2)).c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str(
+    BOOST_THROW_EXCEPTION(Error(
                             "Cannot open/create dabatabase: ["
                             + (actualFolder / hash.substr(2, hash.size() - 2)).string() + "]"));
   }
@@ -79,7 +77,7 @@ ObjectDb::ObjectDb(const fs::path& folder, const std::string& hash)
 }
 
 bool
-ObjectDb::DoesExist(const boost::filesystem::path& folder, const ndn::Name& deviceName,
+ObjectDb::DoesExist(const boost::filesystem::path& folder, const Name& deviceName,
                     const std::string& hash)
 {
   fs::path actualFolder = folder / "objects" / hash.substr(0, 2);
@@ -127,8 +125,8 @@ ObjectDb::~ObjectDb()
 }
 
 void
-ObjectDb::saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment,
-                            const ndn::Data& data)
+ObjectDb::saveContentObject(const Name& deviceName, sqlite3_int64 segment,
+                            const Data& data)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "INSERT INTO File "
@@ -152,8 +150,8 @@ ObjectDb::saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment,
   m_lastUsed = std::time(NULL);
 }
 
-ndn::BufferPtr
-ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
+BufferPtr
+ObjectDb::fetchSegment(const Name& deviceName, sqlite3_int64 segment)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT content_object FROM File WHERE device_name=? AND segment=?", -1,
@@ -164,8 +162,8 @@ ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
 
   sqlite3_bind_int64(stmt, 2, segment);
 
-  ndn::BufferPtr ret;
-  ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+  BufferPtr ret;
+  shared_ptr<Data> data = make_shared<Data>();
 
   int res = sqlite3_step(stmt);
   if (res == SQLITE_ROW) {
@@ -173,7 +171,7 @@ ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
     //      char*>(sqlite3_column_blob(stmt, 0));
     data->wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
     ret =
-      ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().value_size());
+      make_shared<Buffer>(data->getContent().value(), data->getContent().value_size());
   }
 
   sqlite3_finalize(stmt);
@@ -190,23 +188,6 @@ ObjectDb::secondsSinceLastUse()
   return (std::time(NULL) - m_lastUsed);
 }
 
-// sqlite3_int64
-// ObjectDb::getNumberOfSegments(const ndn::Name &deviceName)
-// {
-//   sqlite3_stmt *stmt;
-//   sqlite3_prepare_v2(m_db, "SELECT count(*) FROM File WHERE device_name=?", -1, &stmt, 0);
-
-//   bool retval = false;
-//   int res = sqlite3_step(stmt);
-//   if (res == SQLITE_ROW)
-//     {
-//       retval = true;
-//     }
-//   sqlite3_finalize(stmt);
-
-//   return retval;
-// }
-
 void
 ObjectDb::willStartSave()
 {
@@ -220,3 +201,6 @@ ObjectDb::didStopSave()
   sqlite3_exec(m_db, "END TRANSACTION;", 0, 0, 0);
   // _LOG_DEBUG("Close transaction: " << sqlite3_errmsg(m_db));
 }
+
+} // chronoshare
+} // ndn

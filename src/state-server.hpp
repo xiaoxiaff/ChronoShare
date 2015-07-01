@@ -1,37 +1,36 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef STATE_SERVER_H
 #define STATE_SERVER_H
 
-#include "digest-computer.h"
-#include "object-manager.h"
-#include "object-db.h"
-#include "action-log.h"
+#include "core/chronoshare-common.hpp"
+#include "object-manager.hpp"
+#include "object-db.hpp"
+#include "action-log.hpp"
+
 #include <set>
 #include <map>
+
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
-#include "executor.h"
 
 #include "../contrib/json_spirit/json_spirit_writer_template.h"
 #include "../contrib/json_spirit/json_spirit_value.h"
@@ -39,6 +38,9 @@
 #ifndef JSON_SPIRIT_VALUE_ENABLED
 #error Please define JSON_SPIRIT_VALUE_ENABLED for the Value type to be enabled
 #endif
+
+namespace ndn {
+namespace chronoshare {
 
 /**
  * @brief Class serving state information from ChronoShare
@@ -48,13 +50,13 @@
  * Information available:
  *
  * For now serving only locally(using <PREFIX> =
- */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
+ * ndn:/localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
  *
  * - state: get list of SyncNodes, their sequence numbers, and forwarding hint(almost the same as
- *RECOVERY interest)
+ *   RECOVERY interest)
  *
  *   <PREFIX_INFO>/"state"  (@todo: authentification code or authentication code should in addition
- *somewhere)
+ *   somewhere)
  *
  * - action
  *
@@ -142,7 +144,7 @@
  * Commands available:
  *
  * For now serving only locally(using <PREFIX_CMD> =
- */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
+ * ndn:/localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
  *
  * - restore version of the file
  *
@@ -156,33 +158,33 @@
  */
 class StateServer {
 public:
-  StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
-              const boost::filesystem::path& rootDir, const ndn::Name& userName,
+  StateServer(Face& face, ActionLogPtr actionLog,
+              const boost::filesystem::path& rootDir, const Name& userName,
               const std::string& sharedFolderName, const std::string& appName,
-              ObjectManager& objectManager, int freshness = -1);
+              ObjectManager& objectManager, time::milliseconds freshness = time::seconds(60));
   ~StateServer();
 
 private:
   void
-  info_actions_folder(const ndn::InterestFilter&, const ndn::Interest&);
+  info_actions_folder(const InterestFilter&, const Interest&);
 
   void
-  info_actions_file(const ndn::InterestFilter&, const ndn::Interest&);
+  info_actions_file(const InterestFilter&, const Interest&);
 
   void
-  info_actions_fileOrFolder_Execute(const ndn::Name& interest, bool isFolder = true);
+  info_actions_fileOrFolder_Execute(const Name& interest, bool isFolder = true);
 
   void
-  info_files_folder(const ndn::InterestFilter&, const ndn::Interest&);
+  info_files_folder(const InterestFilter&, const Interest&);
 
   void
-  info_files_folder_Execute(const ndn::Name& interest);
+  info_files_folder_Execute(const Name& interest);
 
   void
-  cmd_restore_file(const ndn::InterestFilter&, const ndn::Interest&);
+  cmd_restore_file(const InterestFilter&, const Interest&);
 
   void
-  cmd_restore_file_Execute(const ndn::Name& interest);
+  cmd_restore_file_Execute(const Name& interest);
 
 private:
   void
@@ -192,34 +194,37 @@ private:
   deregisterPrefixes();
 
   static void
-  formatActionJson(json_spirit::Array& actions, const ndn::Name& name, sqlite3_int64 seq_no,
+  formatActionJson(json_spirit::Array& actions, const Name& name, sqlite3_int64 seq_no,
                    const ActionItem& action);
 
   static void
   formatFilestateJson(json_spirit::Array& files, const FileItem& file);
 
 private:
-  boost::shared_ptr<ndn::Face> m_face;
+  Face& m_face;
   ActionLogPtr m_actionLog;
   ObjectManager& m_objectManager;
 
-  ndn::Name m_PREFIX_INFO;
-  ndn::Name m_PREFIX_CMD;
+  Name m_PREFIX_INFO;
+  Name m_PREFIX_CMD;
 
-  const ndn::RegisteredPrefixId* actionsFolderId;
-  const ndn::RegisteredPrefixId* actionsFileId;
-  const ndn::RegisteredPrefixId* filesFolderId;
-  const ndn::RegisteredPrefixId* restoreFileId;
+  const RegisteredPrefixId* actionsFolderId;
+  const RegisteredPrefixId* actionsFileId;
+  const RegisteredPrefixId* filesFolderId;
+  const RegisteredPrefixId* restoreFileId;
 
   boost::filesystem::path m_rootDir;
-  int m_freshness;
+  time::milliseconds m_freshness;
 
-  Executor m_executor;
-
-  ndn::Name m_userName;
+  Name m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
-  ndn::KeyChain m_keyChain;
-  DigestComputer m_digestComputer;
+  KeyChain m_keyChain;
+
+  boost::asio::io_service& m_ioService;
 };
+
+} // chronoshare
+} // ndn
+
 #endif // CONTENT_SERVER_H

@@ -14,12 +14,13 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
+
 #include "reply.hpp"
 #include "request.hpp"
 #include "request_handler.hpp"
 #include "request_parser.hpp"
+
+#include <memory>
 
 namespace http {
 namespace server {
@@ -27,7 +28,7 @@ namespace server {
 class connection_manager;
 
 /// Represents a single connection from a client.
-class connection : public boost::enable_shared_from_this<connection>, private boost::noncopyable {
+class connection : public std::enable_shared_from_this<connection>, private boost::noncopyable {
 public:
   /// Construct a connection with the given io_service.
   explicit
@@ -77,7 +78,7 @@ private:
   reply reply_;
 };
 
-typedef boost::shared_ptr<connection> connection_ptr;
+typedef std::shared_ptr<connection> connection_ptr;
 
 } // namespace server
 } // namespace http

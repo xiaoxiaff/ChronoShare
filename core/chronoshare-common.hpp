@@ -18,58 +18,35 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHARE_SRC_DB_HELPER_HPP
-#define CHRONOSHARE_SRC_DB_HELPER_HPP
+#ifndef CHRONOSHARE_CORE_COMMON_HPP
+#define CHRONOSHARE_CORE_COMMON_HPP
 
-#include "core/chronoshare-common.hpp"
+#include "core/chronoshare-config.hpp"
 
-#include <sqlite3.h>
-#include <boost/filesystem.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <unistd.h>
+
+#include <boost/assert.hpp>
+#include <boost/concept_check.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/exception/all.hpp>
+#include <boost/throw_exception.hpp>
 
 namespace ndn {
 namespace chronoshare {
 
-class DbHelper
-{
-public:
-  class Error : public boost::exception,
-                public std::runtime_error
-  {
-  public:
-    explicit
-    Error(const std::string& what)
-      : std::runtime_error(what)
-    {
-    }
-  };
-
-public:
-  DbHelper(const boost::filesystem::path& path, const std::string& dbname);
-  virtual ~DbHelper();
-
-private:
-  static void
-  hash_xStep(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-  static void
-  hash_xFinal(sqlite3_context* context);
-
-  static void
-  is_prefix_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-  static void
-  directory_name_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-  static void
-  is_dir_prefix_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
-
-protected:
-  sqlite3* m_db;
-};
-
-typedef shared_ptr<DbHelper> DbHelperPtr;
+using std::shared_ptr;
+using std::make_shared;
 
 } // chronoshare
 } // ndn
 
-#endif // CHRONOSHARE_SRC_DB_HELPER_HPP
+#endif // CHRONOSHARE_CORE_COMMON_HPP

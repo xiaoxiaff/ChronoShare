@@ -1,26 +1,25 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2015 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-#include "sync-core.h"
-#include "logging.h"
+
+#include "sync-core.hpp"
+#include "logging.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -65,7 +64,7 @@ checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 }
 
 void
-listen(boost::shared_ptr<ndn::Face> face, std::string name)
+listen(shared_ptr<Face> face, std::string name)
 {
   printf("%s start listening ...\n", name.c_str());
   std::cout << name << "start listening ... " << std::endl;
@@ -92,9 +91,9 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   Name loc2("/locator2");
   Name syncPrefix("/broadcast/arslan");
 
-  boost::shared_ptr<ndn::Face> c1 = boost::make_shared<ndn::Face>();
+  shared_ptr<Face> c1 = make_shared<Face>();
   boost::thread c1_listen(listen, c1, "c1");
-  boost::shared_ptr<ndn::Face> c2 = boost::make_shared<ndn::Face>();
+  shared_ptr<Face> c2 = make_shared<Face>();
   boost::thread c2_listen(listen, c2, "c2");
 
   SyncLogPtr log1(new SyncLog(dir1, user1));

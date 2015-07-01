@@ -9,13 +9,16 @@
 //
 
 #include "server.hpp"
-#include <boost/bind.hpp>
-#include <signal.h>
-#include "logging.h"
+#include "core/logging.hpp"
 
-INIT_LOGGER("HttpServer");
+#include <signal.h>
+
 namespace http {
 namespace server {
+
+using namespace ndn::chronoshare;
+
+INIT_LOGGER("HttpServer");
 
 server::server(const std::string& address, const std::string& port, const std::string& doc_root)
   : io_service_()
@@ -34,7 +37,7 @@ server::server(const std::string& address, const std::string& port, const std::s
   //#if defined(SIGQUIT)
   //  signals_.add(SIGQUIT);
   //#endif // defined(SIGQUIT)
-  //  signals_.async_wait(boost::bind(&server::handle_stop, this));
+  //  signals_.async_wait(std::bind(&server::handle_stop, this));
 
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(io_service_);
@@ -69,8 +72,7 @@ void
 server::start_accept()
 {
   new_connection_.reset(new connection(io_service_, connection_manager_, request_handler_));
-  acceptor_.async_accept(new_connection_->socket(), boost::bind(&server::handle_accept, this,
-                                                                boost::asio::placeholders::error));
+  acceptor_.async_accept(new_connection_->socket(), std::bind(&server::handle_accept, this, std::placeholders::_1));
 }
 
 void
