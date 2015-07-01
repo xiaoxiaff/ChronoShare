@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
  */
 
 #include "action-log.h"
@@ -55,7 +55,7 @@ CREATE TABLE ActionLog(                                                \n\
     parent_device_name BLOB,                                            \n\
     parent_seq_no      INTEGER,                                         \n\
                                                                         \n\
-    action_name	     TEXT,                                              \n\
+    action_name      TEXT,                                              \n\
     action_content_object BLOB,                                         \n\
                                                                         \n\
     PRIMARY KEY(device_name, seq_no)                                   \n\
@@ -476,7 +476,7 @@ ActionLog::LookupActionData(const ndn::Name &actionName)
 ActionItemPtr
 ActionLog::LookupAction(const ndn::Name &actionName)
 {
-	ndn::shared_ptr<ndn::Data> data = LookupActionData(actionName);
+  ndn::shared_ptr<ndn::Data> data = LookupActionData(actionName);
   if (!data) return ActionItemPtr();
 
   ActionItemPtr action = deserializeMsg<ActionItem>(ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
