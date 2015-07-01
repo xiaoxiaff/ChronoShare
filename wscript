@@ -1,129 +1,57 @@
 # -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
-VERSION='1.0'
+
+VERSION='0.6.0'
 APPNAME='ChronoShare'
 
 from waflib import Build, Logs, Utils, Task, TaskGen, Configure
 
 def options(opt):
-    opt.add_option('--debug',action='store_true',default=False,dest='debug',help='''debugging mode''')
-    opt.add_option('--test', action='store_true',default=False,dest='_test',help='''build unit tests''')
-    opt.add_option('--yes',action='store_true',default=False) # for autoconf/automake/make compatibility
-    opt.add_option('--log4cxx', action='store_true',default=False,dest='log4cxx',help='''Compile with log4cxx logging support''')
+    opt.load(['compiler_cxx', 'qt4', 'gnu_dirs'])
+    opt.load(['default-compiler-flags', 'osx-frameworks', 'boost', 'sqlite3', 'protoc', 'tinyxml',
+              'doxygen', 'sphinx_build'],
+             tooldir=['.waf-tools'])
 
-    if Utils.unversioned_sys_platform () == "darwin":
-        opt.add_option('--auto-update', action='store_true',default=False,dest='autoupdate',help='''(OSX) Download sparkle framework and enable autoupdate feature''')
+    opt = opt.add_option_group('ChronoShare Options')
 
-    opt.load('compiler_c compiler_cxx qt4 gnu_dirs')
-    opt.load(['default-compiler-flags', 'boost', 'protoc', 'tinyxml'], tooldir=['waf-tools'])
+    opt.add_option('--with-tests', action='store_true', default=False, dest='with_tests',
+                   help='''build unit tests''')
+    opt.add_option('--with-log4cxx', action='store_true', default=False, dest='log4cxx',
+                   help='''Compile with log4cxx logging support''')
+
+    opt.add_option('--without-sqlite-locking', action='store_false', default=True,
+                   dest='with_sqlite_locking',
+                   help='''Disable filesystem locking in sqlite3 database '''
+                        '''(use unix-dot locking mechanism instead). '''
+                        '''This option may be necessary if home directory is hosted on NFS.''')
+
+    if Utils.unversioned_sys_platform() == "darwin":
+        opt.add_option('--with-auto-update', action='store_true', default=False, dest='autoupdate',
+                       help='''(OSX) Download sparkle framework and enable autoupdate feature''')
 
 def configure(conf):
-    conf.load("compiler_c compiler_cxx default-compiler-flags gnu_dirs")
-    conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
-               uselib_store='NDN_CXX')
-    conf.define ('NFD_PATH', conf.env.NFD)
+    conf.load(['compiler_cxx', 'gnu_dirs'])
+    conf.load(['default-compiler-flags', 'osx-frameworks', 'boost', 'sqlite3', 'tinyxml', 'qt4', 'protoc',
+                'doxygen', 'sphinx_build'])
 
-    if conf.options.debug:
-        conf.define ('_DEBUG', 1)
-        conf.add_supported_cxxflags (cxxflags = ['-O0',
-                                                 '-Wall',
-                                                 '-Wno-unused-variable',
-                                                 '-g3',
-                                                 '-Wno-unused-private-field', # only clang supports
-                                                 '-fcolor-diagnostics',       # only clang supports
-                                                 '-Qunused-arguments'         # only clang supports
-                                                 ])
-    else:
-        conf.add_supported_cxxflags (cxxflags = ['-O3', '-g'])
+    conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'], uselib_store='NDN_CXX')
 
-    conf.define ("CHRONOSHARE_VERSION", VERSION)
+    conf.check_sqlite3(mandatory=True)
+    if not conf.options.with_sqlite_locking:
+        conf.define('DISABLE_SQLITE3_FS_LOCKING', 1)
 
-    conf.check_cfg(package='sqlite3', args=['--cflags', '--libs'], uselib_store='SQLITE3', mandatory=True)
-    conf.check_cfg(package='libevent', args=['--cflags', '--libs'], uselib_store='LIBEVENT', mandatory=True)
-    conf.check_cfg(package='libevent_pthreads', args=['--cflags', '--libs'], uselib_store='LIBEVENT_PTHREADS', mandatory=True)
-    conf.load('tinyxml')
     conf.check_tinyxml(path=conf.options.tinyxml_dir)
 
-    conf.define ("TRAY_ICON", "chronoshare-big.png")
-    if Utils.unversioned_sys_platform () == "linux":
-        conf.define ("TRAY_ICON", "chronoshare-ubuntu.png")
-
-    if Utils.unversioned_sys_platform () == "darwin":
-        conf.check_cxx(framework_name='Foundation', uselib_store='OSX_FOUNDATION', mandatory=False, compile_filename='test.mm')
-        conf.check_cxx(framework_name='AppKit',     uselib_store='OSX_APPKIT',     mandatory=False, compile_filename='test.mm')
-        conf.check_cxx(framework_name='CoreWLAN',   uselib_store='OSX_COREWLAN',   define_name='HAVE_COREWLAN',
-                       use="OSX_FOUNDATION", mandatory=False, compile_filename='test.mm')
-
-        if conf.options.autoupdate:
-            def check_sparkle(**kwargs):
-              conf.check_cxx (framework_name="Sparkle", header_name=["Foundation/Foundation.h", "AppKit/AppKit.h"],
-                              uselib_store='OSX_SPARKLE', define_name='HAVE_SPARKLE', mandatory=True,
-                              compile_filename='test.mm', use="OSX_FOUNDATION OSX_APPKIT",
-                              **kwargs
-                              )
-            try:
-                # Try standard paths first
-                check_sparkle()
-            except:
-                try:
-                    # Try local path
-                    Logs.info ("Check local version of Sparkle framework")
-                    check_sparkle(cxxflags="-F%s/osx/Frameworks/" % conf.path.abspath(),
-                                  linkflags="-F%s/osx/Frameworks/" % conf.path.abspath())
-                    conf.env.HAVE_LOCAL_SPARKLE = 1
-                except:
-                    import urllib, subprocess, os, shutil
-                    if not os.path.exists('osx/Frameworks/Sparkle.framework'):
-                        # Download to local path and retry
-                        Logs.info ("Sparkle framework not found, trying to download it to 'build/'")
-
-                        urllib.urlretrieve ("http://sparkle.andymatuschak.org/files/Sparkle%201.5b6.zip", "build/Sparkle.zip")
-                        if os.path.exists('build/Sparkle.zip'):
-                            try:
-                                subprocess.check_call (['unzip', '-qq', 'build/Sparkle.zip', '-d', 'build/Sparkle'])
-                                os.remove ("build/Sparkle.zip")
-                                if not os.path.exists("osx/Frameworks"):
-                                    os.mkdir ("osx/Frameworks")
-                                os.rename ("build/Sparkle/Sparkle.framework", "osx/Frameworks/Sparkle.framework")
-                                shutil.rmtree("build/Sparkle", ignore_errors=True)
-
-                                check_sparkle(cxxflags="-F%s/osx/Frameworks/" % conf.path.abspath(),
-                                              linkflags="-F%s/osx/Frameworks/" % conf.path.abspath())
-                                conf.env.HAVE_LOCAL_SPARKLE = 1
-                            except subprocess.CalledProcessError as e:
-                                conf.fatal("Cannot find Sparkle framework. Auto download failed: '%s' returned %s" % (' '.join(e.cmd), e.returncode))
-                            except:
-                                conf.fatal("Unknown Error happened when auto downloading Sparkle framework")
-
-            if conf.is_defined('HAVE_SPARKLE'):
-                conf.env.HAVE_SPARKLE = 1 # small cheat for wscript
-
-    if not conf.check_cfg(package='openssl', args=['--cflags', '--libs'], uselib_store='SSL', mandatory=False):
-        libcrypto = conf.check_cc(lib='crypto',
-                                  header_name='openssl/crypto.h',
-                                  define_name='HAVE_SSL',
-                                  uselib_store='SSL')
-    else:
-        conf.define ("HAVE_SSL", 1)
-    if not conf.get_define ("HAVE_SSL"):
-        conf.fatal ("Cannot find SSL libraries")
+    conf.define("CHRONOSHARE_VERSION", VERSION)
+    conf.define("TRAY_ICON", "chronoshare-big.png")
+    if Utils.unversioned_sys_platform() == "linux":
+        conf.define("TRAY_ICON", "chronoshare-ubuntu.png")
 
     if conf.options.log4cxx:
         conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
         conf.define ("HAVE_LOG4CXX", 1)
 
-
-    conf.load('protoc')
-
-    conf.load('qt4')
-
-    conf.load('boost')
-
-
-#    conf.check_boost(lib='system test iostreams filesystem regex thread date_time')
-
     boost_libs = 'system random thread filesystem'
-
-    if conf.options._test:
+    if conf.options.with_tests:
         conf.env['TEST'] = 1
         conf.define('TEST', 1);
         boost_libs += ' unit_test_framework'
@@ -134,6 +62,8 @@ def configure(conf):
         Logs.error("Please upgrade your distribution or install custom boost libraries" +
                    " (http://redmine.named-data.net/projects/nfd/wiki/Boost_FAQ)")
         return
+
+    conf.define('SYSCONFDIR', conf.env['SYSCONFDIR'])
 
     conf.write_config_header('src/config.h')
 
@@ -201,8 +131,8 @@ def build (bld):
     if bld.env["TEST"]:
       unittests = bld.program (
           target="unit-tests",
-          source = bld.path.ant_glob(['test/main.cc', 
-#                                      'test/test-protobuf.cc', 
+          source = bld.path.ant_glob(['test/main.cc',
+#                                      'test/test-protobuf.cc',
 #                                      'test/test-sync-core.cc',
 #                                      'test/test-sync-log.cc',
 #                                      'test/test-object-manager.cc',
@@ -376,4 +306,3 @@ def add_supported_cxxflags(self, cxxflags):
 
     self.end_msg (' '.join (supportedFlags))
     self.env.CXXFLAGS += supportedFlags
-

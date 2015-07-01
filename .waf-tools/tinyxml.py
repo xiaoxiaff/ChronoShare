@@ -31,7 +31,8 @@ int main() { std::cout << TIXML_MAJOR_VERSION << "." << TIXML_MINOR_VERSION << "
 '''
 
 def options(opt):
-	opt.add_option('--tinyxml',type='string',default='',dest='tinyxml_dir',help='''path to where TinyXML is installed, e.g. /usr/local''')
+	opt.add_option('--with-tinyxml', type='string', default='', dest='tinyxml_dir',
+                       help='''path to where TinyXML is installed, e.g. /usr/local''')
 @conf
 def __tinyxml_get_version_file(self,dir):
 	try:
@@ -54,7 +55,7 @@ def tinyxml_get_root(self,*k,**kw):
 	if root:
 		self.fatal('TinyXML not found in %s'%root)
 	else:
-		self.fatal('TinyXML not found, please provide a --tinyxml argument (see help)')
+		self.fatal('TinyXML not found, please provide a --with-tinyxml argument (see help)')
 @conf
 def check_tinyxml(self,*k,**kw):
 	if not self.env['CXX']:
