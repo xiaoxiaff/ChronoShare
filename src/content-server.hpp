@@ -21,14 +21,18 @@
 #ifndef CONTENT_SERVER_H
 #define CONTENT_SERVER_H
 
-#include <ndn-cxx/security/key-chain.hpp>
 #include "object-db.hpp"
 #include "action-log.hpp"
+
+#include <ndn-cxx/face.hpp>
+#include <ndn-cxx/security/key-chain.hpp>
+#include <ndn-cxx/util/scheduler.hpp>
+
 #include <set>
 #include <map>
+
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
-#include "scheduler.hpp"
 
 namespace ndn {
 namespace chronoshare {

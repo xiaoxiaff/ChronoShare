@@ -21,14 +21,9 @@
 #include "digest-computer.hpp"
 #include "content-server.hpp"
 #include "logging.hpp"
-#include <boost/make_shared.hpp>
-#include <utility>
-#include "task.hpp"
-#include "periodic-task.hpp"
-#include "simple-interval-generator.hpp"
+
 #include <boost/lexical_cast.hpp>
 #include <boost/tuple/tuple.hpp>
-#include <ndn-cxx/face.hpp>
 
 INIT_LOGGER("ContentServer");
 
@@ -50,11 +45,11 @@ ContentServer::ContentServer(shared_ptr<Face> face, ActionLogPtr actionLog,
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
 {
-  //  m_listeningThread = boost::thread(boost::bind(&ContentServer::listen, this));
+  //  m_listeningThread = boost::thread(bind(&ContentServer::listen, this));
 
   m_scheduler->start();
   TaskPtr flushStaleDbCacheTask =
-    make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this),
+    make_shared<PeriodicTask>(bind(&ContentServer::flushStaleDbCache, this),
                                      "flush-state-db-cache", m_scheduler,
                                      make_shared<SimpleIntervalGenerator>(
                                        DB_CACHE_LIFETIME));
@@ -85,7 +80,7 @@ ContentServer::registerPrefix(const Name& forwardingHint)
   ScopedLock lock(m_mutex);
   m_interestFilterIds[forwardingHint] =
     m_face->setInterestFilter(ndn::InterestFilter(forwardingHint),
-                              boost::bind(&ContentServer::filterAndServe, this, _1, _2),
+                              bind(&ContentServer::filterAndServe, this, _1, _2),
                               RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 }
 

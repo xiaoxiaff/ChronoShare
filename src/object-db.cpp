@@ -55,7 +55,7 @@ ObjectDb::ObjectDb(const fs::path& folder, const std::string& hash)
 
   int res = sqlite3_open((actualFolder / hash.substr(2, hash.size() - 2)).c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str(
+    BOOST_THROW_EXCEPTION(Error(
                             "Cannot open/create dabatabase: ["
                             + (actualFolder / hash.substr(2, hash.size() - 2)).string() + "]"));
   }
@@ -77,7 +77,7 @@ ObjectDb::ObjectDb(const fs::path& folder, const std::string& hash)
 }
 
 bool
-ObjectDb::DoesExist(const boost::filesystem::path& folder, const ndn::Name& deviceName,
+ObjectDb::DoesExist(const boost::filesystem::path& folder, const Name& deviceName,
                     const std::string& hash)
 {
   fs::path actualFolder = folder / "objects" / hash.substr(0, 2);
@@ -125,8 +125,8 @@ ObjectDb::~ObjectDb()
 }
 
 void
-ObjectDb::saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment,
-                            const ndn::Data& data)
+ObjectDb::saveContentObject(const Name& deviceName, sqlite3_int64 segment,
+                            const Data& data)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "INSERT INTO File "
@@ -150,8 +150,8 @@ ObjectDb::saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment,
   m_lastUsed = std::time(NULL);
 }
 
-ndn::BufferPtr
-ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
+BufferPtr
+ObjectDb::fetchSegment(const Name& deviceName, sqlite3_int64 segment)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT content_object FROM File WHERE device_name=? AND segment=?", -1,
@@ -162,8 +162,8 @@ ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
 
   sqlite3_bind_int64(stmt, 2, segment);
 
-  ndn::BufferPtr ret;
-  ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+  BufferPtr ret;
+  shared_ptr<Data> data = make_shared<Data>();
 
   int res = sqlite3_step(stmt);
   if (res == SQLITE_ROW) {
@@ -171,7 +171,7 @@ ObjectDb::fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment)
     //      char*>(sqlite3_column_blob(stmt, 0));
     data->wireDecode(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
     ret =
-      ndn::make_shared<ndn::Buffer>(data->getContent().value(), data->getContent().value_size());
+      make_shared<Buffer>(data->getContent().value(), data->getContent().value_size());
   }
 
   sqlite3_finalize(stmt);
@@ -187,23 +187,6 @@ ObjectDb::secondsSinceLastUse()
 {
   return (std::time(NULL) - m_lastUsed);
 }
-
-// sqlite3_int64
-// ObjectDb::getNumberOfSegments(const ndn::Name &deviceName)
-// {
-//   sqlite3_stmt *stmt;
-//   sqlite3_prepare_v2(m_db, "SELECT count(*) FROM File WHERE device_name=?", -1, &stmt, 0);
-
-//   bool retval = false;
-//   int res = sqlite3_step(stmt);
-//   if (res == SQLITE_ROW)
-//     {
-//       retval = true;
-//     }
-//   sqlite3_finalize(stmt);
-
-//   return retval;
-// }
 
 void
 ObjectDb::willStartSave()

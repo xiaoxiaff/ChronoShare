@@ -18,22 +18,31 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef DB_HELPER_H
-#define DB_HELPER_H
+#ifndef CHRONOSHARE_SRC_DB_HELPER_HPP
+#define CHRONOSHARE_SRC_DB_HELPER_HPP
 
-#include <stdint.h>
+#include "chronoshare-common.hpp"
+
 #include <sqlite3.h>
-#include <openssl/evp.h>
-#include <boost/exception/all.hpp>
-#include <string>
 #include <boost/filesystem.hpp>
 
 namespace ndn {
 namespace chronoshare {
 
-typedef boost::error_info<struct tag_errmsg, std::string> errmsg_info_str;
+class DbHelper
+{
+public:
+  class Error : public boost::exception,
+                public std::runtime_error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : std::runtime_error(what)
+    {
+    }
+  };
 
-class DbHelper {
 public:
   DbHelper(const boost::filesystem::path& path, const std::string& dbname);
   virtual ~DbHelper();
@@ -58,14 +67,9 @@ protected:
   sqlite3* m_db;
 };
 
-namespace Error {
-struct Db : virtual boost::exception, virtual std::exception {
-};
-}
-
 typedef shared_ptr<DbHelper> DbHelperPtr;
 
 } // chronoshare
 } // ndn
 
-#endif // DB_HELPER_H
+#endif // CHRONOSHARE_SRC_DB_HELPER_HPP

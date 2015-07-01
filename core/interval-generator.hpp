@@ -18,35 +18,29 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHARE_CORE_COMMON_HPP
-#define CHRONOSHARE_CORE_COMMON_HPP
+#ifndef CHRONOSHARE_CORE_INTERVAL_GENERATOR_HPP
+#define CHRONOSHARE_CORE_INTERVAL_GENERATOR_HPP
 
-#include "chronoshare-config.hpp"
-
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <type_traits>
-#include <unistd.h>
-
-#include <boost/assert.hpp>
-#include <boost/concept_check.hpp>
-#include <boost/noncopyable.hpp>
-#include <boost/exception/all.hpp>
-#include <boost/throw_exception.hpp>
+#include "chronoshare-common.hpp"
 
 namespace ndn {
 namespace chronoshare {
 
-using std::shared_ptr;
-using std::make_shared;
+class IntervalGenerator;
+typedef shared_ptr<IntervalGenerator> IntervalGeneratorPtr;
+
+class IntervalGenerator
+{
+public:
+  virtual ~IntervalGenerator()
+  {
+  }
+
+  virtual double
+  nextInterval() = 0;
+};
 
 } // chronoshare
 } // ndn
 
-#endif // CHRONOSHARE_CORE_COMMON_HPP
+#endif // CHRONOSHARE_CORE_INTERVAL_GENERATOR_HPP

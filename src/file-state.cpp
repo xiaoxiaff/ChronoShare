@@ -296,7 +296,7 @@ FileItemsPtr
 FileState::LookupFilesInFolder(const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
 {
   FileItemsPtr retval = make_shared<FileItems>();
-  LookupFilesInFolder(boost::bind(static_cast<void (FileItems::*)(const FileItem&)>(
+  LookupFilesInFolder(bind(static_cast<void (FileItems::*)(const FileItem&)>(
                                     &FileItems::push_back),
                                   retval.get(), _1),
                       folder, offset, limit);
@@ -385,7 +385,7 @@ FileState::LookupFilesInFolderRecursively(const std::string& folder, int offset 
                                           int limit /*=-1*/)
 {
   FileItemsPtr retval = make_shared<FileItems>();
-  LookupFilesInFolder(boost::bind(static_cast<void (FileItems::*)(const FileItem&)>(
+  LookupFilesInFolder(bind(static_cast<void (FileItems::*)(const FileItem&)>(
                                     &FileItems::push_back),
                                   retval.get(), _1),
                       folder, offset, limit);

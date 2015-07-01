@@ -21,36 +21,35 @@
 #ifndef SYNC_CORE_H
 #define SYNC_CORE_H
 
-#include <ndn-cxx/security/key-chain.hpp>
-#include "sync-log.hpp"
-#include "scheduler.hpp"
-#include "task.hpp"
 #include <ndn-cxx/face.hpp>
+#include <ndn-cxx/security/key-chain.hpp>
+#include <ndn-cxx/util/scheduler.hpp>
+#include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
 
-#include <boost/function.hpp>
+#include "sync-log.hpp"
+#include "random-interval-generator.hpp"
+
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
-#include <boost/make_shared.hpp>
-#include <thread>
 
 namespace ndn {
 namespace chronoshare {
 
 // No use this now
 template<class Msg>
-ndn::BufferPtr
+BufferPtr
 serializeMsg(const Msg& msg)
 {
   int size = msg.ByteSize();
-  ndn::BufferPtr bytes = std::make_shared<ndn::Buffer>(size);
+  BufferPtr bytes = std::make_shared<Buffer>(size);
   msg.SerializeToArray(bytes->buf(), size);
   return bytes;
 }
 
 template<class Msg>
 shared_ptr<Msg>
-deserializeMsg(const ndn::Buffer& bytes)
+deserializeMsg(const Buffer& bytes)
 {
   shared_ptr<Msg> retval(new Msg());
   if (!retval->ParseFromArray(bytes.buf(), bytes.size())) {
@@ -61,7 +60,7 @@ deserializeMsg(const ndn::Buffer& bytes)
 }
 
 template<class Msg>
-ndn::BufferPtr
+BufferPtr
 serializeGZipMsg(const Msg& msg)
 {
   std::vector<char> bytes; // Bytes couldn't work
@@ -72,14 +71,14 @@ serializeGZipMsg(const Msg& msg)
 
     msg.SerializeToOstream(&out);
   }
-  ndn::BufferPtr uBytes = std::make_shared<ndn::Buffer>(bytes.size());
+  BufferPtr uBytes = std::make_shared<Buffer>(bytes.size());
   memcpy(&(*uBytes)[0], &bytes[0], bytes.size());
   return uBytes;
 }
 
 template<class Msg>
 shared_ptr<Msg>
-deserializeGZipMsg(const ndn::Buffer& bytes)
+deserializeGZipMsg(const Buffer& bytes)
 {
   std::vector<char> sBytes(bytes.size());
   memcpy(&sBytes[0], &bytes[0], bytes.size());
@@ -106,10 +105,10 @@ public:
   static const double RANDOM_PERCENT; // seconds;
 
 public:
-  SyncCore(shared_ptr<ndn::Face> face, SyncLogPtr syncLog, const ndn::Name& userName,
-           const ndn::Name& localPrefix // routable name used by the local user
+  SyncCore(shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userName,
+           const Name& localPrefix // routable name used by the local user
            ,
-           const ndn::Name& syncPrefix // the prefix for the sync collection
+           const Name& syncPrefix // the prefix for the sync collection
            ,
            const StateMsgCallback& callback // callback when state change is detected
            ,
@@ -133,24 +132,18 @@ public:
   // ------------------ only used in test -------------------------
 
 public:
-  ndn::ConstBufferPtr
+  ConstBufferPtr
   root() const
   {
     return m_rootDigest;
   }
 
   sqlite3_int64
-  seq(const ndn::Name& name);
+  seq(const Name& name);
 
 private:
   void
-  listen()
-  {
-    m_face->processEvents();
-  }
-
-  void
-  onRegisterFailed(const ndn::Name& prefix, const std::string& reason)
+  onRegisterFailed(const Name& prefix, const std::string& reason)
   {
     std::cerr << "ERROR: Failed to register prefix \"" << prefix << "\" in local hub's daemon ("
               << reason << ")" << std::endl;
@@ -161,54 +154,59 @@ private:
   sendSyncInterest();
 
   void
-  recover(ndn::ConstBufferPtr digest);
+  sendPeriodicSyncInterest(const time::seconds& interval);
 
   void
-  handleInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
+  recover(ConstBufferPtr digest);
 
   void
-  handleSyncInterest(const ndn::Name& name);
+  handleInterest(const InterestFilter& filter, const Interest& interest);
 
   void
-  handleRecoverInterest(const ndn::Name& name);
+  handleSyncInterest(const Name& name);
 
   void
-  handleSyncInterestTimeout(const ndn::Interest& interest);
+  handleRecoverInterest(const Name& name);
 
   void
-  handleRecoverInterestTimeout(const ndn::Interest& interest);
+  handleSyncInterestTimeout(const Interest& interest);
 
   void
-  handleSyncData(const ndn::Interest& interest, ndn::Data& data);
+  handleRecoverInterestTimeout(const Interest& interest);
 
   void
-  handleRecoverData(const ndn::Interest& interest, ndn::Data& data);
+  handleSyncData(const Interest& interest, Data& data);
 
   void
-  handleStateData(const ndn::Buffer& content);
+  handleRecoverData(const Interest& interest, Data& data);
 
   void
-  deregister(const ndn::Name& name);
+  handleStateData(const Buffer& content);
+
+  void
+  deregister(const Name& name);
 
 private:
-  //  ndn::Face m_face;
-  shared_ptr<ndn::Face> m_face;
+  //  Face m_face;
+  shared_ptr<Face> m_face;
 
   SyncLogPtr m_log;
-  SchedulerPtr m_scheduler;
+
+  Scheduler m_scheduler;
+  util::ScopedEventId m_syncInterestEvent;
+  util::ScopedEventId m_periodicInterestEvent;
+  util::ScopedEventId m_localStateDelayedEvent;
+
   StateMsgCallback m_stateMsgCallback;
 
-  ndn::Name m_syncPrefix;
-  ndn::ConstBufferPtr m_rootDigest;
+  Name m_syncPrefix;
+  ConstBufferPtr m_rootDigest;
 
   IntervalGeneratorPtr m_recoverWaitGenerator;
 
-  TaskPtr m_sendSyncInterestTask;
-
   long m_syncInterestInterval;
-  ndn::KeyChain m_keyChain;
-  boost::thread m_listeningThread;
-  const ndn::RegisteredPrefixId* m_registeredPrefixId;
+  KeyChain m_keyChain;
+  const RegisteredPrefixId* m_registeredPrefixId;
 };
 
 } // chronoshare

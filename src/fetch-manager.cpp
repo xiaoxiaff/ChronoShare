@@ -69,11 +69,11 @@ FetchManager::FetchManager(shared_ptr<Face> face, const Mapping& mapping,
                                     make_shared<SimpleIntervalGenerator>(
                                       300), // no need to check to often. if needed, will be
                                             // rescheduled
-                                    boost::bind(&FetchManager::ScheduleFetches, this),
+                                    bind(&FetchManager::ScheduleFetches, this),
                                     SCHEDULE_FETCHES_TAG);
   // resume un-finished fetches if there is any
   if (m_taskDb) {
-    m_taskDb->foreachTask(boost::bind(&FetchManager::Enqueue, this, _1, _2, _3, _4, _5));
+    m_taskDb->foreachTask(bind(&FetchManager::Enqueue, this, _1, _2, _3, _4, _5));
   }
 }
 
@@ -119,8 +119,8 @@ FetchManager::Enqueue(const ndn::Name& deviceName, const ndn::Name& baseName,
   _LOG_TRACE("++++ Create fetcher: " << baseName);
   Fetcher* fetcher =
     new Fetcher(m_face, m_executor, segmentCallback, finishCallback,
-                boost::bind(&FetchManager::DidFetchComplete, this, _1, _2, _3),
-                boost::bind(&FetchManager::DidNoDataTimeout, this, _1), deviceName, baseName,
+                bind(&FetchManager::DidFetchComplete, this, _1, _2, _3),
+                bind(&FetchManager::DidNoDataTimeout, this, _1), deviceName, baseName,
                 minSeqNo, maxSeqNo, boost::posix_time::seconds(30), forwardingHint);
 
   switch (priority) {
@@ -250,7 +250,7 @@ FetchManager::DidFetchComplete(Fetcher& fetcher, const ndn::Name& deviceName,
 
   // like TCP timed-waidatat
   m_scheduler->scheduleOneTimeTask(m_scheduler, 10,
-                                   boost::bind(&FetchManager::TimedWait, this, boost::ref(fetcher)),
+                                   bind(&FetchManager::TimedWait, this, boost::ref(fetcher)),
                                    boost::lexical_cast<string>(baseName));
 
   m_scheduler->rescheduleTaskAt(m_scheduleFetchesTask, 0);

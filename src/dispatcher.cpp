@@ -22,7 +22,6 @@
 #include "logging.hpp"
 #include "fetch-task-db.hpp"
 
-#include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace ndn {
@@ -51,7 +50,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   , m_enablePrefixDiscovery(enablePrefixDiscovery)
 {
   // TODO check
-  m_faceListening = boost::thread(boost::bind(&Dispatcher::listen, this));
+  m_faceListening = boost::thread(bind(&Dispatcher::listen, this));
 
   m_syncLog = make_shared<SyncLog>(m_rootDir, localUserName);
   m_actionLog = make_shared<ActionLog>(
@@ -68,7 +67,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   // m_server needs a different ndn face
   m_face_server = make_shared<Face>();
   m_serverListening =
-    boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_server, "contentServer"));
+    boost::thread(bind(&Dispatcher::listen_other, this, m_face_server, "contentServer"));
   m_server = new ContentServer(m_face_server, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
                                CHRONOSHARE_APP, CONTENT_FRESHNESS);
   m_server->registerPrefix(Name("/"));
@@ -76,7 +75,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 
   m_face_stateServer = make_shared<Face>();
   m_stateServerListening =
-    boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
+    boost::thread(bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
   m_stateServer =
     new StateServer(m_face_stateServer, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
                     CHRONOSHARE_APP, m_objectManager, CONTENT_FRESHNESS);

@@ -18,14 +18,22 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef SYNC_LOG_H
-#define SYNC_LOG_H
+#ifndef CHRONOSHARE_SRC_SYNC_LOG_HPP
+#define CHRONOSHARE_SRC_SYNC_LOG_HPP
+
+#include "chronoshare-common.hpp"
 
 #include "db-helper.hpp"
 #include "digest-computer.hpp"
-#include <sync-state.pb.h>
+
+#include "sync-state.pb.h"
+
 #include <ndn-cxx/name.hpp>
+
 #include <map>
+
+// @todo Replace with std::thread
+#include <boost/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
 namespace ndn {
@@ -33,14 +41,15 @@ namespace chronoshare {
 
 typedef shared_ptr<SyncStateMsg> SyncStateMsgPtr;
 
-class SyncLog : public DbHelper {
+class SyncLog : public DbHelper
+{
 public:
-  SyncLog(const boost::filesystem::path& path, const ndn::Name& localName);
+  SyncLog(const boost::filesystem::path& path, const Name& localName);
 
   /**
    * @brief Get local username
    */
-  inline const ndn::Name&
+  const Name&
   GetLocalName() const;
 
   sqlite3_int64
@@ -48,28 +57,28 @@ public:
 
   // done
   void
-  UpdateDeviceSeqNo(const ndn::Name& name, sqlite3_int64 seqNo);
+  UpdateDeviceSeqNo(const Name& name, sqlite3_int64 seqNo);
 
   void
   UpdateLocalSeqNo(sqlite3_int64 seqNo);
 
-  ndn::Name
-  LookupLocator(const ndn::Name& deviceName);
+  Name
+  LookupLocator(const Name& deviceName);
 
-  ndn::Name
+  Name
   LookupLocalLocator();
 
   void
-  UpdateLocator(const ndn::Name& deviceName, const ndn::Name& locator);
+  UpdateLocator(const Name& deviceName, const Name& locator);
 
   void
-  UpdateLocalLocator(const ndn::Name& locator);
+  UpdateLocalLocator(const Name& locator);
 
   // done
   /**
    * Create an 1ntry in SyncLog and SyncStateNodes corresponding to the current state of SyncNodes
    */
-  ndn::ConstBufferPtr
+  ConstBufferPtr
   RememberStateInStateLog();
 
   // done
@@ -78,7 +87,7 @@ public:
 
   // done
   sqlite3_int64
-  LookupSyncLog(const ndn::Buffer& stateHash);
+  LookupSyncLog(const Buffer& stateHash);
 
   // How difference is exposed will be determined later by the actual protocol
   SyncStateMsgPtr
@@ -86,12 +95,12 @@ public:
                        bool includeOldSeq = false);
 
   SyncStateMsgPtr
-  FindStateDifferences(const ndn::Buffer& oldHash, const ndn::Buffer& newHash,
+  FindStateDifferences(const Buffer& oldHash, const Buffer& newHash,
                        bool includeOldSeq = false);
 
   //-------- only used in test -----------------
   sqlite3_int64
-  SeqNo(const ndn::Name& name);
+  SeqNo(const Name& name);
 
   sqlite3_int64
   LogSize();
@@ -101,7 +110,7 @@ protected:
   UpdateDeviceSeqNo(sqlite3_int64 deviceId, sqlite3_int64 seqNo);
 
 protected:
-  ndn::Name m_localName;
+  Name m_localName;
 
   sqlite3_int64 m_localDeviceId;
 
@@ -114,7 +123,7 @@ protected:
 
 typedef shared_ptr<SyncLog> SyncLogPtr;
 
-const ndn::Name&
+inline const Name&
 SyncLog::GetLocalName() const
 {
   return m_localName;
@@ -123,4 +132,4 @@ SyncLog::GetLocalName() const
 } // chronoshare
 } // ndn
 
-#endif // SYNC_LOG_H
+#endif // CHRONOSHARE_SRC_SYNC_LOG_HPP

@@ -21,18 +21,14 @@
 #include "db-helper.hpp"
 #include "logging.hpp"
 
-#include <boost/make_shared.hpp>
-#include <boost/ref.hpp>
-#include <boost/throw_exception.hpp>
-
 #include <ndn-cxx/util/digest.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("DbHelper");
 
 namespace fs = boost::filesystem;
-
-namespace ndn {
-namespace chronoshare {
 
 using util::Sha256;
 
@@ -42,39 +38,35 @@ const std::string INIT_DATABASE = "\
 
 DbHelper::DbHelper(const fs::path& path, const std::string& dbname)
 {
-  //  std::cout << path << std::endl;
   fs::create_directories(path);
 
   int res = sqlite3_open((path / dbname).c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot open/create dabatabase: ["
-                                                         + (path / dbname).string() + "]"));
+    BOOST_THROW_EXCEPTION(Error("Cannot open/create database: [" + (path / dbname).string() + "]"));
   }
 
   res = sqlite3_create_function(m_db, "hash", 2, SQLITE_ANY, 0, 0, DbHelper::hash_xStep,
                                 DbHelper::hash_xFinal);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot create function ``hash''"));
+    BOOST_THROW_EXCEPTION(Error("Cannot create function ``hash''"));
   }
 
   res =
     sqlite3_create_function(m_db, "is_prefix", 2, SQLITE_ANY, 0, DbHelper::is_prefix_xFun, 0, 0);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Cannot create function ``is_prefix''"));
+    BOOST_THROW_EXCEPTION(Error("Cannot create function ``is_prefix''"));
   }
 
   res = sqlite3_create_function(m_db, "directory_name", -1, SQLITE_ANY, 0,
                                 DbHelper::directory_name_xFun, 0, 0);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Cannot create function ``directory_name''"));
+    BOOST_THROW_EXCEPTION(Error("Cannot create function ``directory_name''"));
   }
 
   res = sqlite3_create_function(m_db, "is_dir_prefix", 2, SQLITE_ANY, 0,
                                 DbHelper::is_dir_prefix_xFun, 0, 0);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Cannot create function ``is_dir_prefix''"));
+    BOOST_THROW_EXCEPTION(Error("Cannot create function ``is_dir_prefix''"));
   }
 
   sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, NULL);
@@ -104,7 +96,7 @@ DbHelper::hash_xStep(sqlite3_context* context, int argc, sqlite3_value** argv)
     return;
   }
 
-  Sha256** digest = reinterpret_cast<Digest**>(sqlite3_aggregate_context(context, sizeof(Sha256*)));
+  Sha256** digest = reinterpret_cast<Sha256**>(sqlite3_aggregate_context(context, sizeof(Sha256*)));
 
   if (digest == nullptr) {
     sqlite3_result_error_nomem(context);
@@ -112,21 +104,21 @@ DbHelper::hash_xStep(sqlite3_context* context, int argc, sqlite3_value** argv)
   }
 
   if (*digest == nullptr) {
-    *hash_context = new Sha256();
+    *digest = new Sha256();
   }
 
   int nameBytes = sqlite3_value_bytes(argv[0]);
   const void* name = sqlite3_value_blob(argv[0]);
   sqlite3_int64 seqno = sqlite3_value_int64(argv[1]);
 
-  (*digest)->update(name, nameBytes);
-  (*digest)->update(&seqno, sizeof(sqlite3_int64));
+  (*digest)->update(reinterpret_cast<const uint8_t*>(name), nameBytes);
+  (*digest)->update(reinterpret_cast<const uint8_t*>(&seqno), sizeof(sqlite3_int64));
 }
 
 void
 DbHelper::hash_xFinal(sqlite3_context* context)
 {
-  Sha256** digest = reinterpret_cast<Digest**>(sqlite3_aggregate_context(context, sizeof(Sha256*)));
+  Sha256** digest = reinterpret_cast<Sha256**>(sqlite3_aggregate_context(context, sizeof(Sha256*)));
 
   if (digest == nullptr) {
     sqlite3_result_error_nomem(context);
@@ -140,7 +132,7 @@ DbHelper::hash_xFinal(sqlite3_context* context)
   }
 
   shared_ptr<const Buffer> hash = (*digest)->computeDigest();
-  sqlite3_result_blob(context, hash.buf(), hash.size(), SQLITE_TRANSIENT);
+  sqlite3_result_blob(context, hash->buf(), hash->size(), SQLITE_TRANSIENT);
 
   delete *digest;
 }

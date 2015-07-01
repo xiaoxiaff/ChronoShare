@@ -25,11 +25,12 @@
 #include "object-manager.hpp"
 #include "object-db.hpp"
 #include "action-log.hpp"
+
 #include <set>
 #include <map>
+
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
-#include "executor.hpp"
 
 #include "../contrib/json_spirit/json_spirit_writer_template.h"
 #include "../contrib/json_spirit/json_spirit_value.h"
@@ -49,13 +50,13 @@ namespace chronoshare {
  * Information available:
  *
  * For now serving only locally(using <PREFIX> =
- */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
+ * ndn:/localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"info")
  *
  * - state: get list of SyncNodes, their sequence numbers, and forwarding hint(almost the same as
- *RECOVERY interest)
+ *   RECOVERY interest)
  *
  *   <PREFIX_INFO>/"state"  (@todo: authentification code or authentication code should in addition
- *somewhere)
+ *   somewhere)
  *
  * - action
  *
@@ -143,7 +144,7 @@ namespace chronoshare {
  * Commands available:
  *
  * For now serving only locally(using <PREFIX_CMD> =
- */localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
+ * ndn:/localhop/<user's-device-name>/"chronoshare"/<FOLDER>/"cmd")
  *
  * - restore version of the file
  *
@@ -157,33 +158,33 @@ namespace chronoshare {
  */
 class StateServer {
 public:
-  StateServer(shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
-              const boost::filesystem::path& rootDir, const ndn::Name& userName,
+  StateServer(shared_ptr<Face> face, ActionLogPtr actionLog,
+              const boost::filesystem::path& rootDir, const Name& userName,
               const std::string& sharedFolderName, const std::string& appName,
-              ObjectManager& objectManager, int freshness = -1);
+              ObjectManager& objectManager, time::milliseconds freshness = time::seconds(60));
   ~StateServer();
 
 private:
   void
-  info_actions_folder(const ndn::InterestFilter&, const ndn::Interest&);
+  info_actions_folder(const InterestFilter&, const Interest&);
 
   void
-  info_actions_file(const ndn::InterestFilter&, const ndn::Interest&);
+  info_actions_file(const InterestFilter&, const Interest&);
 
   void
-  info_actions_fileOrFolder_Execute(const ndn::Name& interest, bool isFolder = true);
+  info_actions_fileOrFolder_Execute(const Name& interest, bool isFolder = true);
 
   void
-  info_files_folder(const ndn::InterestFilter&, const ndn::Interest&);
+  info_files_folder(const InterestFilter&, const Interest&);
 
   void
-  info_files_folder_Execute(const ndn::Name& interest);
+  info_files_folder_Execute(const Name& interest);
 
   void
-  cmd_restore_file(const ndn::InterestFilter&, const ndn::Interest&);
+  cmd_restore_file(const InterestFilter&, const Interest&);
 
   void
-  cmd_restore_file_Execute(const ndn::Name& interest);
+  cmd_restore_file_Execute(const Name& interest);
 
 private:
   void
@@ -193,35 +194,35 @@ private:
   deregisterPrefixes();
 
   static void
-  formatActionJson(json_spirit::Array& actions, const ndn::Name& name, sqlite3_int64 seq_no,
+  formatActionJson(json_spirit::Array& actions, const Name& name, sqlite3_int64 seq_no,
                    const ActionItem& action);
 
   static void
   formatFilestateJson(json_spirit::Array& files, const FileItem& file);
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  shared_ptr<Face> m_face;
   ActionLogPtr m_actionLog;
   ObjectManager& m_objectManager;
 
-  ndn::Name m_PREFIX_INFO;
-  ndn::Name m_PREFIX_CMD;
+  Name m_PREFIX_INFO;
+  Name m_PREFIX_CMD;
 
-  const ndn::RegisteredPrefixId* actionsFolderId;
-  const ndn::RegisteredPrefixId* actionsFileId;
-  const ndn::RegisteredPrefixId* filesFolderId;
-  const ndn::RegisteredPrefixId* restoreFileId;
+  const RegisteredPrefixId* actionsFolderId;
+  const RegisteredPrefixId* actionsFileId;
+  const RegisteredPrefixId* filesFolderId;
+  const RegisteredPrefixId* restoreFileId;
 
   boost::filesystem::path m_rootDir;
-  int m_freshness;
+  time::milliseconds m_freshness;
 
-  Executor m_executor;
-
-  ndn::Name m_userName;
+  Name m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
-  ndn::KeyChain m_keyChain;
+  KeyChain m_keyChain;
   DigestComputer m_digestComputer;
+
+  boost::asio::io_service& m_ioService;
 };
 
 } // chronoshare

@@ -18,14 +18,17 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef FETCHER_H
-#define FETCHER_H
+#ifndef CHRONOSHARE_SRC_FETCHER_HPP
+#define CHRONOSHARE_SRC_FETCHER_HPP
+
+#include "chronoshare-common.hpp"
 
 #include <ndn-cxx/face.hpp>
-#include "executor.hpp"
+
+#include <set>
+
 #include <boost/intrusive/list.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <set>
 
 namespace ndn {
 namespace chronoshare {
@@ -34,29 +37,29 @@ class FetchManager;
 
 class Fetcher {
 public:
-  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName, uint64_t seq,
-                               ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
-  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName)> FinishCallback;
-  typedef boost::function<void(Fetcher&, const ndn::Name& deviceName, const ndn::Name& baseName)>
+  typedef boost::function<void(Name& deviceName, Name& baseName, uint64_t seq,
+                               shared_ptr<Data> data)> SegmentCallback;
+  typedef boost::function<void(Name& deviceName, Name& baseName)> FinishCallback;
+  typedef boost::function<void(Fetcher&, const Name& deviceName, const Name& baseName)>
     OnFetchCompleteCallback;
   typedef boost::function<void(Fetcher&)> OnFetchFailedCallback;
 
-  Fetcher(shared_ptr<ndn::Face> face, ExecutorPtr executor,
+  Fetcher(shared_ptr<Face> face,
           const SegmentCallback& segmentCallback, // callback passed by caller of FetchManager
           const FinishCallback& finishCallback,   // callback passed by caller of FetchManager
           OnFetchCompleteCallback onFetchComplete,
           OnFetchFailedCallback onFetchFailed, // callbacks provided by FetchManager
-          const ndn::Name& deviceName, const ndn::Name& name, int64_t minSeqNo, int64_t maxSeqNo,
+          const Name& deviceName, const Name& name, int64_t minSeqNo, int64_t maxSeqNo,
           boost::posix_time::time_duration timeout =
             boost::posix_time::seconds(30), // this time is not precise, but sets min bound
                                             // actual time depends on how fast Interests timeout
-          const ndn::Name& forwardingHint = ndn::Name());
+          const Name& forwardingHint = Name());
   virtual ~Fetcher();
 
-  inline bool
+  bool
   IsActive() const;
 
-  inline bool
+  bool
   IsTimedWait() const
   {
     return m_timedwait;
@@ -66,21 +69,21 @@ public:
   RestartPipeline();
 
   void
-  SetForwardingHint(const ndn::Name& forwardingHint);
+  SetForwardingHint(const Name& forwardingHint);
 
-  const ndn::Name&
+  const Name&
   GetForwardingHint() const
   {
     return m_forwardingHint;
   }
 
-  const ndn::Name&
+  const Name&
   GetName() const
   {
     return m_name;
   }
 
-  const ndn::Name&
+  const Name&
   GetDeviceName() const
   {
     return m_deviceName;
@@ -115,22 +118,22 @@ private:
   FillPipeline();
 
   void
-  OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
+  OnData(uint64_t seqno, const Interest& interest, Data& data);
 
   void
-  OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data);
+  OnData_Execute(uint64_t seqno, const Interest& interest, Data& data);
 
   void
-  OnTimeout(uint64_t seqno, const ndn::Interest& interest);
+  OnTimeout(uint64_t seqno, const Interest& interest);
 
   void
-  OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest);
+  OnTimeout_Execute(uint64_t seqno, const Interest& interest);
 
 public:
   boost::intrusive::list_member_hook<> m_managerListHook;
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  shared_ptr<Face> m_face;
 
   SegmentCallback m_segmentCallback;
   OnFetchCompleteCallback m_onFetchComplete;
@@ -141,9 +144,9 @@ private:
   bool m_active;
   bool m_timedwait;
 
-  ndn::Name m_name;
-  ndn::Name m_deviceName;
-  ndn::Name m_forwardingHint;
+  Name m_name;
+  Name m_deviceName;
+  Name m_forwardingHint;
 
   boost::posix_time::time_duration m_maximumNoActivityPeriod;
 
@@ -166,6 +169,8 @@ private:
   ExecutorPtr m_executor; // to serialize FillPipeline events
 
   boost::mutex m_seqNoMutex;
+
+  boost::asio::io_service m_ioService;
 };
 
 typedef boost::error_info<struct tag_errmsg, std::string> errmsg_info_str;
@@ -177,7 +182,7 @@ struct Fetcher : virtual boost::exception, virtual std::exception {
 
 typedef shared_ptr<Fetcher> FetcherPtr;
 
-bool
+inline bool
 Fetcher::IsActive() const
 {
   return m_active;
@@ -186,4 +191,4 @@ Fetcher::IsActive() const
 } // chronoshare
 } // ndn
 
-#endif // FETCHER_H
+#endif // CHRONOSHARE_SRC_FETCHER_HPP

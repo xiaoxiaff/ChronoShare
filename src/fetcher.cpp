@@ -22,24 +22,21 @@
 #include "fetch-manager.hpp"
 #include "logging.hpp"
 
-#include <boost/make_shared.hpp>
-#include <boost/ref.hpp>
-#include <boost/throw_exception.hpp>
+#include <boost/asio/io_service.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/bind.hpp>
 
 namespace ndn {
 namespace chronoshare {
 
 INIT_LOGGER("Fetcher");
 
-Fetcher::Fetcher(shared_ptr<Face> face, ExecutorPtr executor,
+Fetcher::Fetcher(shared_ptr<Face> face,
                  const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
                  OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
-                 const ndn::Name& deviceName, const ndn::Name& name, int64_t minSeqNo,
+                 const Name& deviceName, const Name& name, int64_t minSeqNo,
                  int64_t maxSeqNo,
                  boost::posix_time::time_duration timeout /* = boost::posix_time::seconds(30)*/,
-                 const ndn::Name& forwardingHint /* = ndn::Name()*/)
+                 const Name& forwardingHint /* = Name()*/)
   : m_face(face)
 
   , m_segmentCallback(segmentCallback)
@@ -63,7 +60,8 @@ Fetcher::Fetcher(shared_ptr<Face> face, ExecutorPtr executor,
   , m_activePipeline(0)
   , m_retryPause(0)
   , m_nextScheduledRetry(date_time::second_clock<boost::posix_time::ptime>::universal_time())
-  , m_executor(executor) // must be 1
+
+  , m_ioService(face->getIoService())
 {
 }
 
@@ -79,11 +77,11 @@ Fetcher::RestartPipeline()
   // cout << "Restart: " << m_minSendSeqNo << endl;
   m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
-  m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
+  m_ioService.post(bind(&Fetcher::FillPipeline, this));
 }
 
 void
-Fetcher::SetForwardingHint(const ndn::Name& forwardingHint)
+Fetcher::SetForwardingHint(const Name& forwardingHint)
 {
   m_forwardingHint = forwardingHint;
 }
@@ -102,20 +100,20 @@ Fetcher::FillPipeline()
 
     m_inActivePipeline.insert(m_minSendSeqNo + 1);
 
-    _LOG_DEBUG(" >>> i " << ndn::Name(m_forwardingHint).append(m_name)
+    _LOG_DEBUG(" >>> i " << Name(m_forwardingHint).append(m_name)
                          << ", seq = " << (m_minSendSeqNo + 1));
 
     // cout << ">>> " << m_minSendSeqNo+1 << endl;
 
-    ndn::Interest interest(
-      ndn::Name(m_forwardingHint)
+    Interest interest(
+      Name(m_forwardingHint)
         .append(m_name)
         .appendNumber(m_minSendSeqNo + 1)); // Alex: this lifetime should be changed to RTO
     _LOG_DEBUG("interest Name: " << interest);
     interest.setInterestLifetime(time::seconds(1));
     m_face->expressInterest(interest,
-                            boost::bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
-                            boost::bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
+                            bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
+                            bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
 
     _LOG_DEBUG(" >>> i ok");
 
@@ -123,18 +121,18 @@ Fetcher::FillPipeline()
   }
 }
 void
-Fetcher::OnData(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
+Fetcher::OnData(uint64_t seqno, const Interest& interest, Data& data)
 {
-  m_executor->execute(boost::bind(&Fetcher::OnData_Execute, this, seqno, interest, data));
+  m_ioService.post(bind(&Fetcher::OnData_Execute, this, seqno, interest, data));
 }
 
 void
-Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data& data)
+Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
 {
-  const ndn::Name& name = data.getName();
+  const Name& name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
-  ndn::shared_ptr<ndn::Data> pco = ndn::make_shared<ndn::Data>(data.wireEncode());
+  shared_ptr<Data> pco = make_shared<Data>(data.wireEncode());
 
   if (m_forwardingHint == Name()) {
     // TODO: check verified!!!!
@@ -207,25 +205,25 @@ Fetcher::OnData_Execute(uint64_t seqno, const ndn::Interest& interest, ndn::Data
     // using executor, so we won't be deleted if there is scheduled FillPipeline call
     if (!m_onFetchComplete.empty()) {
       m_timedwait = true;
-      m_executor->execute(boost::bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
+      m_ioService.post(bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
     }
   }
   else {
-    m_executor->execute(boost::bind(&Fetcher::FillPipeline, this));
+    m_ioService.post(bind(&Fetcher::FillPipeline, this));
   }
 }
 
 void
-Fetcher::OnTimeout(uint64_t seqno, const ndn::Interest& interest)
+Fetcher::OnTimeout(uint64_t seqno, const Interest& interest)
 {
-  _LOG_DEBUG(this << ", " << m_executor.get());
-  m_executor->execute(boost::bind(&Fetcher::OnTimeout_Execute, this, seqno, interest));
+  _LOG_DEBUG(this);
+  m_ioService.post(bind(&Fetcher::OnTimeout_Execute, this, seqno, interest));
 }
 
 void
-Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
+Fetcher::OnTimeout_Execute(uint64_t seqno, const Interest& interest)
 {
-  const ndn::Name name = interest.getName();
+  const Name name = interest.getName();
   _LOG_DEBUG(" <<< :( timeout " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
 
   // cout << "Fetcher::OnTimeout: " << name << endl;
@@ -264,8 +262,8 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const ndn::Interest& interest)
   else {
     _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
     m_face->expressInterest(interest,
-                            boost::bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
-                            boost::bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
+                            bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
+                            bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
   }
 }
 

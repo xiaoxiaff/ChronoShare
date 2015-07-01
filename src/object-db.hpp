@@ -18,41 +18,53 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef OBJECT_DB_H
-#define OBJECT_DB_H
+#ifndef CHRONOSHARE_SRC_OBJECT_DB_HPP
+#define CHRONOSHARE_SRC_OBJECT_DB_HPP
 
-#include <string>
+#include "chronoshare-common.hpp"
+#include "db-helper.hpp"
+
 #include <sqlite3.h>
-#include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
+
 #include <ctime>
 #include <vector>
+
 #include <ndn-cxx/name.hpp>
 #include <ndn-cxx/face.hpp>
+
+#include <boost/filesystem.hpp>
 
 namespace ndn {
 namespace chronoshare {
 
 class ObjectDb {
 public:
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+public:
   // database will be create in <folder>/<first-pair-of-hash-bytes>/<rest-of-hash>
   ObjectDb(const boost::filesystem::path& folder, const std::string& hash);
   ~ObjectDb();
 
   void
-  saveContentObject(const ndn::Name& deviceName, sqlite3_int64 segment, const ndn::Data& data);
+  saveContentObject(const Name& deviceName, sqlite3_int64 segment, const Data& data);
 
-  ndn::BufferPtr
-  fetchSegment(const ndn::Name& deviceName, sqlite3_int64 segment);
-
-  // sqlite3_int64
-  // getNumberOfSegments (const ndn::Name &deviceName);
+  BufferPtr
+  fetchSegment(const Name& deviceName, sqlite3_int64 segment);
 
   time_t
   secondsSinceLastUse();
 
   static bool
-  DoesExist(const boost::filesystem::path& folder, const ndn::Name& deviceName,
+  DoesExist(const boost::filesystem::path& folder, const Name& deviceName,
             const std::string& hash);
 
 private:
@@ -72,4 +84,4 @@ typedef shared_ptr<ObjectDb> ObjectDbPtr;
 } // chronoshare
 } // ndn
 
-#endif // OBJECT_DB_H
+#endif // CHRONOSHARE_SRC_OBJECT_DB_HPP
