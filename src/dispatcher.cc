@@ -79,7 +79,7 @@ Dispatcher::Dispatcher(const std::string &localUserName
   m_face_stateServer = boost::make_shared<ndn::Face>();
   m_stateServerListening = boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
   m_stateServer = new StateServer(m_face_stateServer, m_actionLog, rootDir, m_localUserName, m_sharedFolder, CHRONOSHARE_APP, m_objectManager, CONTENT_FRESHNESS);
-  // no need to register, right now only listening on localhost prefix
+  // no need to register, right now only listening on localhop prefix
 
   m_core = new SyncCore(face, m_syncLog, localUserName, Name("/"), syncPrefix,
                          bind(&Dispatcher::Did_SyncLog_StateChange, this, _1), DEFAULT_SYNC_INTEREST_INTERVAL);
