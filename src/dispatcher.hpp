@@ -1,45 +1,44 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
-#include "digest-computer.h"
-#include "action-log.h"
-#include "sync-core.h"
-#include "executor.h"
-#include "object-db.h"
-#include "object-manager.h"
-#include "content-server.h"
-#include "state-server.h"
-#include "fetch-manager.h"
+#include "digest-computer.hpp"
+#include "action-log.hpp"
+#include "sync-core.hpp"
+#include "executor.hpp"
+#include "object-db.hpp"
+#include "object-manager.hpp"
+#include "content-server.hpp"
+#include "state-server.hpp"
+#include "fetch-manager.hpp"
 
-#include <boost/function.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/shared_ptr.hpp>
 #include <map>
 
-typedef boost::shared_ptr<ActionItem> ActionItemPtr;
+namespace ndn {
+namespace chronoshare {
+
+typedef shared_ptr<ActionItem> ActionItemPtr;
 
 // TODO:
 // This class lacks a permanent table to store the files in fetching process
@@ -49,7 +48,7 @@ public:
   // sharedFolder is the name to be used in NDN name;
   // rootDir is the shared folder dir in local file system;
   Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-             const boost::filesystem::path& rootDir, boost::shared_ptr<ndn::Face> face,
+             const boost::filesystem::path& rootDir, shared_ptr<ndn::Face> face,
              bool enablePrefixDiscovery = true);
   ~Dispatcher();
 
@@ -93,7 +92,7 @@ private:
   }
 
   void
-  listen_other(boost::shared_ptr<ndn::Face> face, std::string name)
+  listen_other(shared_ptr<ndn::Face> face, std::string name)
   {
     printf("%s start listening ...\n", name.c_str());
     face->processEvents();
@@ -199,7 +198,7 @@ private:
   // fileReady(const ndn::Name &fileNamePrefix);
 
 private:
-  boost::shared_ptr<ndn::Face> m_face;
+  shared_ptr<ndn::Face> m_face;
   SyncCore* m_core;
   SyncLogPtr m_syncLog;
   ActionLogPtr m_actionLog;
@@ -223,8 +222,8 @@ private:
   FetchManagerPtr m_fileFetcher;
   DigestComputer m_digestComputer;
 
-  boost::shared_ptr<ndn::Face> m_face_server;
-  boost::shared_ptr<ndn::Face> m_face_stateServer;
+  shared_ptr<ndn::Face> m_face_server;
+  shared_ptr<ndn::Face> m_face_stateServer;
   boost::thread m_faceListening;
   boost::thread m_serverListening;
   boost::thread m_stateServerListening;
@@ -235,5 +234,8 @@ struct Dispatcher : virtual boost::exception, virtual std::exception {
 };
 typedef boost::error_info<struct tag_errmsg, std::string> error_info_str;
 }
+
+} // chronoshare
+} // ndn
 
 #endif // DISPATCHER_H

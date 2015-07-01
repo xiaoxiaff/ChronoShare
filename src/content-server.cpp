@@ -1,46 +1,43 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "digest-computer.h"
-#include "content-server.h"
-#include "logging.h"
+#include "digest-computer.hpp"
+#include "content-server.hpp"
+#include "logging.hpp"
 #include <boost/make_shared.hpp>
 #include <utility>
-#include "task.h"
-#include "periodic-task.h"
-#include "simple-interval-generator.h"
+#include "task.hpp"
+#include "periodic-task.hpp"
+#include "simple-interval-generator.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <ndn-cxx/face.hpp>
 
 INIT_LOGGER("ContentServer");
 
-using namespace ndn;
-using namespace std;
-using namespace boost;
+namespace ndn {
+namespace chronoshare {
 
 static const int DB_CACHE_LIFETIME = 60;
 
-ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
+ContentServer::ContentServer(shared_ptr<Face> face, ActionLogPtr actionLog,
                              const boost::filesystem::path& rootDir, const ndn::Name& userName,
                              const std::string& sharedFolderName, const std::string& appName,
                              int freshness)
@@ -57,9 +54,9 @@ ContentServer::ContentServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr act
 
   m_scheduler->start();
   TaskPtr flushStaleDbCacheTask =
-    boost::make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this),
+    make_shared<PeriodicTask>(boost::bind(&ContentServer::flushStaleDbCache, this),
                                      "flush-state-db-cache", m_scheduler,
-                                     boost::make_shared<SimpleIntervalGenerator>(
+                                     make_shared<SimpleIntervalGenerator>(
                                        DB_CACHE_LIFETIME));
   m_scheduler->addTask(flushStaleDbCacheTask);
 }
@@ -198,7 +195,7 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
       if (ObjectDb::DoesExist(m_dbFolder, deviceName,
                               hashStr)) // this is kind of overkill, as it counts available segments
       {
-        db = boost::make_shared<ObjectDb>(m_dbFolder, hashStr);
+        db = make_shared<ObjectDb>(m_dbFolder, hashStr);
         m_dbCache.insert(make_pair(hash, db));
       }
       else {
@@ -284,3 +281,6 @@ ContentServer::flushStaleDbCache()
     }
   }
 }
+
+} // chronoshare
+} // ndn

@@ -1,31 +1,30 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef FETCH_MANAGER_H
 #define FETCH_MANAGER_H
 
-#include "fetcher.h"
-#include "fetch-task-db.h"
-#include "scheduler.h"
-#include "executor.h"
+#include "fetcher.hpp"
+#include "fetch-task-db.hpp"
+#include "scheduler.hpp"
+#include "executor.hpp"
 
 #include <boost/exception/all.hpp>
 #include <boost/shared_ptr.hpp>
@@ -33,6 +32,9 @@
 #include <string>
 #include <list>
 #include <stdint.h>
+
+namespace ndn {
+namespace chronoshare {
 
 class FetchManager {
 public:
@@ -42,7 +44,7 @@ public:
   typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName, uint64_t seq,
                                ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
   typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName)> FinishCallback;
-  FetchManager(boost::shared_ptr<ndn::Face> face, const Mapping& mapping,
+  FetchManager(shared_ptr<ndn::Face> face, const Mapping& mapping,
                const ndn::Name& broadcastForwardingHint, uint32_t parallelFetches = 3,
                const SegmentCallback& defaultSegmentCallback = SegmentCallback(),
                const FinishCallback& defaultFinishCallback = FinishCallback(),
@@ -60,7 +62,7 @@ public:
           uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
 
   // only for Fetcher
-  inline boost::shared_ptr<ndn::Face>
+  inline shared_ptr<ndn::Face>
   GetFace();
 
 private:
@@ -82,7 +84,7 @@ private:
   TimedWait(Fetcher& fetcher);
 
 private:
-  boost::shared_ptr<ndn::Face> m_face;
+  shared_ptr<ndn::Face> m_face;
   Mapping m_mapping;
 
   uint32_t m_maxParallelFetches;
@@ -105,7 +107,7 @@ private:
   const ndn::Name m_broadcastHint;
 };
 
-boost::shared_ptr<ndn::Face>
+shared_ptr<ndn::Face>
 FetchManager::GetFace()
 {
   return m_face;
@@ -117,6 +119,9 @@ struct FetchManager : virtual boost::exception, virtual std::exception {
 };
 }
 
-typedef boost::shared_ptr<FetchManager> FetchManagerPtr;
+typedef shared_ptr<FetchManager> FetchManagerPtr;
+
+} // chronoshare
+} // ndn
 
 #endif // FETCHER_H

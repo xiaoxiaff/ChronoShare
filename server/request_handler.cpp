@@ -20,7 +20,7 @@
 #include <QFile>
 #include <QDataStream>
 #include <QString>
-#include "logging.h"
+#include "logging.hpp"
 
 INIT_LOGGER("HttpServer")
 

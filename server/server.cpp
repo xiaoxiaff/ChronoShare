@@ -11,7 +11,7 @@
 #include "server.hpp"
 #include <boost/bind.hpp>
 #include <signal.h>
-#include "logging.h"
+#include "logging.hpp"
 
 INIT_LOGGER("HttpServer");
 namespace http {

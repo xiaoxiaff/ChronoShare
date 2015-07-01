@@ -77,7 +77,7 @@ private:
   reply reply_;
 };
 
-typedef boost::shared_ptr<connection> connection_ptr;
+typedef shared_ptr<connection> connection_ptr;
 
 } // namespace server
 } // namespace http

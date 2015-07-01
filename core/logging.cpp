@@ -18,47 +18,48 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include <QtCore>
-
-#include "dispatcher.hpp"
 #include "logging.hpp"
-#include "fs-watcher.hpp"
+
+#ifdef HAVE_LOG4CXX
+
+#include <log4cxx/logger.h>
+#include <log4cxx/basicconfigurator.h>
+#include <log4cxx/consoleappender.h>
+#include <log4cxx/patternlayout.h>
+#include <log4cxx/level.h>
+#include <log4cxx/propertyconfigurator.h>
+#include <log4cxx/defaultconfigurator.h>
+#include <log4cxx/helpers/exception.h>
 
 namespace ndn {
 namespace chronoshare {
 
-int
-main(int argc, char* argv[])
+using namespace log4cxx;
+using namespace log4cxx::helpers;
+
+void
+INIT_LOGGERS()
 {
-  INIT_LOGGERS();
+  static bool configured = false;
 
-  QCoreApplication app(argc, argv);
+  if (configured)
+    return;
 
-  if (argc != 4) {
-    cerr << "Usage: ./csd <username> <shared-folder> <path>" << endl;
-    return 1;
+  if (access("log4cxx.properties", R_OK) == 0)
+    PropertyConfigurator::configureAndWatch("log4cxx.properties");
+  else {
+    PatternLayoutPtr layout(new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n"));
+    ConsoleAppenderPtr appender(new ConsoleAppender(layout));
+
+    BasicConfigurator::configure(appender);
+    Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
   }
 
-  string username = argv[1];
-  string sharedFolder = argv[2];
-  string path = argv[3];
-
-  cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder
-       << "] at [" << path << "]" << endl;
-
-  Dispatcher dispatcher(username, sharedFolder, path, make_shared<Face>());
-
-  FsWatcher watcher(path.c_str(), bind(&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
-                    bind(&Dispatcher::Did_LocalFile_Delete, &dispatcher, _1));
-
-  return app.exec();
+  //  _LOG_DEBUG("Hello World!");    // Debug level
+  configured = true;
 }
 
 } // chronoshare
 } // ndn
 
-int
-main(int argc, char* argv[])
-{
-  return ndn::chronoshare::main(argc, argv);
-}
+#endif // HAVE_LOG4CXX

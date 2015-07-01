@@ -1,26 +1,25 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "db-helper.h"
-#include "logging.h"
+#include "db-helper.hpp"
+#include "logging.hpp"
 
 #include <boost/make_shared.hpp>
 #include <boost/ref.hpp>
@@ -30,10 +29,12 @@
 
 INIT_LOGGER("DbHelper");
 
-using namespace boost;
 namespace fs = boost::filesystem;
 
-using ndn::util::Sha256;
+namespace ndn {
+namespace chronoshare {
+
+using util::Sha256;
 
 const std::string INIT_DATABASE = "\
     PRAGMA foreign_keys = ON;      \
@@ -230,3 +231,6 @@ DbHelper::is_dir_prefix_xFun(sqlite3_context* context, int argc, sqlite3_value**
     sqlite3_result_int(context, 0);
   }
 }
+
+} // chronoshare
+} // ndn

@@ -1,41 +1,42 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef ACTION_LOG_H
 #define ACTION_LOG_H
 
-#include "db-helper.h"
-#include "file-state.h"
-#include "sync-log.h"
-#include "action-item.pb.h"
-#include "file-item.pb.h"
+#include "db-helper.hpp"
+#include "file-state.hpp"
+#include "sync-log.hpp"
+#include "action-item.pb.hpp"
+#include "file-item.pb.hpp"
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 
 #include <boost/tuple/tuple.hpp>
 
+namespace ndn {
+namespace chronoshare {
+
 class ActionLog;
-typedef boost::shared_ptr<ActionLog> ActionLogPtr;
-typedef boost::shared_ptr<ActionItem> ActionItemPtr;
+typedef shared_ptr<ActionLog> ActionLogPtr;
+typedef shared_ptr<ActionItem> ActionItemPtr;
 
 class ActionLog : public DbHelper {
 public:
@@ -47,7 +48,7 @@ public:
   typedef boost::function<void(std::string /*filename*/)> OnFileRemovedCallback;
 
 public:
-  ActionLog(boost::shared_ptr<ndn::Face> face, const boost::filesystem::path& path,
+  ActionLog(shared_ptr<ndn::Face> face, const boost::filesystem::path& path,
             SyncLogPtr syncLog, const std::string& sharedFolder, const std::string& appName,
             OnFileAddedOrChangedCallback onFileAddedOrChanged, OnFileRemovedCallback onFileRemoved);
 
@@ -139,13 +140,13 @@ private:
   static void
   apply_action_xFun(sqlite3_context* context, int argc, sqlite3_value** argv);
 
-  //  static boost::shared_ptr<ActionItem>
+  //  static shared_ptr<ActionItem>
   //  deserializeActionItem(const ndn::Block &content)
   //  {
-  //  	boost::shared_ptr<ActionItem> retval(new ActionItem());
+  //  	shared_ptr<ActionItem> retval(new ActionItem());
   //  	if (!retval->ParseFromArray(content.value(), content.value_size()))
   //  	{
-  //  		return boost::shared_ptr<ActionItem>();
+  //  		return shared_ptr<ActionItem>();
   //  	}
   //  	return retval;
   //  }
@@ -154,7 +155,7 @@ private:
   SyncLogPtr m_syncLog;
   FileStatePtr m_fileState;
 
-  boost::shared_ptr<ndn::Face> m_face;
+  shared_ptr<ndn::Face> m_face;
   std::string m_sharedFolderName;
   std::string m_appName;
 
@@ -173,5 +174,8 @@ ActionLog::GetFileState()
 {
   return m_fileState;
 }
+
+} // chronoshare
+} // ndn
 
 #endif // ACTION_LOG_H

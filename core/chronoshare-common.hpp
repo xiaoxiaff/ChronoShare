@@ -18,47 +18,28 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include <QtCore>
+#ifndef CHRONOSHARE_CORE_COMMON_HPP
+#define CHRONOSHARE_CORE_COMMON_HPP
 
-#include "dispatcher.hpp"
-#include "logging.hpp"
-#include "fs-watcher.hpp"
+#include "chronoshare-config.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <unistd.h>
+
+#include <boost/assert.hpp>
+#include <boost/concept_check.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace ndn {
-namespace chronoshare {
-
-int
-main(int argc, char* argv[])
-{
-  INIT_LOGGERS();
-
-  QCoreApplication app(argc, argv);
-
-  if (argc != 4) {
-    cerr << "Usage: ./csd <username> <shared-folder> <path>" << endl;
-    return 1;
-  }
-
-  string username = argv[1];
-  string sharedFolder = argv[2];
-  string path = argv[3];
-
-  cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder
-       << "] at [" << path << "]" << endl;
-
-  Dispatcher dispatcher(username, sharedFolder, path, make_shared<Face>());
-
-  FsWatcher watcher(path.c_str(), bind(&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
-                    bind(&Dispatcher::Did_LocalFile_Delete, &dispatcher, _1));
-
-  return app.exec();
+using boost::noncopyable;
 }
 
-} // chronoshare
-} // ndn
-
-int
-main(int argc, char* argv[])
-{
-  return ndn::chronoshare::main(argc, argv);
-}
+#endif // CHRONOSHARE_CORE_COMMON_HPP

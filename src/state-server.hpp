@@ -1,37 +1,35 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef STATE_SERVER_H
 #define STATE_SERVER_H
 
-#include "digest-computer.h"
-#include "object-manager.h"
-#include "object-db.h"
-#include "action-log.h"
+#include "digest-computer.hpp"
+#include "object-manager.hpp"
+#include "object-db.hpp"
+#include "action-log.hpp"
 #include <set>
 #include <map>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
-#include "executor.h"
+#include "executor.hpp"
 
 #include "../contrib/json_spirit/json_spirit_writer_template.h"
 #include "../contrib/json_spirit/json_spirit_value.h"
@@ -39,6 +37,9 @@
 #ifndef JSON_SPIRIT_VALUE_ENABLED
 #error Please define JSON_SPIRIT_VALUE_ENABLED for the Value type to be enabled
 #endif
+
+namespace ndn {
+namespace chronoshare {
 
 /**
  * @brief Class serving state information from ChronoShare
@@ -156,7 +157,7 @@
  */
 class StateServer {
 public:
-  StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
+  StateServer(shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
               const boost::filesystem::path& rootDir, const ndn::Name& userName,
               const std::string& sharedFolderName, const std::string& appName,
               ObjectManager& objectManager, int freshness = -1);
@@ -199,7 +200,7 @@ private:
   formatFilestateJson(json_spirit::Array& files, const FileItem& file);
 
 private:
-  boost::shared_ptr<ndn::Face> m_face;
+  shared_ptr<ndn::Face> m_face;
   ActionLogPtr m_actionLog;
   ObjectManager& m_objectManager;
 
@@ -222,4 +223,8 @@ private:
   ndn::KeyChain m_keyChain;
   DigestComputer m_digestComputer;
 };
+
+} // chronoshare
+} // ndn
+
 #endif // CONTENT_SERVER_H

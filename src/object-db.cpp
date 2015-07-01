@@ -1,37 +1,35 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "object-db.h"
+#include "object-db.hpp"
 #include <iostream>
 #include <boost/make_shared.hpp>
-#include "db-helper.h"
+#include "db-helper.hpp"
 #include <sys/stat.h>
-#include "logging.h"
+#include "logging.hpp"
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Object.Db");
 
-using namespace std;
-using namespace ndn;
-using namespace boost;
 namespace fs = boost::filesystem;
 
 const std::string INIT_DATABASE = "\
@@ -220,3 +218,6 @@ ObjectDb::didStopSave()
   sqlite3_exec(m_db, "END TRANSACTION;", 0, 0, 0);
   // _LOG_DEBUG("Close transaction: " << sqlite3_errmsg(m_db));
 }
+
+} // chronoshare
+} // ndn

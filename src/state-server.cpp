@@ -1,45 +1,42 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "state-server.h"
-#include "logging.h"
+#include "state-server.hpp"
+#include "logging.hpp"
 #include <boost/make_shared.hpp>
 #include <utility>
-#include "task.h"
-#include "periodic-task.h"
-#include "simple-interval-generator.h"
+#include "task.hpp"
+#include "periodic-task.hpp"
+#include "simple-interval-generator.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-INIT_LOGGER("StateServer");
+namespace ndn {
+namespace chronoshare {
 
-using namespace std;
-using namespace boost;
-using namespace ndn;
+INIT_LOGGER("StateServer");
 
 namespace fs = boost::filesystem;
 
-StateServer::StateServer(boost::shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
+StateServer::StateServer(shared_ptr<Face> face, ActionLogPtr actionLog,
                          const boost::filesystem::path& rootDir, const ndn::Name& userName,
                          const std::string& sharedFolderName, const std::string& appName,
                          ObjectManager& objectManager, int freshness /* = -1*/)
@@ -552,3 +549,6 @@ StateServer::cmd_restore_file_Execute(const ndn::Name& interest)
     m_face->put(*data);
   }
 }
+
+} // chronoshare
+} // ndn

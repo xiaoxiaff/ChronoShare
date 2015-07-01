@@ -1,22 +1,21 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2012-2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Zhenkai Zhu <zhenkai@cs.ucla.edu>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef HASH_HELPER_H
@@ -30,11 +29,14 @@
 #include <ndn-cxx/encoding/buffer.hpp>
 #include <ndn-cxx/util/digest.hpp>
 
+namespace ndn {
+namespace chronoshare {
+
 // Other options: VP_md2, EVP_md5, EVP_sha, EVP_sha1, EVP_sha256, EVP_dss, EVP_dss1, EVP_mdc2,
 // EVP_ripemd160
 #define HASH_FUNCTION EVP_sha256
 class Hash;
-typedef boost::shared_ptr<Hash> HashPtr;
+typedef shared_ptr<Hash> HashPtr;
 
 class Hash {
 public:
@@ -161,5 +163,8 @@ struct HashConversion : virtual boost::exception, virtual std::exception {
 
 std::ostream&
 operator<<(std::ostream& os, const Hash& digest);
+
+} // chronoshare
+} // ndn
 
 #endif // HASH_STRING_CONVERTER_H

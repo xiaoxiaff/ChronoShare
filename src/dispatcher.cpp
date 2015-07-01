@@ -1,35 +1,32 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- *	   Zhenkai Zhu <zhenkai@cs.ucla.edu>
- * Author: Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	   Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "dispatcher.h"
-#include "logging.h"
-#include "fetch-task-db.h"
+#include "dispatcher.hpp"
+#include "logging.hpp"
+#include "fetch-task-db.hpp"
 
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 
-using namespace ndn;
-using namespace std;
-using namespace boost;
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Dispatcher");
 
@@ -40,7 +37,7 @@ static const int CONTENT_FRESHNESS = 1800;                 // seconds
 const static double DEFAULT_SYNC_INTEREST_INTERVAL = 10.0; // seconds;
 
 Dispatcher::Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-                       const filesystem::path& rootDir, boost::shared_ptr<ndn::Face> face,
+                       const filesystem::path& rootDir, shared_ptr<Face> face,
                        bool enablePrefixDiscovery)
   : m_face(face)
   , m_core(NULL)
@@ -56,8 +53,8 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   // TODO check
   m_faceListening = boost::thread(boost::bind(&Dispatcher::listen, this));
 
-  m_syncLog = boost::make_shared<SyncLog>(m_rootDir, localUserName);
-  m_actionLog = boost::make_shared<ActionLog>(
+  m_syncLog = make_shared<SyncLog>(m_rootDir, localUserName);
+  m_actionLog = make_shared<ActionLog>(
     m_face, m_rootDir, m_syncLog, sharedFolder, CHRONOSHARE_APP,
     // bind(&Dispatcher::Did_ActionLog_ActionApply_AddOrModify, this, _1, _2, _3, _4, _5, _6, _7),
     ActionLog::OnFileAddedOrChangedCallback(), // don't really need this callback
@@ -69,7 +66,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   syncPrefix.append(sharedFolder);
 
   // m_server needs a different ndn face
-  m_face_server = boost::make_shared<ndn::Face>();
+  m_face_server = make_shared<Face>();
   m_serverListening =
     boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_server, "contentServer"));
   m_server = new ContentServer(m_face_server, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
@@ -77,7 +74,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   m_server->registerPrefix(Name("/"));
   m_server->registerPrefix(Name(BROADCAST_DOMAIN));
 
-  m_face_stateServer = boost::make_shared<ndn::Face>();
+  m_face_stateServer = make_shared<Face>();
   m_stateServerListening =
     boost::thread(boost::bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
   m_stateServer =
@@ -89,17 +86,17 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
                         bind(&Dispatcher::Did_SyncLog_StateChange, this, _1),
                         DEFAULT_SYNC_INTEREST_INTERVAL);
 
-  FetchTaskDbPtr actionTaskDb = boost::make_shared<FetchTaskDb>(m_rootDir, "action");
+  FetchTaskDbPtr actionTaskDb = make_shared<FetchTaskDb>(m_rootDir, "action");
   m_actionFetcher =
-    boost::make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
+    make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
                                      Name(BROADCAST_DOMAIN), // no appname suffix now
                                      3, bind(&Dispatcher::Did_FetchManager_ActionFetch, this, _1,
                                              _2, _3, _4),
                                      FetchManager::FinishCallback(), actionTaskDb);
 
-  FetchTaskDbPtr fileTaskDb = boost::make_shared<FetchTaskDb>(m_rootDir, "file");
+  FetchTaskDbPtr fileTaskDb = make_shared<FetchTaskDb>(m_rootDir, "file");
   m_fileFetcher =
-    boost::make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
+    make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
                                      Name(BROADCAST_DOMAIN), // no appname suffix now
                                      3, bind(&Dispatcher::Did_FetchManager_FileSegmentFetch, this,
                                              _1, _2, _3, _4),
@@ -387,7 +384,7 @@ Dispatcher::Did_FetchManager_ActionFetch(const ndn::Name& deviceName,
     else {
       if (m_objectDbMap.find(*hash) == m_objectDbMap.end()) {
         _LOG_DEBUG("create ObjectDb for " << DigestComputer::digestToString(*hash));
-        m_objectDbMap[*hash] = boost::make_shared<ObjectDb>(m_rootDir / ".chronoshare", hashStr);
+        m_objectDbMap[*hash] = make_shared<ObjectDb>(m_rootDir / ".chronoshare", hashStr);
       }
 
       m_fileFetcher->Enqueue(deviceName, fileNameBase, 0, action->seg_num() - 1,
@@ -577,3 +574,6 @@ Dispatcher::Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn
 //   permissions(filePath, static_cast<filesystem::perms>(file->mode()));
 
 // }
+
+} // chronoshare
+} // ndn

@@ -1,32 +1,30 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *         Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
 #ifndef SYNC_CORE_H
 #define SYNC_CORE_H
 
 #include <ndn-cxx/security/key-chain.hpp>
-#include "sync-log.h"
-#include "scheduler.h"
-#include "task.h"
+#include "sync-log.hpp"
+#include "scheduler.hpp"
+#include "task.hpp"
 #include <ndn-cxx/face.hpp>
 
 #include <boost/function.hpp>
@@ -35,6 +33,9 @@
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/make_shared.hpp>
 #include <thread>
+
+namespace ndn {
+namespace chronoshare {
 
 // No use this now
 template<class Msg>
@@ -48,13 +49,13 @@ serializeMsg(const Msg& msg)
 }
 
 template<class Msg>
-boost::shared_ptr<Msg>
+shared_ptr<Msg>
 deserializeMsg(const ndn::Buffer& bytes)
 {
-  boost::shared_ptr<Msg> retval(new Msg());
+  shared_ptr<Msg> retval(new Msg());
   if (!retval->ParseFromArray(bytes.buf(), bytes.size())) {
     // to indicate an error
-    return boost::shared_ptr<Msg>();
+    return shared_ptr<Msg>();
   }
   return retval;
 }
@@ -77,7 +78,7 @@ serializeGZipMsg(const Msg& msg)
 }
 
 template<class Msg>
-boost::shared_ptr<Msg>
+shared_ptr<Msg>
 deserializeGZipMsg(const ndn::Buffer& bytes)
 {
   std::vector<char> sBytes(bytes.size());
@@ -86,10 +87,10 @@ deserializeGZipMsg(const ndn::Buffer& bytes)
   in.push(boost::iostreams::gzip_decompressor()); // gzip filter
   in.push(boost::make_iterator_range(sBytes));    // source
 
-  boost::shared_ptr<Msg> retval = boost::make_shared<Msg>();
+  shared_ptr<Msg> retval = boost::make_shared<Msg>();
   if (!retval->ParseFromIstream(&in)) {
     // to indicate an error
-    return boost::shared_ptr<Msg>();
+    return shared_ptr<Msg>();
   }
 
   return retval;
@@ -105,7 +106,7 @@ public:
   static const double RANDOM_PERCENT; // seconds;
 
 public:
-  SyncCore(boost::shared_ptr<ndn::Face> face, SyncLogPtr syncLog, const ndn::Name& userName,
+  SyncCore(shared_ptr<ndn::Face> face, SyncLogPtr syncLog, const ndn::Name& userName,
            const ndn::Name& localPrefix // routable name used by the local user
            ,
            const ndn::Name& syncPrefix // the prefix for the sync collection
@@ -191,7 +192,7 @@ private:
 
 private:
   //  ndn::Face m_face;
-  boost::shared_ptr<ndn::Face> m_face;
+  shared_ptr<ndn::Face> m_face;
 
   SyncLogPtr m_log;
   SchedulerPtr m_scheduler;
@@ -209,5 +210,8 @@ private:
   boost::thread m_listeningThread;
   const ndn::RegisteredPrefixId* m_registeredPrefixId;
 };
+
+} // chronoshare
+} // ndn
 
 #endif // SYNC_CORE_H

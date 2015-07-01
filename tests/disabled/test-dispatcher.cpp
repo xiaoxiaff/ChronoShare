@@ -1,27 +1,25 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright (c) 2012 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author:  Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *          Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *          Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "logging.h"
-#include "dispatcher.h"
+#include "logging.hpp"
+#include "dispatcher.hpp"
 #include <boost/test/unit_test.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/filesystem.hpp>
@@ -63,9 +61,9 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   string folder = "who-is-president";
 
-  boost::shared_ptr<Face> face1 = boost::make_shared<Face>();
+  shared_ptr<Face> face1 = make_shared<Face>();
   usleep(100);
-  boost::shared_ptr<Face> face2 = boost::make_shared<Face>();
+  shared_ptr<Face> face2 = make_shared<Face>();
   usleep(100);
 
   cleanDir(dir1);

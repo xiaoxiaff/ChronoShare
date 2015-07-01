@@ -1,34 +1,35 @@
-/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil -*- */
-/*
- * Copyright(c) 2013 University of California, Los Angeles
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/**
+ * Copyright (c) 2013-2015 Regents of the University of California.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
+ * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * ChronoShare is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
  *
- * Author: Zhenkai Zhu <zhenkai@cs.ucla.edu>
- *         Alexander Afanasyev <alexander.afanasyev@ucla.edu>
- *	       Lijing Wang <wanglj11@mails.tsinghua.edu.cn>
+ * You should have received copies of the GNU General Public License along with
+ * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "sync-core.h"
-#include "sync-state-helper.h"
-#include "logging.h"
-#include "random-interval-generator.h"
-#include "simple-interval-generator.h"
-#include "periodic-task.h"
-#include "digest-computer.h"
+#include "sync-core.hpp"
+#include "sync-state-helper.hpp"
+#include "logging.hpp"
+#include "random-interval-generator.hpp"
+#include "simple-interval-generator.hpp"
+#include "periodic-task.hpp"
+#include "digest-computer.hpp"
 
 #include <boost/lexical_cast.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 INIT_LOGGER("Sync.Core");
 
@@ -42,11 +43,7 @@ const std::string SYNC_INTEREST_TAG2 = "send-sync-interest2";
 
 const std::string LOCAL_STATE_CHANGE_DELAYED_TAG = "local-state-changed";
 
-using namespace std;
-using namespace boost;
-using namespace ndn;
-
-SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userName,
+SyncCore::SyncCore(shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userName,
                    const Name& localPrefix, const Name& syncPrefix,
                    const StateMsgCallback& callback, long syncInterestInterval /*= -1.0*/)
   : m_face(face)
@@ -76,9 +73,9 @@ SyncCore::SyncCore(boost::shared_ptr<Face> face, SyncLogPtr syncLog, const Name&
   double interval =
     (m_syncInterestInterval > 0 && m_syncInterestInterval < 30) ? m_syncInterestInterval : 4;
   m_sendSyncInterestTask =
-    boost::make_shared<PeriodicTask>(bind(&SyncCore::sendSyncInterest, this), SYNC_INTEREST_TAG,
+    make_shared<PeriodicTask>(bind(&SyncCore::sendSyncInterest, this), SYNC_INTEREST_TAG,
                                      m_scheduler,
-                                     boost::make_shared<SimpleIntervalGenerator>(interval));
+                                     make_shared<SimpleIntervalGenerator>(interval));
   // sendSyncInterest();
   Scheduler::scheduleOneTimeTask(m_scheduler, 0.1, bind(&SyncCore::sendSyncInterest, this),
                                  SYNC_INTEREST_TAG2);
@@ -424,3 +421,6 @@ SyncCore::seq(const Name& name)
 {
   return m_log->SeqNo(name);
 }
+
+} // chronoshare
+} // ndn
