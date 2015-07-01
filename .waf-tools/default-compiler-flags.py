@@ -142,6 +142,7 @@ class ClangFlags(GccBasicFlags):
                               '-Wno-error=unneeded-internal-declaration', # Bug #1588
                               '-Wno-error=deprecated-register',
                               '-Wno-error=unused-local-typedef', # Bug #2657
+                              '-Wno-nested-anon-types', # protobuf uses nested anonymous types
                               ]
         if Utils.unversioned_sys_platform() == "darwin":
             flags['CXXFLAGS'] += ['-stdlib=libc++']

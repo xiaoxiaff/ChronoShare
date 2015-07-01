@@ -68,48 +68,30 @@ def configure(conf):
     conf.write_config_header('src/config.h')
 
 def build (bld):
-    feature_list = 'qt4 cxx'
-    if bld.env["TEST"]:
-        feature_list += ' cxxstlib'
-
-    executor = bld.objects (
-        target = "executor",
-        features = ["cxx"],
-        source = bld.path.ant_glob(['executor/**/*.cc']),
-        use = 'BOOST BOOST_THREAD LIBEVENT LIBEVENT_PTHREADS LOG4CXX',
-        includes = "executor src",
-        )
-
-    scheduler = bld.objects (
-        target = "scheduler",
-        features = ["cxx"],
-        source = bld.path.ant_glob(['scheduler/**/*.cc']),
-        use = 'BOOST BOOST_THREAD LIBEVENT LIBEVENT_PTHREADS LOG4CXX executor',
-        includes = "scheduler executor src",
-        )
-
     adhoc = bld (
         target = "adhoc",
         features=['cxx'],
         includes = "src",
     )
+
     if Utils.unversioned_sys_platform () == "darwin":
         adhoc.mac_app = True
         adhoc.source = 'adhoc/adhoc-osx.mm'
-        adhoc.use = "BOOST BOOST_THREAD BOOST_DATE_TIME LOG4CXX OSX_FOUNDATION OSX_COREWLAN"
+        adhoc.use = "BOOST LOG4CXX OSX_FOUNDATION OSX_COREWLAN"
 
-    chornoshare = bld (
+    chornoshare = bld(
         target="chronoshare",
-        features=feature_list,
+        features='qt4 cxx',
         source = bld.path.ant_glob(['src/**/*.cc', 'src/**/*.proto']),
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML SSL",
+        use = "BOOST SQLITE3 LOG4CXX scheduler NDN_CXX TINYXML SSL",
         includes = "scheduler src executor",
+        defines='WAF=1',
         )
 
     fs_watcher = bld (
         target = "fs_watcher",
         features = "qt4 cxx",
-        defines = "WAF",
+        defines = "WAF=1",
         source = bld.path.ant_glob(['fs-watcher/*.cc']),
         use = "SQLITE3 LOG4CXX scheduler executor QTCORE",
         includes = "fs-watcher scheduler executor src",
@@ -122,7 +104,7 @@ def build (bld):
 #          features = "qt4 cxx cxxprogram",
 #          defines = "WAF",
 #          source = bld.path.ant_glob(['test/*.cc']),
-#          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
+#          use = 'BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
 #          includes = "scheduler src executor gui fs-watcher",
 #          install_prefix = None,
 #          )
@@ -147,38 +129,35 @@ def build (bld):
 #                                      'test/client/client.cc', 'test/daemon/daemon.cc', 'test/daemon/notify-i.cc' #lack of lots of lib now
                                       ]),
           features=['qt4', 'cxx', 'cxxprogram'],
-          use = 'BOOST_TEST BOOST_FILESYSTEM BOOST_DATE_TIME LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
-#          use = 'BOOST BOOST_FILESYSTEM chronoshare fs_watcher QTCORE QTGUI',
-          includes = "scheduler src executor gui fs-watcher",
-          install_prefix = None,
-#          install_path = None,
-          defines = "WAF",
+          use='BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX database fs_watcher chronoshare TINYXML',
+          includes="scheduler src executor gui fs-watcher",
+          install_path=None,
+          defines="WAF",
 #          defines = 'TEST_CERT_PATH=\"%s/cert-test\"' %(bld.bldnode),
           )
 
-    http_server = bld (
-          target = "http_server",
-          features = "qt4 cxx",
-          source = bld.path.ant_glob(['server/*.cpp']),
-          includes = "server src .",
-          use = "BOOST QTCORE"
-          )
+    http_server = bld(
+          target="http_server",
+          features="qt4 cxx",
+          source=bld.path.ant_glob(['server/*.cpp']),
+          includes="server src .",
+          use="BOOST QTCORE")
 
-    qt = bld (
-        target = "ChronoShare",
-        features = "qt4 cxx cxxprogram html_resources",
-        defines = "WAF",
-        source = bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
-        includes = "scheduler executor fs-watcher gui src adhoc server . ",
-        use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server TINYXML",
+    qt = bld(
+        target="ChronoShare",
+        features="qt4 cxx cxxprogram html_resources",
+        defines="WAF=1",
+        source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cc', 'gui/images.qrc']),
+        includes="scheduler executor fs-watcher gui src adhoc server . ",
+        use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server TINYXML",
 
-        html_resources = bld.path.find_dir ("gui/html").ant_glob([
+        html_resources = bld.path.find_dir("gui/html").ant_glob([
                 '**/*.js', '**/*.png', '**/*.css',
                 '**/*.html', '**/*.gif', '**/*.ico'
                 ]),
         )
 
-    if Utils.unversioned_sys_platform () == "darwin":
+    if Utils.unversioned_sys_platform() == "darwin":
         app_plist = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
 <plist version="0.9">
@@ -218,7 +197,7 @@ def build (bld):
                 qt.mac_frameworks = "osx/Frameworks/Sparkle.framework"
 
     if Utils.unversioned_sys_platform () == "linux":
-        bld (
+        bld(
             features = "process_in",
             target = "ChronoShare.desktop",
             source = "ChronoShare.desktop.in",
@@ -229,19 +208,19 @@ def build (bld):
 
     cmdline = bld (
         target = "csd",
-	features = "qt4 cxx cxxprogram",
-	defines = "WAF",
-	source = "cmd/csd.cc",
-	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
-	)
+        features = "qt4 cxx cxxprogram",
+        defines = "WAF",
+        source = "cmd/csd.cc",
+        includes = "scheduler executor gui fs-watcher src . ",
+        use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
+        )
 
     dump_db = bld (
         target = "dump-db",
         features = "cxx cxxprogram",
-	source = "cmd/dump-db.cc",
-	includes = "scheduler executor gui fs-watcher src . ",
-	use = "BOOST BOOST_FILESYSTEM BOOST_DATE_TIME SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
+        source = "cmd/dump-db.cc",
+        includes = "scheduler executor gui fs-watcher src . ",
+        use = "BOOST SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX database chronoshare TINYXML"
         )
 
 from waflib import TaskGen
@@ -252,33 +231,34 @@ def m_hook(self, node):
 
 @TaskGen.extension('.js', '.png', '.css', '.html', '.gif', '.ico', '.in')
 def sig_hook(self, node):
-    node.sig=Utils.h_file (node.abspath())
+    node.sig = Utils.h_file(node.abspath())
 
 @TaskGen.feature('process_in')
 @TaskGen.after_method('process_source')
 def create_process_in(self):
-    dst = self.bld.path.find_or_declare (self.target)
-    tsk = self.create_task ('process_in', self.source, dst)
+    dst = self.bld.path.find_or_declare(self.target)
+    tsk = self.create_task('process_in', self.source, dst)
 
 class process_in(Task.Task):
-    color='PINK'
+    color = 'PINK'
 
-    def run (self):
-        self.outputs[0].write (Utils.subst_vars(self.inputs[0].read (), self.env))
+    def run(self):
+        self.outputs[0].write(Utils.subst_vars(self.inputs[0].read(), self.env))
 
 @TaskGen.feature('html_resources')
 @TaskGen.before_method('process_source')
 def create_qrc_task(self):
-    output = self.bld.path.find_or_declare ("gui/html.qrc")
+    output = self.bld.path.find_or_declare("gui/html.qrc")
     tsk = self.create_task('html_resources', self.html_resources, output)
-    tsk.base_path = output.parent.get_src ()
-    self.create_rcc_task (output.get_src ())
+    tsk.base_path = output.parent.get_src()
+    self.create_rcc_task(output.get_src())
 
 class html_resources(Task.Task):
     color='PINK'
 
     def __str__ (self):
-        return "%s: Generating %s\n" % (self.__class__.__name__.replace('_task',''), self.outputs[0].nice_path ())
+        return "%s: Generating %s\n" % (self.__class__.__name__.replace('_task',''),
+                                        self.outputs[0].path_from(self.outputs[0].ctx.launch_node()))
 
     def run (self):
         out = self.outputs[0]
@@ -291,18 +271,3 @@ class html_resources(Task.Task):
 
         src_out.write (bld_out.read(), 'w')
         return 0
-
-@Configure.conf
-def add_supported_cxxflags(self, cxxflags):
-    """
-    Check which cxxflags are supported by compiler and add them to env.CXXFLAGS variable
-    """
-    self.start_msg('Checking allowed flags for c++ compiler')
-
-    supportedFlags = []
-    for flag in cxxflags:
-        if self.check_cxx (cxxflags=[flag], mandatory=False):
-            supportedFlags += [flag]
-
-    self.end_msg (' '.join (supportedFlags))
-    self.env.CXXFLAGS += supportedFlags
