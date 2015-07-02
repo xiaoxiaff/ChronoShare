@@ -26,12 +26,6 @@
 #include "file-item.pb.h"
 #include <ndn-cxx/util/digest.hpp>
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/exception/all.hpp>
-#include <boost/function.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
-
 #include <list>
 
 namespace ndn {
@@ -50,8 +44,8 @@ public:
    * @brief Update or add a file
    */
   void
-  UpdateFile(const std::string& filename, sqlite3_int64 version, const ndn::Buffer& hash,
-             const ndn::Buffer& device_name, sqlite3_int64 seqno, time_t atime, time_t mtime,
+  UpdateFile(const std::string& filename, sqlite3_int64 version, const Buffer& hash,
+             const Buffer& device_name, sqlite3_int64 seqno, time_t atime, time_t mtime,
              time_t ctime, int mode, int seg_num);
 
   /**
@@ -79,13 +73,13 @@ public:
    * @brief Lookup file state using content hash(multiple items may be returned)
    */
   FileItemsPtr
-  LookupFilesForHash(const ndn::Buffer& hash);
+  LookupFilesForHash(const Buffer& hash);
 
   /**
    * @brief Lookup all files in the specified folder and call visitor(file) for each file
    */
   void
-  LookupFilesInFolder(const boost::function<void(const FileItem&)>& visitor,
+  LookupFilesInFolder(const function<void(const FileItem&)>& visitor,
                       const std::string& folder, int offset = 0, int limit = -1);
 
   /**
@@ -99,7 +93,7 @@ public:
    * file
    */
   bool
-  LookupFilesInFolderRecursively(const boost::function<void(const FileItem&)>& visitor,
+  LookupFilesInFolderRecursively(const function<void(const FileItem&)>& visitor,
                                  const std::string& folder, int offset = 0, int limit = -1);
 
   /**

@@ -24,7 +24,6 @@
 #include "digest-computer.hpp"
 #include "action-log.hpp"
 #include "sync-core.hpp"
-#include "executor.hpp"
 #include "object-db.hpp"
 #include "object-manager.hpp"
 #include "content-server.hpp"
@@ -48,7 +47,7 @@ public:
   // sharedFolder is the name to be used in NDN name;
   // rootDir is the shared folder dir in local file system;
   Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-             const boost::filesystem::path& rootDir, shared_ptr<ndn::Face> face,
+             const boost::filesystem::path& rootDir, shared_ptr<Face> face,
              bool enablePrefixDiscovery = true);
   ~Dispatcher();
 
@@ -69,7 +68,7 @@ public:
   Restore_LocalFile(FileItemPtr file);
 
   // for test
-  ndn::ConstBufferPtr
+  ConstBufferPtr
   SyncRoot()
   {
     return m_core->root();
@@ -92,7 +91,7 @@ private:
   }
 
   void
-  listen_other(shared_ptr<ndn::Face> face, std::string name)
+  listen_other(shared_ptr<Face> face, std::string name)
   {
     printf("%s start listening ...\n", name.c_str());
     face->processEvents();
@@ -144,8 +143,8 @@ private:
   Did_SyncLog_StateChange_Execute(SyncStateMsgPtr stateMsg);
 
   void
-  Did_FetchManager_ActionFetch(const ndn::Name& deviceName, const ndn::Name& actionName,
-                               uint32_t seqno, ndn::shared_ptr<ndn::Data> actionData);
+  Did_FetchManager_ActionFetch(const Name& deviceName, const Name& actionName,
+                               uint32_t seqno, shared_ptr<Data> actionData);
 
   void
   Did_ActionLog_ActionApply_Delete(const std::string& filename);
@@ -154,32 +153,32 @@ private:
   Did_ActionLog_ActionApply_Delete_Execute(std::string filename);
 
   // void
-  // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, ndn::Name device_name,
+  // Did_ActionLog_ActionApply_AddOrModify(const std::string &filename, Name device_name,
   // sqlite3_int64 seq_no,
-  //                                        ndn::ConstBufferPtr hash, time_t m_time, int mode, int
+  //                                        ConstBufferPtr hash, time_t m_time, int mode, int
   //                                        seg_num);
 
   void
-  Did_FetchManager_FileSegmentFetch(const ndn::Name& deviceName, const ndn::Name& fileSegmentName,
-                                    uint32_t segment, ndn::shared_ptr<ndn::Data> fileSegmentData);
+  Did_FetchManager_FileSegmentFetch(const Name& deviceName, const Name& fileSegmentName,
+                                    uint32_t segment, shared_ptr<Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileSegmentFetch_Execute(ndn::Name deviceName, ndn::Name fileSegmentName,
+  Did_FetchManager_FileSegmentFetch_Execute(Name deviceName, Name fileSegmentName,
                                             uint32_t segment,
-                                            ndn::shared_ptr<ndn::Data> fileSegmentData);
+                                            shared_ptr<Data> fileSegmentData);
 
   void
-  Did_FetchManager_FileFetchComplete(const ndn::Name& deviceName, const ndn::Name& fileBaseName);
+  Did_FetchManager_FileFetchComplete(const Name& deviceName, const Name& fileBaseName);
 
   void
-  Did_FetchManager_FileFetchComplete_Execute(ndn::Name deviceName, ndn::Name fileBaseName);
+  Did_FetchManager_FileFetchComplete_Execute(Name deviceName, Name fileBaseName);
 
   void
-  Did_LocalPrefix_Updated(const ndn::Name& prefix);
+  Did_LocalPrefix_Updated(const Name& prefix);
 
 private:
   void
-  AssembleFile_Execute(const ndn::Name& deviceName, const ndn::Buffer& filehash,
+  AssembleFile_Execute(const Name& deviceName, const Buffer& filehash,
                        const boost::filesystem::path& relativeFilepath);
 
   // void
@@ -192,26 +191,27 @@ private:
   // actionReceived(const ActionItemPtr &actionItem);
 
   // void
-  // fileSegmentReceived(const ndn::Name &name, const Ccnx::Bytes &content);
+  // fileSegmentReceived(const Name &name, const Ccnx::Bytes &content);
 
   // void
-  // fileReady(const ndn::Name &fileNamePrefix);
+  // fileReady(const Name &fileNamePrefix);
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  shared_ptr<Face> m_face;
   SyncCore* m_core;
   SyncLogPtr m_syncLog;
   ActionLogPtr m_actionLog;
   FileStatePtr m_fileState;
 
   boost::filesystem::path m_rootDir;
-  Executor m_executor;
+  boost::asio::io_service& m_ioService;
+
   ObjectManager m_objectManager;
-  ndn::Name m_localUserName;
+  Name m_localUserName;
   // maintain object db ptrs so that we don't need to create them
   // for every fetched segment of a file
 
-  std::map<ndn::Buffer, ObjectDbPtr> m_objectDbMap;
+  std::map<Buffer, ObjectDbPtr> m_objectDbMap;
 
   std::string m_sharedFolder;
   ContentServer* m_server;
@@ -222,8 +222,8 @@ private:
   FetchManagerPtr m_fileFetcher;
   DigestComputer m_digestComputer;
 
-  shared_ptr<ndn::Face> m_face_server;
-  shared_ptr<ndn::Face> m_face_stateServer;
+  shared_ptr<Face> m_face_server;
+  shared_ptr<Face> m_face_stateServer;
   boost::thread m_faceListening;
   boost::thread m_serverListening;
   boost::thread m_stateServerListening;

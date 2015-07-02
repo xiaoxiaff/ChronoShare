@@ -86,7 +86,7 @@ deserializeGZipMsg(const Buffer& bytes)
   in.push(boost::iostreams::gzip_decompressor()); // gzip filter
   in.push(boost::make_iterator_range(sBytes));    // source
 
-  shared_ptr<Msg> retval = boost::make_shared<Msg>();
+  shared_ptr<Msg> retval = make_shared<Msg>();
   if (!retval->ParseFromIstream(&in)) {
     // to indicate an error
     return shared_ptr<Msg>();
@@ -97,10 +97,10 @@ deserializeGZipMsg(const Buffer& bytes)
 
 class SyncCore {
 public:
-  typedef boost::function<void(SyncStateMsgPtr stateMsg)> StateMsgCallback;
+  typedef function<void(SyncStateMsgPtr stateMsg)> StateMsgCallback;
 
   static const int FRESHNESS; // seconds
-  static const string RECOVER;
+  static const std::string RECOVER;
   static const double WAIT;           // seconds;
   static const double RANDOM_PERCENT; // seconds;
 
@@ -193,9 +193,9 @@ private:
   SyncLogPtr m_log;
 
   Scheduler m_scheduler;
-  util::ScopedEventId m_syncInterestEvent;
-  util::ScopedEventId m_periodicInterestEvent;
-  util::ScopedEventId m_localStateDelayedEvent;
+  util::scheduler::ScopedEventId m_syncInterestEvent;
+  util::scheduler::ScopedEventId m_periodicInterestEvent;
+  util::scheduler::ScopedEventId m_localStateDelayedEvent;
 
   StateMsgCallback m_stateMsgCallback;
 

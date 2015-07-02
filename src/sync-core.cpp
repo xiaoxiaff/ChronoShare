@@ -21,8 +21,8 @@
 #include "sync-core.hpp"
 #include "sync-state-helper.hpp"
 #include "logging.hpp"
-#include "periodic-task.hpp"
-#include "digest-computer.hpp"
+
+#include <ndn-cxx/util/string-helper.hpp>
 
 #include <boost/lexical_cast.hpp>
 
@@ -32,7 +32,7 @@ namespace chronoshare {
 INIT_LOGGER("Sync.Core");
 
 const int SyncCore::FRESHNESS = 2;
-const string SyncCore::RECOVER = "RECOVER";
+const std::string SyncCore::RECOVER = "RECOVER";
 const double SyncCore::WAIT = 0.05;
 const double SyncCore::RANDOM_PERCENT = 0.5;
 
@@ -101,8 +101,8 @@ SyncCore::localStateChanged()
 
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] localStateChanged ");
   _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes: oldDigest--"
-                 << DigestComputer::shortDigest(*oldDigest) << " newDigest--"
-                 << DigestComputer::shortDigest(*m_rootDigest));
+                 << toHex(*oldDigest) << " newDigest--"
+                 << toHex(*m_rootDigest));
 
   SyncStateMsgPtr msg = m_log->FindStateDifferences(*oldDigest, *m_rootDigest);
 
@@ -154,7 +154,7 @@ SyncCore::sendSyncInterest()
   syncInterest.appendImplicitSha256Digest(m_rootDigest);
 
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send SYNC Interest for "
-                 << DigestComputer::shortDigest(*m_rootDigest) << ": " << syncInterest.toUri());
+                 << toHex(*m_rootDigest) << ": " << syncInterest);
 
   Interest interest(syncInterest);
   if (m_syncInterestInterval > 0 && m_syncInterestInterval < 30) {
@@ -175,14 +175,14 @@ SyncCore::recover(ConstBufferPtr digest)
 {
   if (!(*digest == *m_rootDigest) && m_log->LookupSyncLog(*digest) <= 0) {
     _LOG_TRACE(m_log->GetLocalName() << ", Recover for received_Digest "
-                                     << DigestComputer::shortDigest(*digest));
+                                     << toHex(*digest));
     // unfortunately we still don't recognize this digest
     // append the unknown digest
     Name recoverInterest(m_syncPrefix);
     recoverInterest.append(RECOVER).appendImplicitSha256Digest(digest);
 
     _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send RECOVER Interests for "
-                   << DigestComputer::shortDigest(*digest));
+                   << toHex(*digest));
 
     m_face->expressInterest(recoverInterest,
                             bind(&SyncCore::handleRecoverData, this, _1, _2),
@@ -219,7 +219,7 @@ SyncCore::handleSyncInterest(const Name& name)
     make_shared<Buffer>(name.get(-1).value(), name.get(-1).value_size());
   if (*digest == *m_rootDigest) {
     // we have the same digest; nothing needs to be done
-    _LOG_TRACE("same as root digest: " << DigestComputer::shortDigest(*digest));
+    _LOG_TRACE("same as root digest: " << toHex(*digest));
     return;
   }
   else if (m_log->LookupSyncLog(*digest) > 0) {
@@ -236,26 +236,21 @@ SyncCore::handleSyncInterest(const Name& name)
     m_face->put(*data);
 
     _LOG_TRACE(m_log->GetLocalName()
-               << " publishes: " << DigestComputer::shortDigest(*digest)
-               << " my_rootDigest:" << DigestComputer::shortDigest(*m_rootDigest));
+               << " publishes: " << toHex(*digest)
+               << " my_rootDigest:" << toHex(*m_rootDigest));
     _LOG_TRACE(msg);
   }
   else {
-
-    static boost::random::uniform_int_distribution<uint32_t> distribution;
-    return distribution(getRandomGenerator());
-
-    
     // we don't recognize the digest, send recover Interest if still don't know the digest after a
     // randomized wait period
     double wait = m_recoverWaitGenerator->nextInterval();
     _LOG_TRACE(m_log->GetLocalName()
-               << ", my_rootDigest: " << DigestComputer::shortDigest(*m_rootDigest)
-               << ", received_Digest: " << DigestComputer::shortDigest(*digest));
+               << ", my_rootDigest: " << toHex(*m_rootDigest)
+               << ", received_Digest: " << toHex(*digest));
     _LOG_TRACE("recover task scheduled after wait: " << wait);
 
     // @todo Figure out how to cancel scheduled events when class is destroyed
-    m_scheduler.scheduleEvent(time::milliseconds(wait * 1000),
+    m_scheduler.scheduleEvent(time::milliseconds(static_cast<int>(wait * 1000)),
                               bind(&SyncCore::recover, this, digest));
   }
 }
@@ -268,9 +263,9 @@ SyncCore::handleRecoverInterest(const Name& name)
   ConstBufferPtr digest =
     make_shared<Buffer>(name.get(-1).value(), name.get(-1).value_size());
   // this is the digest unkonwn to the sender of the interest
-  _LOG_DEBUG("rootDigest: " << DigestComputer::shortDigest(*digest));
+  _LOG_DEBUG("rootDigest: " << toHex(*digest));
   if (m_log->LookupSyncLog(*digest) > 0) {
-    _LOG_DEBUG("Find in our sync_log! " << DigestComputer::shortDigest(*digest));
+    _LOG_DEBUG("Find in our sync_log! " << toHex(*digest));
     // we know the digest, should reply everything and the newest thing, but not the digest!!! This
     // is important
     unsigned char _origin = 0;
@@ -287,9 +282,9 @@ SyncCore::handleRecoverInterest(const Name& name)
     m_face->put(*data);
 
     _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes "
-                   << DigestComputer::shortDigest(*digest)
+                   << toHex(*digest)
                    << " FindStateDifferences(0, m_rootDigest/"
-                   << DigestComputer::shortDigest(*m_rootDigest) << ")");
+                   << toHex(*m_rootDigest) << ")");
     _LOG_TRACE(msg);
   }
   else {
@@ -369,7 +364,7 @@ SyncCore::handleStateData(const Buffer& content)
   int index = 0;
   while (index < size) {
     SyncState state = msg->state(index);
-    string devStr = state.name();
+    std::string devStr = state.name();
     Name
     deviceName(Block((const unsigned char*)devStr.c_str(), devStr.size()));
     //    cout << "Got Name: " << deviceName;
@@ -378,7 +373,7 @@ SyncCore::handleStateData(const Buffer& content)
       //      cout << ", Got seq: " << seqno << endl;
       m_log->UpdateDeviceSeqNo(deviceName, seqno);
       if (state.has_locator()) {
-        string locStr = state.locator();
+        std::string locStr = state.locator();
         Name
         locatorName(Block((const unsigned char*)locStr.c_str(), locStr.size()));
         //        cout << ", Got loc: " << locatorName << endl;

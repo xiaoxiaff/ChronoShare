@@ -22,6 +22,7 @@
 #include "logging.hpp"
 
 #include <ndn-cxx/util/sqlite3-statement.hpp>
+#include <ndn-cxx/util/string-helper.hpp>
 
 namespace ndn {
 namespace chronoshare {
@@ -203,7 +204,7 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
     BOOST_THROW_EXCEPTION(Error("Some error with rememberStateInStateLog"));
   }
 
-  _LOG_DEBUG("rememberinStateLog rootDigest: " << DigestComputer::shortDigest(*retval));
+  _LOG_DEBUG("rememberinStateLog rootDigest: " << toHex(*retval));
   return retval;
 }
 

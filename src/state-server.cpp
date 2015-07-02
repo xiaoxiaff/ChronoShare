@@ -21,6 +21,9 @@
 #include "state-server.hpp"
 #include "logging.hpp"
 
+#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/string-helper.hpp>
+
 #include <boost/asio/io_service.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -170,7 +173,7 @@ StateServer::formatActionJson(json_spirit::Array& actions, const Name& name,
   if (action.action() == 0) {
     Object update;
     const Buffer hash(action.file_hash().c_str(), action.file_hash().size());
-    update.push_back(Pair("hash", DigestComputer::digestToString(hash)));
+    update.push_back(Pair("hash", toHex(hash)));
     update.push_back(Pair("timestamp", to_iso_extended_string(from_time_t(action.mtime()))));
 
     std::ostringstream chmod;
@@ -325,8 +328,8 @@ StateServer::formatFilestateJson(json_spirit::Array& files, const FileItem& file
     json.push_back(Pair("owner", owner));
   }
 
-  json.push_back(Pair("hash", DigestComputer::digestToString(
-                                Buffer(file.file_hash().c_str(), file.file_hash().size()))));
+  json.push_back(Pair("hash", toHex(reinterpret_cast<const uint8_t*>(file.file_hash().data()),
+                                    file.file_hash().size())));
   json.push_back(Pair("timestamp", to_iso_extended_string(from_time_t(file.mtime()))));
 
   std::ostringstream chmod;
@@ -449,7 +452,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
     if (!file) {
       _LOG_ERROR("Requested file is not found: [" << filename << "] version [" << version
                                                   << "] hash ["
-                                                  << DigestComputer::digestToString(hash) << "]");
+                                                  << toHex(hash) << "]");
     }
   }
   else {
@@ -484,21 +487,23 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
   _LOG_DEBUG("filePath" << filePath << " deviceName " << deviceName);
 
   try {
-    if (fs::exists(filePath) && fs::last_write_time(filePath) == file->mtime() &&
+    if (fs::exists(filePath) && fs::last_write_time(filePath) == file->mtime()
 #if BOOST_VERSION >= 104900
-        fs::status(filePath).permissions() == static_cast<fs::perms>(file->mode())
-        &&
+        && fs::status(filePath).permissions() == static_cast<fs::perms>(file->mode())
 #endif
-        *m_digestComputer.digestFromFile(filePath) == hash) {
-      shared_ptr<Data> data = make_shared<Data>();
-      data->setName(interest);
-      data->setFreshnessPeriod(m_freshness);
-      std::string msg = "OK: File already exists";
-      data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
-      m_keyChain.sign(*data);
-      m_face->put(*data);
-      _LOG_DEBUG("Asking to assemble a file, but file already exists on a filesystem");
-      return;
+        ) {
+      fs::ifstream input(filePath, std::ios::in | std::ios::binary);
+      if (*util::Sha256(input).computeDigest() == hash) {
+        shared_ptr<Data> data = make_shared<Data>();
+        data->setName(interest);
+        data->setFreshnessPeriod(m_freshness);
+        std::string msg = "OK: File already exists";
+        data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
+        m_keyChain.sign(*data);
+        m_face->put(*data);
+        _LOG_DEBUG("Asking to assemble a file, but file already exists on a filesystem");
+        return;
+      }
     }
   }
   catch (fs::filesystem_error& error) {

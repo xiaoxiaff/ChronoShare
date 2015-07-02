@@ -27,6 +27,7 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
+#include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
 
 #include <set>
 #include <map>
@@ -100,7 +101,8 @@ private:
   boost::filesystem::path m_dbFolder;
   int m_freshness;
 
-  SchedulerPtr m_scheduler;
+  Scheduler m_scheduler;
+  util::scheduler::ScopedEventId m_flushStateDbCacheEvent;
   typedef std::map<ndn::Buffer, ObjectDbPtr> DbCache;
   DbCache m_dbCache;
   Mutex m_dbCacheMutex;

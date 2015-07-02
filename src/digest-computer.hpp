@@ -31,69 +31,42 @@ namespace chronoshare {
 namespace fs = boost::filesystem;
 class DigestComputer {
 public:
-  DigestComputer()
-  {
-  }
 
-  ~DigestComputer()
-  {
-  }
+  // static std::string
+  // digestToString(const Buffer& digest)
+  // {
+  //   using namespace CryptoPP;
 
-  mutable ndn::util::Sha256 m_digest;
+  //   std::string hash;
+  //   StringSource(digest.buf(), digest.size(), true, new HexEncoder(new StringSink(hash), false));
+  //   return hash;
+  // }
 
-  ndn::ConstBufferPtr
-  digestFromFile(const boost::filesystem::path& filename)
-  {
-    m_digest.reset();
-    boost::filesystem::ifstream iff(filename, std::ios::in | std::ios::binary);
-    while (iff.good()) {
-      char buf[1024];
-      iff.read(buf, 1024);
-      m_digest.update(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
-    }
-    return m_digest.computeDigest();
-  }
-
-  ndn::ConstBufferPtr
-  computeRootDigest(ndn::Block& block, uint64_t seq_no)
-  {
-    m_digest.reset();
-    m_digest << block << seq_no;
-    return m_digest.computeDigest();
-  }
-
-  static std::string
-  digestToString(const ndn::Buffer& digest)
-  {
-    using namespace CryptoPP;
-
-    std::string hash;
-    StringSource(digest.buf(), digest.size(), true, new HexEncoder(new StringSink(hash), false));
-    return hash;
-  }
-
-  static ndn::Buffer
-  digestFromString(std::string hash)
+  static Buffer
+  digestFromString(const std::string& hash)
   {
     using namespace CryptoPP;
 
     std::string digestStr;
     StringSource(hash, true, new HexDecoder(new StringSink(digestStr)));
-    ndn::Buffer
+    Buffer
     digest(reinterpret_cast<const uint8_t*>(digestStr.c_str()), digestStr.size());
 
     return digest;
   }
 
-  static std::string
-  shortDigest(const ndn::Buffer& digest)
-  {
-    using namespace CryptoPP;
+  // static std::string
+  // shortDigest(const Buffer& digest)
+  // {
+  //   using namespace CryptoPP;
 
-    std::string hash;
-    StringSource(digest.buf(), digest.size(), true, new HexEncoder(new StringSink(hash), false));
-    return hash.substr(0, 5);
-  }
+  //   std::string hash;
+  //   StringSource(digest.buf(), digest.size(), true, new HexEncoder(new StringSink(hash), false));
+  //   return hash.substr(0, 5);
+  // }
+
+private:
+  util::Sha256 m_digest;
 };
 
 } // chronoshare

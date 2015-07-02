@@ -18,10 +18,11 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef SYNC_STATE_HELPER_H
-#define SYNC_STATE_HELPER_H
+#ifndef CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP
+#define CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP
 
-#include "sync-state.pb.hpp"
+#include "core/chronoshare-common.hpp"
+#include "sync-state.pb.h"
 
 namespace ndn {
 namespace chronoshare {
@@ -36,15 +37,13 @@ operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
     int index = 0;
     while (index < size) {
       SyncState state = msg->state(index);
-      string strName = state.name();
-      string strLocator = state.locator();
+      std::string strName = state.name();
+      std::string strLocator = state.locator();
       sqlite3_int64 seq = state.seq();
 
-      os << "Name: "
-         << ndn::Name(ndn::Block((const unsigned char*)strName.c_str(), strName.size())).toUri()
-         << ", Locator: "
-         << ndn::Name(ndn::Block((const unsigned char*)strLocator.c_str(), strLocator.size()))
-              .toUri() << ", seq: " << seq << std::endl;
+      os << "Name: " << Name(Block((const unsigned char*)strName.c_str(), strName.size())).toUri()
+         << ", Locator: " << Name(Block((const unsigned char*)strLocator.c_str(), strLocator.size()))
+         << ", seq: " << seq << std::endl;
       index++;
     }
   }
@@ -59,4 +58,4 @@ operator<<(std::ostream& os, const SyncStateMsgPtr& msg)
 } // chronoshare
 } // ndn
 
-#endif // SYNC_STATE_HELPER_H
+#endif // CHRONOSHARE_SRC_SYNC_STATE_HELPER_HPP

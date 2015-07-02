@@ -24,11 +24,10 @@
 
 #include <sys/stat.h>
 
-#include <fstream>
 #include <boost/lexical_cast.hpp>
-#include <boost/throw_exception.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/make_shared.hpp>
+
+#include <ndn-cxx/util/string-helper.hpp>
 
 namespace ndn {
 namespace chronoshare {
@@ -36,6 +35,7 @@ namespace chronoshare {
 INIT_LOGGER("Object.Manager");
 
 namespace fs = boost::filesystem;
+using util::Sha256;
 
 const int MAX_FILE_SEGMENT_SIZE = 1024;
 
@@ -53,15 +53,15 @@ ObjectManager::~ObjectManager()
 }
 
 // /<devicename>/<appname>/file/<hash>/<segment>
-boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
-ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceName)
+std::tuple<ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
+ObjectManager::localFileToObjects(const fs::path& file, const Name& deviceName)
 {
-  ndn::ConstBufferPtr fileHash = m_digestComputer.digestFromFile(file);
-  _LOG_DEBUG("fileHash size " << fileHash->size() << " fileHash content "
-                              << DigestComputer::digestToString(*fileHash));
+  fs::ifstream input1(file, std::ios::in | std::ios::binary);
+  Sha256 fileHash(input1);
+  _LOG_DEBUG("fileHash content " << fileHash.toString());
 
   _LOG_DEBUG("file " << file);
-  ObjectDb fileDb(m_folder, DigestComputer::digestToString(*fileHash));
+  ObjectDb fileDb(m_folder, fileHash.toString());
 
   fs::ifstream iff(file, std::ios::in | std::ios::binary);
   sqlite3_int64 segment = 0;
@@ -73,11 +73,11 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
       break;
     }
 
-    ndn::Name name = ndn::Name("/");
+    Name name = Name("/");
     name.append(deviceName)
       .append(m_appName)
       .append("file")
-      .appendImplicitSha256Digest(fileHash)
+      .appendImplicitSha256Digest(fileHash.computeDigest())
       .appendNumber(segment);
     _LOG_DEBUG("publish Data Name: " << name.toUri());
 
@@ -85,7 +85,7 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
     // cout << name << endl;
     //_LOG_DEBUG("Read " << iff.gcount() << " from " << file << " for segment " << segment);
 
-    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    shared_ptr<Data> data = make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(60));
     data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
@@ -98,14 +98,14 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
   }
   if (segment == 0) // handle empty files
   {
-    ndn::Name name = ndn::Name("/");
+    Name name = Name("/");
     name.append(m_appName)
       .append("file")
-      .appendImplicitSha256Digest(fileHash)
+      .appendImplicitSha256Digest(fileHash.computeDigest())
       .append(deviceName)
       .appendNumber(0);
 
-    ndn::shared_ptr<Data> data = ndn::make_shared<Data>();
+    shared_ptr<Data> data = make_shared<Data>();
     data->setName(name);
     data->setFreshnessPeriod(time::seconds(0));
     data->setContent(0, 0);
@@ -117,14 +117,14 @@ ObjectManager::localFileToObjects(const fs::path& file, const ndn::Name& deviceN
     segment++;
   }
 
-  return boost::make_tuple(fileHash, segment);
+  return std::make_tuple(fileHash.computeDigest(), segment);
 }
 
 bool
-ObjectManager::objectsToLocalFile(/*in*/ const ndn::Name& deviceName,
-                                  /*in*/ const ndn::Buffer& fileHash, /*out*/ const fs::path& file)
+ObjectManager::objectsToLocalFile(/*in*/const Name& deviceName,
+                                  /*in*/const Buffer& fileHash, /*out*/const fs::path& file)
 {
-  string hashStr = DigestComputer::digestToString(fileHash);
+  std::string hashStr = toHex(fileHash);
   if (!ObjectDb::DoesExist(m_folder, deviceName, hashStr)) {
     _LOG_ERROR("ObjectDb for [" << m_folder << ", " << deviceName << ", " << hashStr
                                 << "] does not exist or not all segments are available");
@@ -139,7 +139,7 @@ ObjectManager::objectsToLocalFile(/*in*/ const ndn::Name& deviceName,
   ObjectDb fileDb(m_folder, hashStr);
 
   sqlite3_int64 segment = 0;
-  ndn::BufferPtr bytes = fileDb.fetchSegment(deviceName, 0);
+  BufferPtr bytes = fileDb.fetchSegment(deviceName, 0);
   while (bytes) {
 
     if (bytes->buf()) {

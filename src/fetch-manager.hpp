@@ -21,17 +21,15 @@
 #ifndef FETCH_MANAGER_H
 #define FETCH_MANAGER_H
 
+#include "chronoshare-common.hpp"
+
 #include "fetcher.hpp"
 #include "fetch-task-db.hpp"
-#include "scheduler.hpp"
-#include "executor.hpp"
 
-#include <boost/exception/all.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-#include <string>
+#include <ndn-cxx/util/scheduler.hpp>
+#include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
+
 #include <list>
-#include <stdint.h>
 
 namespace ndn {
 namespace chronoshare {
@@ -40,42 +38,43 @@ class FetchManager {
 public:
   enum { PRIORITY_NORMAL, PRIORITY_HIGH };
 
-  typedef boost::function<ndn::Name(const ndn::Name&)> Mapping;
-  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName, uint64_t seq,
-                               ndn::shared_ptr<ndn::Data> data)> SegmentCallback;
-  typedef boost::function<void(ndn::Name& deviceName, ndn::Name& baseName)> FinishCallback;
-  FetchManager(shared_ptr<ndn::Face> face, const Mapping& mapping,
-               const ndn::Name& broadcastForwardingHint, uint32_t parallelFetches = 3,
+  typedef function<Name(const Name&)> Mapping;
+  typedef function<void(Name& deviceName, Name& baseName, uint64_t seq, shared_ptr<Data> data)> SegmentCallback;
+  typedef function<void(Name& deviceName, Name& baseName)> FinishCallback;
+
+public:
+  FetchManager(shared_ptr<Face> face, const Mapping& mapping,
+               const Name& broadcastForwardingHint, uint32_t parallelFetches = 3,
                const SegmentCallback& defaultSegmentCallback = SegmentCallback(),
                const FinishCallback& defaultFinishCallback = FinishCallback(),
                const FetchTaskDbPtr& taskDb = FetchTaskDbPtr());
   virtual ~FetchManager();
 
   void
-  Enqueue(const ndn::Name& deviceName, const ndn::Name& baseName,
+  Enqueue(const Name& deviceName, const Name& baseName,
           const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
           uint64_t minSeqNo, uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
 
   // Enqueue using default callbacks
   void
-  Enqueue(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+  Enqueue(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
           uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
 
   // only for Fetcher
-  inline shared_ptr<ndn::Face>
+  inline shared_ptr<Face>
   GetFace();
 
 private:
   // Fetch Events
   void
-  DidDataSegmentFetched(Fetcher& fetcher, uint64_t seqno, const ndn::Name& basename,
-                        const ndn::Name& name, ndn::shared_ptr<ndn::Data> data);
+  DidDataSegmentFetched(Fetcher& fetcher, uint64_t seqno, const Name& basename,
+                        const Name& name, shared_ptr<Data> data);
 
   void
   DidNoDataTimeout(Fetcher& fetcher);
 
   void
-  DidFetchComplete(Fetcher& fetcher, const ndn::Name& deviceName, const ndn::Name& baseName);
+  DidFetchComplete(Fetcher& fetcher, const Name& deviceName, const Name& baseName);
 
   void
   ScheduleFetches();
@@ -84,7 +83,7 @@ private:
   TimedWait(Fetcher& fetcher);
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  shared_ptr<Face> m_face;
   Mapping m_mapping;
 
   uint32_t m_maxParallelFetches;
@@ -97,17 +96,18 @@ private:
   typedef boost::intrusive::list<Fetcher, MemberOption> FetchList;
 
   FetchList m_fetchList;
-  SchedulerPtr m_scheduler;
-  ExecutorPtr m_executor;
-  TaskPtr m_scheduleFetchesTask;
+  Scheduler m_scheduler;
+  util::scheduler::ScopedEventId m_scheduledFetchesEvent;
+
   SegmentCallback m_defaultSegmentCallback;
   FinishCallback m_defaultFinishCallback;
   FetchTaskDbPtr m_taskDb;
 
-  const ndn::Name m_broadcastHint;
+  const Name m_broadcastHint;
+  boost::asio::io_service& m_ioService;
 };
 
-shared_ptr<ndn::Face>
+shared_ptr<Face>
 FetchManager::GetFace()
 {
   return m_face;

@@ -53,13 +53,13 @@ Fetcher::Fetcher(shared_ptr<Face> face,
 
   , m_minSendSeqNo(minSeqNo - 1)
   , m_maxInOrderRecvSeqNo(minSeqNo - 1)
-  , m_minSeqNo(minSeqNo)
+  // , m_minSeqNo(minSeqNo)
   , m_maxSeqNo(maxSeqNo)
 
   , m_pipeline(6) // initial "congestion window"
   , m_activePipeline(0)
   , m_retryPause(0)
-  , m_nextScheduledRetry(date_time::second_clock<boost::posix_time::ptime>::universal_time())
+  , m_nextScheduledRetry(boost::date_time::second_clock<boost::posix_time::ptime>::universal_time())
 
   , m_ioService(face->getIoService())
 {
@@ -75,7 +75,7 @@ Fetcher::RestartPipeline()
   m_active = true;
   m_minSendSeqNo = m_maxInOrderRecvSeqNo;
   // cout << "Restart: " << m_minSendSeqNo << endl;
-  m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
+  m_lastPositiveActivity = boost::date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
   m_ioService.post(bind(&Fetcher::FillPipeline, this));
 }
@@ -137,7 +137,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
   if (m_forwardingHint == Name()) {
     // TODO: check verified!!!!
     if (true) {
-      if (!m_segmentCallback.empty()) {
+      if (m_segmentCallback != nullptr) {
         m_segmentCallback(m_deviceName, m_name, seqno, pco);
       }
     }
@@ -153,7 +153,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
     // we need to verify this pco and apply callback only when verified
     // TODO: check verified !!!
     if (true) {
-      if (!m_segmentCallback.empty()) {
+      if (m_segmentCallback != nullptr) {
         m_segmentCallback(m_deviceName, m_name, seqno, pco);
       }
     }
@@ -164,7 +164,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
   }
 
   m_activePipeline--;
-  m_lastPositiveActivity = date_time::second_clock<boost::posix_time::ptime>::universal_time();
+  m_lastPositiveActivity = boost::date_time::second_clock<boost::posix_time::ptime>::universal_time();
 
   ////////////////////////////////////////////////////////////////////////////
   boost::unique_lock<boost::mutex> lock(m_seqNoMutex);
@@ -172,7 +172,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
   m_outOfOrderRecvSeqNo.insert(seqno);
   m_inActivePipeline.erase(seqno);
   _LOG_DEBUG("Total segments received: " << m_outOfOrderRecvSeqNo.size());
-  set<int64_t>::iterator inOrderSeqNo = m_outOfOrderRecvSeqNo.begin();
+  std::set<int64_t>::iterator inOrderSeqNo = m_outOfOrderRecvSeqNo.begin();
   for (; inOrderSeqNo != m_outOfOrderRecvSeqNo.end(); inOrderSeqNo++) {
     _LOG_TRACE("Checking " << *inOrderSeqNo << " and " << m_maxInOrderRecvSeqNo + 1);
     if (*inOrderSeqNo == m_maxInOrderRecvSeqNo + 1) {
@@ -195,7 +195,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
     _LOG_TRACE("Fetch finished: " << m_name);
     m_active = false;
     // invoke callback
-    if (!m_finishCallback.empty()) {
+    if (m_finishCallback != nullptr) {
       _LOG_TRACE("Notifying callback");
       m_finishCallback(m_deviceName, m_name);
     }
@@ -203,7 +203,7 @@ Fetcher::OnData_Execute(uint64_t seqno, const Interest& interest, Data& data)
     // tell FetchManager that we have finish our job
     // m_onFetchComplete(*this);
     // using executor, so we won't be deleted if there is scheduled FillPipeline call
-    if (!m_onFetchComplete.empty()) {
+    if (m_onFetchComplete != nullptr) {
       m_timedwait = true;
       m_ioService.post(bind(m_onFetchComplete, boost::ref(*this), m_deviceName, m_name));
     }
@@ -232,7 +232,7 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const Interest& interest)
   //      << ", oldest: " <<(date_time::second_clock<boost::posix_time::ptime>::universal_time() -
   //      m_maximumNoActivityPeriod) << endl;
 
-  if (m_lastPositiveActivity < (date_time::second_clock<boost::posix_time::ptime>::universal_time()
+  if (m_lastPositiveActivity < (boost::date_time::second_clock<boost::posix_time::ptime>::universal_time()
                                 - m_maximumNoActivityPeriod)) {
     bool done = false;
     {
@@ -253,7 +253,7 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const Interest& interest)
       }
 
       m_active = false;
-      if (!m_onFetchFailed.empty()) {
+      if (m_onFetchFailed != nullptr) {
         m_onFetchFailed(boost::ref(*this));
       }
       // this is not valid anymore, but we still should be able finish work

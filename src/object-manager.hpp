@@ -36,7 +36,7 @@ namespace chronoshare {
 
 class ObjectManager {
 public:
-  ObjectManager(shared_ptr<ndn::Face> face, const boost::filesystem::path& folder,
+  ObjectManager(shared_ptr<Face> face, const boost::filesystem::path& folder,
                 const std::string& appName);
   virtual ~ObjectManager();
 
@@ -45,18 +45,18 @@ public:
    *
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
-  boost::tuple<ndn::ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
-  localFileToObjects(const boost::filesystem::path& file, const ndn::Name& deviceName);
+  std::tuple<ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
+  localFileToObjects(const boost::filesystem::path& file, const Name& deviceName);
 
   bool
-  objectsToLocalFile(/*in*/ const ndn::Name& deviceName, /*in*/ const ndn::Buffer& hash,
+  objectsToLocalFile(/*in*/ const Name& deviceName, /*in*/ const Buffer& hash,
                      /*out*/ const boost::filesystem::path& file);
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  shared_ptr<Face> m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
-  ndn::KeyChain m_keyChain;
+  KeyChain m_keyChain;
   DigestComputer m_digestComputer;
 };
 

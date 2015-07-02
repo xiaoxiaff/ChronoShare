@@ -22,8 +22,9 @@
 #include "content-server.hpp"
 #include "logging.hpp"
 
+#include <ndn-cxx/util/string-helper.hpp>
+
 #include <boost/lexical_cast.hpp>
-#include <boost/tuple/tuple.hpp>
 
 INIT_LOGGER("ContentServer");
 
@@ -40,26 +41,20 @@ ContentServer::ContentServer(shared_ptr<Face> face, ActionLogPtr actionLog,
   , m_actionLog(actionLog)
   , m_dbFolder(rootDir / ".chronoshare")
   , m_freshness(freshness)
-  , m_scheduler(new Scheduler())
+  , m_scheduler(face->getIoService())
+  , m_flushStateDbCacheEvent(m_scheduler)
   , m_userName(userName)
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
 {
   //  m_listeningThread = boost::thread(bind(&ContentServer::listen, this));
 
-  m_scheduler->start();
-  TaskPtr flushStaleDbCacheTask =
-    make_shared<PeriodicTask>(bind(&ContentServer::flushStaleDbCache, this),
-                                     "flush-state-db-cache", m_scheduler,
-                                     make_shared<SimpleIntervalGenerator>(
-                                       DB_CACHE_LIFETIME));
-  m_scheduler->addTask(flushStaleDbCacheTask);
+  m_flushStateDbCacheEvent = m_scheduler.scheduleEvent(time::seconds(DB_CACHE_LIFETIME),
+                                                       bind(&ContentServer::flushStaleDbCache, this));
 }
 
 ContentServer::~ContentServer()
 {
-  m_scheduler->shutdown();
-
   ScopedLock lock(m_mutex);
   for (FilterIdIt it = m_interestFilterIds.begin(); it != m_interestFilterIds.end(); ++it) {
     m_face->unsetInterestFilter(it->second);
@@ -106,12 +101,12 @@ ContentServer::filterAndServeImpl(const Name& forwardingHint, const Name& name,
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
   if (name.size() >= 4 && name.get(-4).toUri() == m_appName) {
-    string type = name.get(-3).toUri();
+    std::string type = name.get(-3).toUri();
     if (type == "file") {
       serve_File(forwardingHint, name, interest);
     }
     else if (type == "action") {
-      string folder = name.get(-2).toUri();
+      std::string folder = name.get(-2).toUri();
       if (folder == m_sharedFolderName) {
         serve_Action(forwardingHint, name, interest);
       }
@@ -142,9 +137,8 @@ ContentServer::serve_Action(const Name& forwardingHint, const Name& name, const 
 {
   _LOG_DEBUG(">> content server serving ACTION, hint: " << forwardingHint
                                                         << ", interest: " << interest);
-  m_scheduler->scheduleOneTimeTask(m_scheduler, 0, bind(&ContentServer::serve_Action_Execute, this,
-                                                        forwardingHint, name, interest),
-                                   boost::lexical_cast<string>(name));
+  m_scheduler.scheduleEvent(time::seconds(0),
+                            bind(&ContentServer::serve_Action_Execute, this, forwardingHint, name, interest));
   // need to unlock ccnx mutex... or at least don't lock it
 }
 
@@ -154,9 +148,8 @@ ContentServer::serve_File(const Name& forwardingHint, const Name& name, const Na
   _LOG_DEBUG(">> content server serving FILE, hint: " << forwardingHint
                                                       << ", interest: " << interest);
 
-  m_scheduler->scheduleOneTimeTask(m_scheduler, 0, bind(&ContentServer::serve_File_Execute, this,
-                                                        forwardingHint, name, interest),
-                                   boost::lexical_cast<string>(name));
+  m_scheduler.scheduleEvent(time::seconds(0),
+                            bind(&ContentServer::serve_File_Execute, this, forwardingHint, name, interest));
   // need to unlock ccnx mutex... or at least don't lock it
 }
 
@@ -173,10 +166,10 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
   ndn::Buffer hash(name.get(-2).value(), name.get(-2).value_size());
 
   _LOG_DEBUG(" server FILE for device: " << deviceName
-                                         << ", file_hash: " << DigestComputer::shortDigest(hash)
+                                         << ", file_hash: " << toHex(hash)
                                          << " segment: " << segment);
 
-  string hashStr = DigestComputer::digestToString(hash);
+  std::string hashStr = toHex(hash);
 
   ObjectDbPtr db;
 
@@ -195,7 +188,7 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
       }
       else {
         _LOG_ERROR("ObjectDd doesn't exist for device: " << deviceName << ", file_hash: "
-                                                         << DigestComputer::shortDigest(hash));
+                                                         << toHex(hash));
       }
     }
   }
@@ -223,7 +216,7 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
     else {
       _LOG_ERROR("ObjectDd exists, but no segment "
                  << segment << " for device: " << deviceName
-                 << ", file_hash: " << DigestComputer::shortDigest(hash));
+                 << ", file_hash: " << toHex(hash));
     }
   }
 }
@@ -275,6 +268,9 @@ ContentServer::flushStaleDbCache()
       ++it;
     }
   }
+
+  m_flushStateDbCacheEvent = m_scheduler.scheduleEvent(time::seconds(DB_CACHE_LIFETIME),
+                                                       bind(&ContentServer::flushStaleDbCache, this));
 }
 
 } // chronoshare

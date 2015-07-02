@@ -46,8 +46,7 @@ FetchTaskDb::FetchTaskDb(const boost::filesystem::path& folder, const std::strin
 
   int res = sqlite3_open((actualFolder / tag).c_str(), &m_db);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(
-      Error::Db() << errmsg_info_str("Cannot open database: " + (actualFolder / tag).string()));
+    BOOST_THROW_EXCEPTION(Error("Cannot open database: " + (actualFolder / tag).string()));
   }
 
   char* errmsg = 0;
@@ -69,7 +68,7 @@ FetchTaskDb::~FetchTaskDb()
 }
 
 void
-FetchTaskDb::addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+FetchTaskDb::addTask(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
                      uint64_t maxSeqNo, int priority)
 {
   sqlite3_stmt* stmt;
@@ -92,7 +91,7 @@ FetchTaskDb::addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uin
 }
 
 void
-FetchTaskDb::deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName)
+FetchTaskDb::deleteTask(const Name& deviceName, const Name& baseName)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "DELETE FROM Task WHERE deviceName = ? AND baseName = ?;", -1, &stmt, 0);
@@ -114,8 +113,8 @@ FetchTaskDb::foreachTask(const FetchTaskCallback& callback)
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Task;", -1, &stmt, 0);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    ndn::Name deviceName(ndn::Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
-    ndn::Name baseName(ndn::Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
+    Name deviceName(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+    Name baseName(Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
 
     std::cout << "deviceName: " << deviceName << " baseName: " << baseName << std::endl;
     uint64_t minSeqNo = sqlite3_column_int64(stmt, 2);

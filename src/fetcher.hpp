@@ -29,6 +29,7 @@
 
 #include <boost/intrusive/list.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/thread.hpp>
 
 namespace ndn {
 namespace chronoshare {
@@ -37,12 +38,11 @@ class FetchManager;
 
 class Fetcher {
 public:
-  typedef boost::function<void(Name& deviceName, Name& baseName, uint64_t seq,
-                               shared_ptr<Data> data)> SegmentCallback;
-  typedef boost::function<void(Name& deviceName, Name& baseName)> FinishCallback;
-  typedef boost::function<void(Fetcher&, const Name& deviceName, const Name& baseName)>
-    OnFetchCompleteCallback;
-  typedef boost::function<void(Fetcher&)> OnFetchFailedCallback;
+  typedef function<void(Name& deviceName, Name& baseName, uint64_t seq,
+                        shared_ptr<Data> data)> SegmentCallback;
+  typedef function<void(Name& deviceName, Name& baseName)> FinishCallback;
+  typedef function<void(Fetcher&, const Name& deviceName, const Name& baseName)> OnFetchCompleteCallback;
+  typedef function<void(Fetcher&)> OnFetchFailedCallback;
 
   Fetcher(shared_ptr<Face> face,
           const SegmentCallback& segmentCallback, // callback passed by caller of FetchManager
@@ -155,7 +155,7 @@ private:
   std::set<int64_t> m_outOfOrderRecvSeqNo;
   std::set<int64_t> m_inActivePipeline;
 
-  int64_t m_minSeqNo;
+  // int64_t m_minSeqNo;
   int64_t m_maxSeqNo;
 
   uint32_t m_pipeline;
@@ -166,11 +166,9 @@ private:
   double m_retryPause; // pause to stop trying to fetch(for fetch-manager)
   boost::posix_time::ptime m_nextScheduledRetry;
 
-  ExecutorPtr m_executor; // to serialize FillPipeline events
-
   boost::mutex m_seqNoMutex;
 
-  boost::asio::io_service m_ioService;
+  boost::asio::io_service& m_ioService;
 };
 
 typedef boost::error_info<struct tag_errmsg, std::string> errmsg_info_str;

@@ -63,8 +63,8 @@ FileState::~FileState()
 }
 
 void
-FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const ndn::Buffer& hash,
-                      const ndn::Buffer& device_name, sqlite3_int64 seq_no, time_t atime,
+FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const Buffer& hash,
+                      const Buffer& device_name, sqlite3_int64 seq_no, time_t atime,
                       time_t mtime, time_t ctime, int mode, int seg_num)
 {
   _LOG_DEBUG("UpdateFile Triggered...");
@@ -213,7 +213,7 @@ FileState::LookupFile(const std::string& filename)
 }
 
 FileItemsPtr
-FileState::LookupFilesForHash(const ndn::Buffer& hash)
+FileState::LookupFilesForHash(const Buffer& hash)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT filename,version,device_name,seq_no,file_hash,strftime('%s', "
@@ -252,7 +252,7 @@ FileState::LookupFilesForHash(const ndn::Buffer& hash)
 }
 
 void
-FileState::LookupFilesInFolder(const boost::function<void(const FileItem&)>& visitor,
+FileState::LookupFilesInFolder(const function<void(const FileItem&)>& visitor,
                                const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
 {
   sqlite3_stmt* stmt;
@@ -305,7 +305,7 @@ FileState::LookupFilesInFolder(const std::string& folder, int offset /*=0*/, int
 }
 
 bool
-FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileItem&)>& visitor,
+FileState::LookupFilesInFolderRecursively(const function<void(const FileItem&)>& visitor,
                                           const std::string& folder, int offset /*=0*/,
                                           int limit /*=-1*/)
 {

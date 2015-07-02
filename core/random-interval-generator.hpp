@@ -59,7 +59,7 @@ public:
   }
 
   virtual double
-  nextInterval() _OVERRIDE
+  nextInterval()
   {
     double percent = m_random();
     double interval = m_interval;
@@ -85,7 +85,7 @@ private:
   fractional(double x)
   {
     double dummy;
-    return abs(modf(x, &dummy));
+    return std::abs<double>(modf(x, &dummy));
   }
 
 private:

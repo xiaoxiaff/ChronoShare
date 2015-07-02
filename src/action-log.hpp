@@ -30,8 +30,6 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 
-#include <boost/tuple/tuple.hpp>
-
 namespace ndn {
 namespace chronoshare {
 
@@ -39,12 +37,23 @@ class ActionLog;
 typedef shared_ptr<ActionLog> ActionLogPtr;
 typedef shared_ptr<ActionItem> ActionItemPtr;
 
-class ActionLog : public DbHelper {
+class ActionLog : public DbHelper
+{
 public:
-  typedef boost::function<void(std::string /*filename*/, Name /*device_name*/,
-                               sqlite3_int64 /*seq_no*/, ConstBufferPtr /*hash*/,
-                               time_t /*m_time*/, int /*mode*/, int /*seg_num*/)>
-    OnFileAddedOrChangedCallback;
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+public:
+  typedef function<void(std::string /*filename*/, Name /*device_name*/,
+                        sqlite3_int64 /*seq_no*/, ConstBufferPtr /*hash*/,
+                        time_t /*m_time*/, int /*mode*/, int /*seg_num*/)> OnFileAddedOrChangedCallback;
 
   typedef boost::function<void(std::string /*filename*/)> OnFileRemovedCallback;
 
@@ -111,18 +120,15 @@ public:
    * calling visitor(device_name,seqno,action) for each action
    */
   bool
-  LookupActionsInFolderRecursively(
-    const boost::function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>&
-      visitor,
-    const std::string& folder, int offset = 0, int limit = -1);
+  LookupActionsInFolderRecursively(const function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>& visitor,
+                                   const std::string& folder, int offset = 0, int limit = -1);
 
   bool
-  LookupActionsForFile(const boost::function<void(const Name& name, sqlite3_int64 seq_no,
-                                                  const ActionItem&)>& visitor,
+  LookupActionsForFile(const function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>& visitor,
                        const std::string& file, int offset = 0, int limit = -1);
 
   void
-  LookupRecentFileActions(const boost::function<void(const std::string&, int, int)>& visitor,
+  LookupRecentFileActions(const function<void(const std::string&, int, int)>& visitor,
                           int limit = 5);
 
   //
@@ -135,7 +141,7 @@ public:
   LogSize();
 
 private:
-  boost::tuple<sqlite3_int64 /*version*/, BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
+  std::tuple<sqlite3_int64 /*version*/, BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
   GetLatestActionForFile(const std::string& filename);
 
   static void

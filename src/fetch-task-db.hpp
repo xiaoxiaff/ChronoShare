@@ -21,16 +21,30 @@
 #ifndef FETCH_TASK_DB_H
 #define FETCH_TASK_DB_H
 
+#include "db-helper.hpp"
+
 #include <ndn-cxx/name.hpp>
 #include <sqlite3.h>
 #include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
 
 namespace ndn {
 namespace chronoshare {
 
-class FetchTaskDb {
+class FetchTaskDb
+{
+public:
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+  typedef function<void(const Name&, const Name&, uint64_t, uint64_t, int)> FetchTaskCallback;
+
 public:
   FetchTaskDb(const boost::filesystem::path& folder, const std::string& tag);
   ~FetchTaskDb();
@@ -38,14 +52,11 @@ public:
   // task with same deviceName and baseName combination will be added only once
   // if task already exists, this call does nothing
   void
-  addTask(const ndn::Name& deviceName, const ndn::Name& baseName, uint64_t minSeqNo,
+  addTask(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
           uint64_t maxSeqNo, int priority);
 
   void
-  deleteTask(const ndn::Name& deviceName, const ndn::Name& baseName);
-
-  typedef boost::function<void(const ndn::Name&, const ndn::Name&, uint64_t, uint64_t, int)>
-    FetchTaskCallback;
+  deleteTask(const Name& deviceName, const Name& baseName);
 
   void
   foreachTask(const FetchTaskCallback& callback);

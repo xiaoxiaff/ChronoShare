@@ -23,6 +23,8 @@
 #include "digest-computer.hpp"
 #include "sync-core.hpp"
 
+#include <ndn-cxx/util/string-helper.hpp>
+
 namespace ndn {
 namespace chronoshare {
 
@@ -108,14 +110,13 @@ ActionLog::ActionLog(shared_ptr<Face> face, const boost::filesystem::path& path,
     sqlite3_create_function(m_db, "apply_action", -1, SQLITE_ANY, reinterpret_cast<void*>(this),
                             ActionLog::apply_action_xFun, 0, 0);
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db()
-                          << errmsg_info_str("Cannot create function ``apply_action''"));
+    BOOST_THROW_EXCEPTION(Error("Cannot create function ``apply_action''"));
   }
 
   m_fileState = make_shared<FileState>(path);
 }
 
-boost::tuple<sqlite3_int64 /*version*/, BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
+std::tuple<sqlite3_int64 /*version*/, BufferPtr /*device name*/, sqlite3_int64 /*seq_no*/>
 ActionLog::GetLatestActionForFile(const std::string& filename)
 {
   // check if something already exists
@@ -126,7 +127,7 @@ ActionLog::GetLatestActionForFile(const std::string& filename)
                                -1, &stmt, 0);
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str("Some error with GetExistingRecord"));
+    BOOST_THROW_EXCEPTION(Error("Some error with GetExistingRecord"));
   }
 
   sqlite3_int64 version = -1;
@@ -146,7 +147,7 @@ ActionLog::GetLatestActionForFile(const std::string& filename)
   }
 
   sqlite3_finalize(stmt);
-  return boost::make_tuple(version, parent_device_name, parent_seq_no);
+  return std::make_tuple(version, parent_device_name, parent_seq_no);
 }
 
 // local add action. remote action is extracted from content object
@@ -185,7 +186,7 @@ ActionLog::AddLocalActionUpdate(const std::string& filename, const Buffer& hash,
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
 
   if (res != SQLITE_OK) {
-    BOOST_THROW_EXCEPTION(Error::Db() << errmsg_info_str(sqlite3_errmsg(m_db)));
+    BOOST_THROW_EXCEPTION(Error(sqlite3_errmsg(m_db)));
   }
 
   sqlite3_bind_blob(stmt, 1, device_name.wire(), device_name.size(), SQLITE_STATIC);
@@ -230,7 +231,7 @@ ActionLog::AddLocalActionUpdate(const std::string& filename, const Buffer& hash,
 
   // assign name to the action, serialize action, and create content object
 
-  string item_msg;
+  std::string item_msg;
   item->SerializeToString(&item_msg);
 
   // action name: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
@@ -285,8 +286,7 @@ ActionLog::AddLocalActionUpdate(const std::string& filename, const Buffer& hash,
 // ActionLog::AddActionMove(const std::string &oldFile, const std::string &newFile)
 // {
 //   // not supported yet
-//   BOOST_THROW_EXCEPTION(Error::Db()
-//                          << errmsg_info_str("Move operation is not yet supported"));
+//   BOOST_THROW_EXCEPTION(Error("Move operation is not yet supported"));
 // }
 
 ActionItemPtr
@@ -355,7 +355,7 @@ ActionLog::AddLocalActionDelete(const std::string& filename)
   item->set_parent_device_name(parent_device_name->buf(), parent_device_name->size());
   item->set_parent_seq_no(parent_seq_no);
 
-  string item_msg;
+  std::string item_msg;
   item->SerializeToString(&item_msg);
 
   // action name: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
@@ -550,7 +550,7 @@ ActionLog::AddRemoteAction(const Name& deviceName, sqlite3_int64 seqno,
   _LOG_DEBUG("AddRemoteAction: [" << deviceName.toUri() << "] seqno: " << seqno);
 
   sqlite3_stmt* stmt;
-  int res = sqlite3_prepare_v2(
+  sqlite3_prepare_v2(
     m_db,
     "INSERT INTO ActionLog "
     "(device_name, seq_no, action, filename, version, action_timestamp, "
@@ -631,21 +631,21 @@ ActionLog::AddRemoteAction(shared_ptr<Data> actionData)
   // action name: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
   uint64_t seqno = name.get(-1).toNumber();
-  string sharedFolder = name.get(-2).toUri();
+  std::string sharedFolder = name.get(-2).toUri();
 
   if (sharedFolder != m_sharedFolderName) {
     _LOG_ERROR("Action doesn't belong to this shared folder");
     return ActionItemPtr();
   }
 
-  string action = name.get(-3).toUri();
+  std::string action = name.get(-3).toUri();
 
   if (action != "action") {
     _LOG_ERROR("not an action");
     return ActionItemPtr();
   }
 
-  string appName = name.get(-4).toUri();
+  std::string appName = name.get(-4).toUri();
   if (appName != m_appName) {
     _LOG_ERROR("Action doesn't belong to this application");
     return ActionItemPtr();
@@ -674,10 +674,8 @@ ActionLog::LogSize()
 }
 
 bool
-ActionLog::LookupActionsInFolderRecursively(
-  const boost::function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>&
-    visitor,
-  const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
+ActionLog::LookupActionsInFolderRecursively(const function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>& visitor,
+                                            const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
 {
   _LOG_DEBUG("LookupActionsInFolderRecursively: [" << folder << "]");
 
@@ -770,10 +768,8 @@ ActionLog::LookupActionsInFolderRecursively(
  * @todo Figure out the way to minimize code duplication
  */
 bool
-ActionLog::LookupActionsForFile(
-  const boost::function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>&
-    visitor,
-  const std::string& file, int offset /*=0*/, int limit /*=-1*/)
+ActionLog::LookupActionsForFile(const function<void(const Name& name, sqlite3_int64 seq_no, const ActionItem&)>& visitor,
+                                const std::string& file, int offset /*=0*/, int limit /*=-1*/)
 {
   _LOG_DEBUG("LookupActionsInFolderRecursively: [" << file << "]");
   if (file.empty())
@@ -846,8 +842,7 @@ ActionLog::LookupActionsForFile(
 }
 
 void
-ActionLog::LookupRecentFileActions(const boost::function<void(const string&, int, int)>& visitor,
-                                   int limit)
+ActionLog::LookupRecentFileActions(const function<void(const std::string&, int, int)>& visitor, int limit)
 {
   sqlite3_stmt* stmt;
 
@@ -896,7 +891,7 @@ ActionLog::apply_action_xFun(sqlite3_context* context, int argc, sqlite3_value**
   Buffer device_name(sqlite3_value_blob(argv[0]), sqlite3_value_bytes(argv[0]));
   sqlite3_int64 seq_no = sqlite3_value_int64(argv[1]);
   int action = sqlite3_value_int(argv[2]);
-  string filename = reinterpret_cast<const char*>(sqlite3_value_text(argv[3]));
+  std::string filename = reinterpret_cast<const char*>(sqlite3_value_text(argv[3]));
   sqlite3_int64 version = sqlite3_value_int64(argv[4]);
 
   _LOG_TRACE("apply_function called with " << argc);
@@ -914,7 +909,7 @@ ActionLog::apply_action_xFun(sqlite3_context* context, int argc, sqlite3_value**
     int seg_num = sqlite3_value_int(argv[10]);
 
     _LOG_DEBUG("Update " << filename << " " << atime << " " << mtime << " " << ctime << " "
-                         << DigestComputer::shortDigest(hash));
+                         << toHex(hash));
 
     the->m_fileState->UpdateFile(filename, version, hash, device_name, seq_no, atime, mtime, ctime,
                                  mode, seg_num);
