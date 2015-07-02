@@ -21,6 +21,8 @@
 #ifndef CONTENT_SERVER_H
 #define CONTENT_SERVER_H
 
+#include "core/chronoshare-common.hpp"
+
 #include "object-db.hpp"
 #include "action-log.hpp"
 

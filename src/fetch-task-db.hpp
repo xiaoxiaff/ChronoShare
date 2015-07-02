@@ -21,10 +21,13 @@
 #ifndef FETCH_TASK_DB_H
 #define FETCH_TASK_DB_H
 
+#include "core/chronoshare-common.hpp"
 #include "db-helper.hpp"
 
 #include <ndn-cxx/name.hpp>
+
 #include <sqlite3.h>
+
 #include <boost/filesystem.hpp>
 
 namespace ndn {

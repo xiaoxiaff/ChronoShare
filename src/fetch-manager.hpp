@@ -21,8 +21,7 @@
 #ifndef FETCH_MANAGER_H
 #define FETCH_MANAGER_H
 
-#include "chronoshare-common.hpp"
-
+#include "core/chronoshare-common.hpp"
 #include "fetcher.hpp"
 #include "fetch-task-db.hpp"
 

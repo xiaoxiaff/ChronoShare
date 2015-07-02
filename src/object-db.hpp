@@ -21,7 +21,7 @@
 #ifndef CHRONOSHARE_SRC_OBJECT_DB_HPP
 #define CHRONOSHARE_SRC_OBJECT_DB_HPP
 
-#include "chronoshare-common.hpp"
+#include "core/chronoshare-common.hpp"
 #include "db-helper.hpp"
 
 #include <sqlite3.h>

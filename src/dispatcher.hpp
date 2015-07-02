@@ -18,10 +18,11 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef DISPATCHER_H
-#define DISPATCHER_H
+#ifndef CHRONOSHARE_SRC_DISPATCHER_HPP
+#define CHRONOSHARE_SRC_DISPATCHER_HPP
 
-#include "digest-computer.hpp"
+#include "core/chronoshare-common.hpp"
+
 #include "action-log.hpp"
 #include "sync-core.hpp"
 #include "object-db.hpp"
@@ -220,7 +221,6 @@ private:
 
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
-  DigestComputer m_digestComputer;
 
   shared_ptr<Face> m_face_server;
   shared_ptr<Face> m_face_stateServer;
@@ -238,4 +238,4 @@ typedef boost::error_info<struct tag_errmsg, std::string> error_info_str;
 } // chronoshare
 } // ndn
 
-#endif // DISPATCHER_H
+#endif // CHRONOSHARE_SRC_DISPATCHER_HPP

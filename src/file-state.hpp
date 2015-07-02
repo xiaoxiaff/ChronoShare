@@ -21,9 +21,10 @@
 #ifndef FILE_STATE_H
 #define FILE_STATE_H
 
+#include "core/chronoshare-common.hpp"
 #include "db-helper.hpp"
-
 #include "file-item.pb.h"
+
 #include <ndn-cxx/util/digest.hpp>
 
 #include <list>

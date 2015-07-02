@@ -21,7 +21,7 @@
 #ifndef STATE_SERVER_H
 #define STATE_SERVER_H
 
-#include "digest-computer.hpp"
+#include "core/chronoshare-common.hpp"
 #include "object-manager.hpp"
 #include "object-db.hpp"
 #include "action-log.hpp"
@@ -220,7 +220,6 @@ private:
   std::string m_sharedFolderName;
   std::string m_appName;
   KeyChain m_keyChain;
-  DigestComputer m_digestComputer;
 
   boost::asio::io_service& m_ioService;
 };

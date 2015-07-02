@@ -18,13 +18,13 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef OBJECT_MANAGER_H
-#define OBJECT_MANAGER_H
+#ifndef CHRONOSHARE_SRC_OBJECT_MANAGER_HPP
+#define CHRONOSHARE_SRC_OBJECT_MANAGER_HPP
 
-#include "digest-computer.hpp"
-#include <string>
+#include "core/chronoshare-common.hpp"
+
 #include <boost/filesystem.hpp>
-#include <boost/tuple/tuple.hpp>
+
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/util/digest.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
@@ -57,7 +57,6 @@ private:
   boost::filesystem::path m_folder;
   std::string m_appName;
   KeyChain m_keyChain;
-  DigestComputer m_digestComputer;
 };
 
 typedef shared_ptr<ObjectManager> ObjectManagerPtr;
@@ -70,4 +69,4 @@ struct ObjectManager : virtual boost::exception, virtual std::exception {
 } // chronoshare
 } // ndn
 
-#endif // OBJECT_MANAGER_H
+#endif // CHRONOSHARE_SRC_OBJECT_MANAGER_HPP

@@ -21,13 +21,14 @@
 #ifndef SYNC_CORE_H
 #define SYNC_CORE_H
 
+#include "core/chronoshare-common.hpp"
+#include "sync-log.hpp"
+#include "random-interval-generator.hpp"
+
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
 #include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
-
-#include "sync-log.hpp"
-#include "random-interval-generator.hpp"
 
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>

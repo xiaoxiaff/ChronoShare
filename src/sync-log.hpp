@@ -21,11 +21,8 @@
 #ifndef CHRONOSHARE_SRC_SYNC_LOG_HPP
 #define CHRONOSHARE_SRC_SYNC_LOG_HPP
 
-#include "chronoshare-common.hpp"
-
+#include "core/chronoshare-common.hpp"
 #include "db-helper.hpp"
-#include "digest-computer.hpp"
-
 #include "sync-state.pb.h"
 
 #include <ndn-cxx/name.hpp>
@@ -118,7 +115,6 @@ protected:
   typedef boost::unique_lock<Mutex> WriteLock;
 
   Mutex m_stateUpdateMutex;
-  DigestComputer m_digestComputer;
 };
 
 typedef shared_ptr<SyncLog> SyncLogPtr;

@@ -21,7 +21,7 @@
 #ifndef CHRONOSHARE_SRC_FETCHER_HPP
 #define CHRONOSHARE_SRC_FETCHER_HPP
 
-#include "chronoshare-common.hpp"
+#include "core/chronoshare-common.hpp"
 
 #include <ndn-cxx/face.hpp>
 

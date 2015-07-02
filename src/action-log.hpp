@@ -18,9 +18,10 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef ACTION_LOG_H
-#define ACTION_LOG_H
+#ifndef CHRONOSHARE_SRC_ACTION_LOG_HPP
+#define CHRONOSHARE_SRC_ACTION_LOG_HPP
 
+#include "core/chronoshare-common.hpp"
 #include "db-helper.hpp"
 #include "file-state.hpp"
 #include "sync-log.hpp"
@@ -174,4 +175,4 @@ ActionLog::GetFileState()
 } // chronoshare
 } // ndn
 
-#endif // ACTION_LOG_H
+#endif // CHRONOSHARE_SRC_ACTION_LOG_HPP

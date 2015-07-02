@@ -18,7 +18,6 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "digest-computer.hpp"
 #include "content-server.hpp"
 #include "logging.hpp"
 

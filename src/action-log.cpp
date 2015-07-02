@@ -20,7 +20,6 @@
 
 #include "action-log.hpp"
 #include "logging.hpp"
-#include "digest-computer.hpp"
 #include "sync-core.hpp"
 
 #include <ndn-cxx/util/string-helper.hpp>

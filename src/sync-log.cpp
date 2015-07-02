@@ -211,7 +211,7 @@ SELECT state_hash FROM SyncLog WHERE state_id = ?\
 sqlite3_int64
 SyncLog::LookupSyncLog(const std::string& stateHash)
 {
-  return LookupSyncLog(DigestComputer::digestFromString(stateHash));
+  return LookupSyncLog(*fromHex(stateHash));
 }
 
 sqlite3_int64
@@ -354,8 +354,7 @@ SyncStateMsgPtr
 SyncLog::FindStateDifferences(const std::string& oldHash, const std::string& newHash,
                               bool includeOldSeq)
 {
-  return FindStateDifferences(DigestComputer::digestFromString(oldHash),
-                              DigestComputer::digestFromString(newHash), includeOldSeq);
+  return FindStateDifferences(*fromHex(oldHash), *fromHex(newHash), includeOldSeq);
 }
 
 SyncStateMsgPtr
