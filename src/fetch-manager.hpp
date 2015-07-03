@@ -42,7 +42,7 @@ public:
   typedef function<void(Name& deviceName, Name& baseName)> FinishCallback;
 
 public:
-  FetchManager(shared_ptr<Face> face, const Mapping& mapping,
+  FetchManager(Face& face, const Mapping& mapping,
                const Name& broadcastForwardingHint, uint32_t parallelFetches = 3,
                const SegmentCallback& defaultSegmentCallback = SegmentCallback(),
                const FinishCallback& defaultFinishCallback = FinishCallback(),
@@ -58,10 +58,6 @@ public:
   void
   Enqueue(const Name& deviceName, const Name& baseName, uint64_t minSeqNo,
           uint64_t maxSeqNo, int priority = PRIORITY_NORMAL);
-
-  // only for Fetcher
-  inline shared_ptr<Face>
-  GetFace();
 
 private:
   // Fetch Events
@@ -82,7 +78,7 @@ private:
   TimedWait(Fetcher& fetcher);
 
 private:
-  shared_ptr<Face> m_face;
+  Face& m_face;
   Mapping m_mapping;
 
   uint32_t m_maxParallelFetches;
@@ -105,12 +101,6 @@ private:
   const Name m_broadcastHint;
   boost::asio::io_service& m_ioService;
 };
-
-shared_ptr<Face>
-FetchManager::GetFace()
-{
-  return m_face;
-}
 
 typedef boost::error_info<struct tag_errmsg, std::string> errmsg_info_str;
 namespace Error {

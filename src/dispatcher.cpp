@@ -41,24 +41,20 @@ static const int CONTENT_FRESHNESS = 1800;                 // seconds
 const static double DEFAULT_SYNC_INTEREST_INTERVAL = 10.0; // seconds;
 
 Dispatcher::Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-                       const fs::path& rootDir, shared_ptr<Face> face,
+                       const fs::path& rootDir, Face& face,
                        bool enablePrefixDiscovery)
   : m_face(face)
   , m_core(NULL)
   , m_rootDir(rootDir)
-  , m_ioService(face->getIoService())
+  , m_ioService(face.getIoService())
   , m_objectManager(face, rootDir, CHRONOSHARE_APP)
   , m_localUserName(localUserName)
   , m_sharedFolder(sharedFolder)
   , m_server(NULL)
   , m_enablePrefixDiscovery(enablePrefixDiscovery)
 {
-  // TODO check
-  m_faceListening = boost::thread(bind(&Dispatcher::listen, this));
-
   m_syncLog = make_shared<SyncLog>(m_rootDir, localUserName);
-  m_actionLog = make_shared<ActionLog>(
-    m_face, m_rootDir, m_syncLog, sharedFolder, CHRONOSHARE_APP,
+  m_actionLog = make_shared<ActionLog>(std::ref(m_face), m_rootDir, m_syncLog, sharedFolder, CHRONOSHARE_APP,
     // bind(&Dispatcher::Did_ActionLog_ActionApply_AddOrModify, this, _1, _2, _3, _4, _5, _6, _7),
     ActionLog::OnFileAddedOrChangedCallback(), // don't really need this callback
     bind(&Dispatcher::Did_ActionLog_ActionApply_Delete, this, _1));
@@ -68,20 +64,15 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   syncPrefix.append(CHRONOSHARE_APP);
   syncPrefix.append(sharedFolder);
 
-  // m_server needs a different ndn face
-  m_face_server = make_shared<Face>();
-  m_serverListening =
-    boost::thread(bind(&Dispatcher::listen_other, this, m_face_server, "contentServer"));
-  m_server = new ContentServer(m_face_server, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
+  // @todo Previously there was a claim that content server needs another face.
+  //       I don't immediately understand why
+  m_server = new ContentServer(m_face, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
                                CHRONOSHARE_APP, CONTENT_FRESHNESS);
   m_server->registerPrefix(Name("/"));
   m_server->registerPrefix(Name(BROADCAST_DOMAIN));
 
-  m_face_stateServer = make_shared<Face>();
-  m_stateServerListening =
-    boost::thread(bind(&Dispatcher::listen_other, this, m_face_stateServer, "stateServer"));
   m_stateServer =
-    new StateServer(m_face_stateServer, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
+    new StateServer(m_face, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
                     CHRONOSHARE_APP, m_objectManager, time::seconds(CONTENT_FRESHNESS));
   // no need to register, right now only listening on localhop prefix
 
@@ -91,7 +82,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 
   FetchTaskDbPtr actionTaskDb = make_shared<FetchTaskDb>(m_rootDir, "action");
   m_actionFetcher =
-    make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
+    make_shared<FetchManager>(std::ref(m_face), bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
                                      Name(BROADCAST_DOMAIN), // no appname suffix now
                                      3, bind(&Dispatcher::Did_FetchManager_ActionFetch, this, _1,
                                              _2, _3, _4),
@@ -99,7 +90,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 
   FetchTaskDbPtr fileTaskDb = make_shared<FetchTaskDb>(m_rootDir, "file");
   m_fileFetcher =
-    make_shared<FetchManager>(m_face, bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
+    make_shared<FetchManager>(std::ref(m_face), bind(&SyncLog::LookupLocator, &*m_syncLog, _1),
                                      Name(BROADCAST_DOMAIN), // no appname suffix now
                                      3, bind(&Dispatcher::Did_FetchManager_FileSegmentFetch, this,
                                              _1, _2, _3, _4),
@@ -125,10 +116,6 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 Dispatcher::~Dispatcher()
 {
   _LOG_DEBUG("Enter destructor of dispatcher");
-
-  m_face->shutdown();
-  m_face_server->shutdown();
-  m_face_stateServer->shutdown();
 
   if (m_enablePrefixDiscovery) {
     _LOG_DEBUG("deregistering prefix discovery in Dispatcher");

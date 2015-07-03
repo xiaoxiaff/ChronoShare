@@ -36,7 +36,7 @@ INIT_LOGGER("StateServer");
 
 namespace fs = boost::filesystem;
 
-StateServer::StateServer(shared_ptr<Face> face, ActionLogPtr actionLog,
+StateServer::StateServer(Face& face, ActionLogPtr actionLog,
                          const fs::path& rootDir, const Name& userName,
                          const std::string& sharedFolderName, const std::string& appName,
                          ObjectManager& objectManager, time::milliseconds freshness)
@@ -48,7 +48,7 @@ StateServer::StateServer(shared_ptr<Face> face, ActionLogPtr actionLog,
   , m_userName(userName)
   , m_sharedFolderName(sharedFolderName)
   , m_appName(appName)
-  , m_ioService(face->getIoService())
+  , m_ioService(m_face.getIoService())
 {
   // may be later /localhop should be replaced with /%C1.M.S.localhost
 
@@ -78,18 +78,18 @@ StateServer::registerPrefixes()
   Name actionsFolder = Name(m_PREFIX_INFO);
   actionsFolder.append("actions").append("folder");
   actionsFolderId =
-    m_face->setInterestFilter(InterestFilter(actionsFolder),
-                              bind(&StateServer::info_actions_folder, this, _1, _2),
-                              RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
+    m_face.setInterestFilter(InterestFilter(actionsFolder),
+                             bind(&StateServer::info_actions_folder, this, _1, _2),
+                             RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 
   _LOG_DEBUG("Register Prefix: " << actionsFolder);
 
   Name actionsFile = Name(m_PREFIX_INFO);
   actionsFile.append("actions").append("file");
   actionsFileId =
-    m_face->setInterestFilter(InterestFilter(actionsFile),
-                              bind(&StateServer::info_actions_file, this, _1, _2),
-                              RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
+    m_face.setInterestFilter(InterestFilter(actionsFile),
+                             bind(&StateServer::info_actions_file, this, _1, _2),
+                             RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 
   _LOG_DEBUG("Register Prefix: " << actionsFile);
 
@@ -97,9 +97,9 @@ StateServer::registerPrefixes()
   Name filesFolder = Name(m_PREFIX_INFO);
   filesFolder.append("files").append("folder");
   filesFolderId =
-    m_face->setInterestFilter(InterestFilter(filesFolder),
-                              bind(&StateServer::info_files_folder, this, _1, _2),
-                              RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
+    m_face.setInterestFilter(InterestFilter(filesFolder),
+                             bind(&StateServer::info_files_folder, this, _1, _2),
+                             RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 
   _LOG_DEBUG("Register Prefix: " << filesFolder);
 
@@ -107,9 +107,9 @@ StateServer::registerPrefixes()
   Name restoreFile = Name(m_PREFIX_CMD);
   restoreFile.append("restore").append("file");
   restoreFileId =
-    m_face->setInterestFilter(InterestFilter(restoreFile),
-                              bind(&StateServer::cmd_restore_file, this, _1, _2),
-                              RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
+    m_face.setInterestFilter(InterestFilter(restoreFile),
+                             bind(&StateServer::cmd_restore_file, this, _1, _2),
+                             RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 
   _LOG_DEBUG("Register Prefix: " << restoreFile);
 }
@@ -117,10 +117,10 @@ StateServer::registerPrefixes()
 void
 StateServer::deregisterPrefixes()
 {
-  m_face->unsetInterestFilter(actionsFolderId);
-  m_face->unsetInterestFilter(actionsFileId);
-  m_face->unsetInterestFilter(filesFolderId);
-  m_face->unsetInterestFilter(restoreFileId);
+  m_face.unsetInterestFilter(actionsFolderId);
+  m_face.unsetInterestFilter(actionsFileId);
+  m_face.unsetInterestFilter(filesFolderId);
+  m_face.unsetInterestFilter(restoreFileId);
 }
 
 void
@@ -285,7 +285,7 @@ StateServer::info_actions_fileOrFolder_Execute(const Name& interest, bool isFold
   data->setFreshnessPeriod(m_freshness);
   data->setContent(reinterpret_cast<const uint8_t*>(os.str().c_str()), os.str().size());
   m_keyChain.sign(*data);
-  m_face->put(*data);
+  m_face.put(*data);
 }
 
 void
@@ -415,7 +415,7 @@ StateServer::info_files_folder_Execute(const Name& interest)
   data->setFreshnessPeriod(m_freshness);
   data->setContent(reinterpret_cast<const uint8_t*>(os.str().c_str()), os.str().size());
   m_keyChain.sign(*data);
-  m_face->put(*data);
+  m_face.put(*data);
 }
 
 void
@@ -471,7 +471,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
     std::string msg = "FAIL: Requested file is not found";
     data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
     return;
   }
 
@@ -500,7 +500,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
         std::string msg = "OK: File already exists";
         data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
         m_keyChain.sign(*data);
-        m_face->put(*data);
+        m_face.put(*data);
         _LOG_DEBUG("Asking to assemble a file, but file already exists on a filesystem");
         return;
       }
@@ -513,7 +513,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
     std::string msg = "FAIL: File operation failed";
     data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
     _LOG_ERROR("File operations failed on [" << filePath << "](ignoring)");
   }
 
@@ -530,7 +530,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
     std::string msg = "OK";
     data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
     _LOG_DEBUG("Restoring file successfully!");
   }
   else {
@@ -540,7 +540,7 @@ StateServer::cmd_restore_file_Execute(const Name& interest)
     std::string msg = "FAIL: Unknown error while restoring file";
     data->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
   }
 }
 

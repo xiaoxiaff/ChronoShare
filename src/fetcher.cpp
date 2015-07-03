@@ -30,7 +30,7 @@ namespace chronoshare {
 
 INIT_LOGGER("Fetcher");
 
-Fetcher::Fetcher(shared_ptr<Face> face,
+Fetcher::Fetcher(Face& face,
                  const SegmentCallback& segmentCallback, const FinishCallback& finishCallback,
                  OnFetchCompleteCallback onFetchComplete, OnFetchFailedCallback onFetchFailed,
                  const Name& deviceName, const Name& name, int64_t minSeqNo,
@@ -61,7 +61,7 @@ Fetcher::Fetcher(shared_ptr<Face> face,
   , m_retryPause(0)
   , m_nextScheduledRetry(boost::date_time::second_clock<boost::posix_time::ptime>::universal_time())
 
-  , m_ioService(face->getIoService())
+  , m_ioService(m_face.getIoService())
 {
 }
 
@@ -111,9 +111,9 @@ Fetcher::FillPipeline()
         .appendNumber(m_minSendSeqNo + 1)); // Alex: this lifetime should be changed to RTO
     _LOG_DEBUG("interest Name: " << interest);
     interest.setInterestLifetime(time::seconds(1));
-    m_face->expressInterest(interest,
-                            bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
-                            bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
+    m_face.expressInterest(interest,
+                           bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
+                           bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
 
     _LOG_DEBUG(" >>> i ok");
 
@@ -261,9 +261,9 @@ Fetcher::OnTimeout_Execute(uint64_t seqno, const Interest& interest)
   }
   else {
     _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
-    m_face->expressInterest(interest,
-                            bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
-                            bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
+    m_face.expressInterest(interest,
+                           bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
+                           bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
   }
 }
 

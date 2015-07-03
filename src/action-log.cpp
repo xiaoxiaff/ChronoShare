@@ -87,13 +87,13 @@ CREATE TRIGGER ActionLogInsert_trigger                                  \n\
 //   _LOG_TRACE("SQLITE: " << q);
 // }
 
-ActionLog::ActionLog(shared_ptr<Face> face, const boost::filesystem::path& path,
+ActionLog::ActionLog(Face& face, const boost::filesystem::path& path,
                      SyncLogPtr syncLog, const std::string& sharedFolder,
                      const std::string& appName, OnFileAddedOrChangedCallback onFileAddedOrChanged,
                      OnFileRemovedCallback onFileRemoved)
   : DbHelper(path / ".chronoshare", "action-log.db")
   , m_syncLog(syncLog)
-  , m_face(face)
+  // , m_face(face)
   , m_sharedFolderName(sharedFolder)
   , m_appName(appName)
   , m_onFileAddedOrChanged(onFileAddedOrChanged)

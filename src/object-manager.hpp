@@ -36,7 +36,7 @@ namespace chronoshare {
 
 class ObjectManager {
 public:
-  ObjectManager(shared_ptr<Face> face, const boost::filesystem::path& folder,
+  ObjectManager(Face& face, const boost::filesystem::path& folder,
                 const std::string& appName);
   virtual ~ObjectManager();
 
@@ -53,7 +53,7 @@ public:
                      /*out*/ const boost::filesystem::path& file);
 
 private:
-  shared_ptr<Face> m_face;
+  Face& m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
   KeyChain m_keyChain;

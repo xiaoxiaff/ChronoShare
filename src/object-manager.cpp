@@ -39,7 +39,7 @@ using util::Sha256;
 
 const int MAX_FILE_SEGMENT_SIZE = 1024;
 
-ObjectManager::ObjectManager(shared_ptr<Face> face, const fs::path& folder,
+ObjectManager::ObjectManager(Face& face, const fs::path& folder,
                              const std::string& appName)
   : m_face(face)
   , m_folder(folder / ".chronoshare")
@@ -90,7 +90,7 @@ ObjectManager::localFileToObjects(const fs::path& file, const Name& deviceName)
     data->setFreshnessPeriod(time::seconds(60));
     data->setContent(reinterpret_cast<const uint8_t*>(&buf), iff.gcount());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     fileDb.saveContentObject(deviceName, segment, *data);
 
@@ -110,7 +110,7 @@ ObjectManager::localFileToObjects(const fs::path& file, const Name& deviceName)
     data->setFreshnessPeriod(time::seconds(0));
     data->setContent(0, 0);
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     fileDb.saveContentObject(deviceName, 0, *data);
 

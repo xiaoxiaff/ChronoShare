@@ -105,8 +105,19 @@ public:
   static const double WAIT;           // seconds;
   static const double RANDOM_PERCENT; // seconds;
 
+  class Error : public boost::exception,
+                public std::runtime_error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : std::runtime_error(what)
+    {
+    }
+  };
+
 public:
-  SyncCore(shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userName,
+  SyncCore(Face& face, SyncLogPtr syncLog, const Name& userName,
            const Name& localPrefix // routable name used by the local user
            ,
            const Name& syncPrefix // the prefix for the sync collection
@@ -148,7 +159,7 @@ private:
   {
     std::cerr << "ERROR: Failed to register prefix \"" << prefix << "\" in local hub's daemon ("
               << reason << ")" << std::endl;
-    m_face->shutdown();
+    throw Error("ERROR: Failed to register prefix (" + reason + ")");
   }
 
   void
@@ -188,8 +199,7 @@ private:
   deregister(const Name& name);
 
 private:
-  //  Face m_face;
-  shared_ptr<Face> m_face;
+  Face& m_face;
 
   SyncLogPtr m_log;
 

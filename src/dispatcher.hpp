@@ -48,7 +48,7 @@ public:
   // sharedFolder is the name to be used in NDN name;
   // rootDir is the shared folder dir in local file system;
   Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-             const boost::filesystem::path& rootDir, shared_ptr<Face> face,
+             const boost::filesystem::path& rootDir, Face& face,
              bool enablePrefixDiscovery = true);
   ~Dispatcher();
 
@@ -83,22 +83,6 @@ public:
   }
 
 private:
-  void
-  listen()
-  {
-    printf("m_face start listening ...\n");
-    m_face->processEvents();
-    printf("m_face listen Over !!! \n");
-  }
-
-  void
-  listen_other(shared_ptr<Face> face, std::string name)
-  {
-    printf("%s start listening ...\n", name.c_str());
-    face->processEvents();
-    printf("%s listen Over !!!\n", name.c_str());
-  }
-
   void
   Did_LocalFile_AddOrModify_Execute(boost::filesystem::path relativeFilepath); // cannot be const &
                                                                                // for Execute
@@ -198,7 +182,7 @@ private:
   // fileReady(const Name &fileNamePrefix);
 
 private:
-  shared_ptr<Face> m_face;
+  Face& m_face;
   SyncCore* m_core;
   SyncLogPtr m_syncLog;
   ActionLogPtr m_actionLog;
@@ -221,12 +205,6 @@ private:
 
   FetchManagerPtr m_actionFetcher;
   FetchManagerPtr m_fileFetcher;
-
-  shared_ptr<Face> m_face_server;
-  shared_ptr<Face> m_face_stateServer;
-  boost::thread m_faceListening;
-  boost::thread m_serverListening;
-  boost::thread m_stateServerListening;
 };
 
 namespace Error {

@@ -32,15 +32,15 @@ namespace chronoshare {
 
 static const int DB_CACHE_LIFETIME = 60;
 
-ContentServer::ContentServer(shared_ptr<Face> face, ActionLogPtr actionLog,
-                             const boost::filesystem::path& rootDir, const ndn::Name& userName,
+ContentServer::ContentServer(Face& face, ActionLogPtr actionLog,
+                             const boost::filesystem::path& rootDir, const Name& userName,
                              const std::string& sharedFolderName, const std::string& appName,
                              int freshness)
   : m_face(face)
   , m_actionLog(actionLog)
   , m_dbFolder(rootDir / ".chronoshare")
   , m_freshness(freshness)
-  , m_scheduler(face->getIoService())
+  , m_scheduler(face.getIoService())
   , m_flushStateDbCacheEvent(m_scheduler)
   , m_userName(userName)
   , m_sharedFolderName(sharedFolderName)
@@ -56,7 +56,7 @@ ContentServer::~ContentServer()
 {
   ScopedLock lock(m_mutex);
   for (FilterIdIt it = m_interestFilterIds.begin(); it != m_interestFilterIds.end(); ++it) {
-    m_face->unsetInterestFilter(it->second);
+    m_face.unsetInterestFilter(it->second);
   }
 
   m_interestFilterIds.clear();
@@ -73,16 +73,16 @@ ContentServer::registerPrefix(const Name& forwardingHint)
 
   ScopedLock lock(m_mutex);
   m_interestFilterIds[forwardingHint] =
-    m_face->setInterestFilter(ndn::InterestFilter(forwardingHint),
-                              bind(&ContentServer::filterAndServe, this, _1, _2),
-                              RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
+    m_face.setInterestFilter(InterestFilter(forwardingHint),
+                             bind(&ContentServer::filterAndServe, this, _1, _2),
+                             RegisterPrefixSuccessCallback(), RegisterPrefixFailureCallback());
 }
 
 void
 ContentServer::deregisterPrefix(const Name& forwardingHint)
 {
   _LOG_DEBUG("<< content server: deregister " << forwardingHint);
-  m_face->unsetInterestFilter(m_interestFilterIds[forwardingHint]);
+  m_face.unsetInterestFilter(m_interestFilterIds[forwardingHint]);
 
   ScopedLock lock(m_mutex);
   m_interestFilterIds.erase(forwardingHint);
@@ -161,8 +161,8 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
   // name:           /<device_name>/<appname>/file/<hash>/<segment>
 
   int64_t segment = name.get(-1).toNumber();
-  ndn::Name deviceName = name.getSubName(0, name.size() - 4);
-  ndn::Buffer hash(name.get(-2).value(), name.get(-2).value_size());
+  Name deviceName = name.getSubName(0, name.size() - 4);
+  Buffer hash(name.get(-2).value(), name.get(-2).value_size());
 
   _LOG_DEBUG(" server FILE for device: " << deviceName
                                          << ", file_hash: " << toHex(hash)
@@ -193,10 +193,10 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
   }
 
   if (db) {
-    ndn::BufferPtr co = db->fetchSegment(deviceName, segment);
+    BufferPtr co = db->fetchSegment(deviceName, segment);
     if (co) {
 
-      ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
+      shared_ptr<Data> data = make_shared<Data>();
       data->setContent(co->buf(), co->size());
       if (forwardingHint.size() == 0) {
         _LOG_DEBUG(deviceName << "forwardingHint.size = 0 Name: " << name);
@@ -209,7 +209,7 @@ ContentServer::serve_File_Execute(const Name& forwardingHint, const Name& name,
         data->setName(interest);
       }
       m_keyChain.sign(*data);
-      m_face->put(*data);
+      m_face.put(*data);
       _LOG_DEBUG("Send File Data Done!");
     }
     else {
@@ -229,15 +229,15 @@ ContentServer::serve_Action_Execute(const Name& forwardingHint, const Name& name
   // name for actions: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
   int64_t seqno = name.get(-1).toNumber();
-  ndn::Name deviceName = name.getSubName(0, name.size() - 4);
+  Name deviceName = name.getSubName(0, name.size() - 4);
 
   _LOG_DEBUG(" server ACTION for device: " << deviceName << " and seqno: " << seqno);
 
-  ndn::shared_ptr<ndn::Data> data = m_actionLog->LookupActionData(deviceName, seqno);
+  shared_ptr<Data> data = m_actionLog->LookupActionData(deviceName, seqno);
   if (data) {
     if (forwardingHint.size() == 0) {
       m_keyChain.sign(*data);
-      m_face->put(*data);
+      m_face.put(*data);
     }
     else {
       data->setName(interest);
@@ -245,7 +245,7 @@ ContentServer::serve_Action_Execute(const Name& forwardingHint, const Name& name
         data->setFreshnessPeriod(time::seconds(m_freshness));
       }
       m_keyChain.sign(*data);
-      m_face->put(*data);
+      m_face.put(*data);
     }
   }
   else {

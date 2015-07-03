@@ -24,8 +24,18 @@
 #include "logging.hpp"
 #include "fs-watcher.hpp"
 
+#include <boost/asio/io_service.hpp>
+
+#include <thread>
+
 namespace ndn {
 namespace chronoshare {
+
+class Runner : public QObject
+{
+Q_OBJECT
+public:
+};
 
 int
 main(int argc, char* argv[])
@@ -33,25 +43,60 @@ main(int argc, char* argv[])
   INIT_LOGGERS();
 
   QCoreApplication app(argc, argv);
+  // Runner runner;
+  // QObject::connect(&runner, SIGNAL(done()), &app, SLOT(quit()));
 
   if (argc != 4) {
-    cerr << "Usage: ./csd <username> <shared-folder> <path>" << endl;
+    std::cerr << "Usage: ./csd <username> <shared-folder> <path>" << std::endl;
     return 1;
   }
 
-  string username = argv[1];
-  string sharedFolder = argv[2];
-  string path = argv[3];
+  std::string username = argv[1];
+  std::string sharedFolder = argv[2];
+  std::string path = argv[3];
 
-  cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder
-       << "] at [" << path << "]" << endl;
+  std::cout << "Starting ChronoShare for [" << username << "] shared-folder [" << sharedFolder
+       << "] at [" << path << "]" << std::endl;
 
-  Dispatcher dispatcher(username, sharedFolder, path, make_shared<Face>());
+  boost::asio::io_service ioService;
+  QApplication::setEventDispatcher(new QAsioEventDispatcher(ioService));
+  Face face(ioService);
 
-  FsWatcher watcher(path.c_str(), bind(&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
+  Dispatcher dispatcher(username, sharedFolder, path, face);
+
+  // std::thread ioThread([&ioService, &app] {
+  //     try {
+  //       ioService.run();
+  //     }
+  //     catch (boost::exception& e) {
+  //       if (&dynamic_cast<std::exception&>(e) != nullptr) {
+  //         std::cerr << "ERROR: " << dynamic_cast<std::exception&>(e).what() << std::endl;
+  //       }
+  //       std::cerr << boost::diagnostic_information(e, true) << std::endl;
+  //     }
+  //     catch (std::exception& e) {
+  //       std::cerr << "ERROR: " << e.what() << std::endl;
+  //     }
+  //   });
+
+  FsWatcher watcher(ioService, path.c_str(),
+                    bind(&Dispatcher::Did_LocalFile_AddOrModify, &dispatcher, _1),
                     bind(&Dispatcher::Did_LocalFile_Delete, &dispatcher, _1));
 
-  return app.exec();
+  try {
+    return app.exec();
+  }
+  catch (boost::exception& e) {
+    if (&dynamic_cast<std::exception&>(e) != nullptr) {
+      std::cerr << "ERROR: " << dynamic_cast<std::exception&>(e).what() << std::endl;
+    }
+    std::cerr << boost::diagnostic_information(e, true) << std::endl;
+  }
+  catch (std::exception& e) {
+    std::cerr << "ERROR: " << e.what() << std::endl;
+  }
+
+  return retval;
 }
 
 } // chronoshare

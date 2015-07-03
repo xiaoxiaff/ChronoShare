@@ -44,7 +44,7 @@ public:
   typedef function<void(Fetcher&, const Name& deviceName, const Name& baseName)> OnFetchCompleteCallback;
   typedef function<void(Fetcher&)> OnFetchFailedCallback;
 
-  Fetcher(shared_ptr<Face> face,
+  Fetcher(Face& face,
           const SegmentCallback& segmentCallback, // callback passed by caller of FetchManager
           const FinishCallback& finishCallback,   // callback passed by caller of FetchManager
           OnFetchCompleteCallback onFetchComplete,
@@ -133,7 +133,7 @@ public:
   boost::intrusive::list_member_hook<> m_managerListHook;
 
 private:
-  shared_ptr<Face> m_face;
+  Face& m_face;
 
   SegmentCallback m_segmentCallback;
   OnFetchCompleteCallback m_onFetchComplete;

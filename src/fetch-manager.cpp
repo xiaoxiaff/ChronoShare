@@ -37,7 +37,7 @@ struct fetcher_disposer {
   }
 };
 
-FetchManager::FetchManager(shared_ptr<Face> face, const Mapping& mapping,
+FetchManager::FetchManager(Face& face, const Mapping& mapping,
                            const Name& broadcastForwardingHint,
                            uint32_t parallelFetches, // = 3
                            const SegmentCallback& defaultSegmentCallback,
@@ -47,13 +47,13 @@ FetchManager::FetchManager(shared_ptr<Face> face, const Mapping& mapping,
   , m_mapping(mapping)
   , m_maxParallelFetches(parallelFetches)
   , m_currentParallelFetches(0)
-  , m_scheduler(face->getIoService())
+  , m_scheduler(m_face.getIoService())
   , m_scheduledFetchesEvent(m_scheduler)
   , m_defaultSegmentCallback(defaultSegmentCallback)
   , m_defaultFinishCallback(defaultFinishCallback)
   , m_taskDb(taskDb)
   , m_broadcastHint(broadcastForwardingHint)
-  , m_ioService(face->getIoService())
+  , m_ioService(m_face.getIoService())
 {
   // no need to check to often. if needed, will be rescheduled
   m_scheduledFetchesEvent = m_scheduler.scheduleEvent(time::seconds(300),
@@ -70,8 +70,6 @@ FetchManager::FetchManager(shared_ptr<Face> face, const Mapping& mapping,
 
 FetchManager::~FetchManager()
 {
-  m_face.reset();
-
   m_fetchList.clear_and_dispose(fetcher_disposer());
 }
 

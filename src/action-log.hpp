@@ -59,7 +59,7 @@ public:
   typedef boost::function<void(std::string /*filename*/)> OnFileRemovedCallback;
 
 public:
-  ActionLog(shared_ptr<Face> face, const boost::filesystem::path& path,
+  ActionLog(Face& face, const boost::filesystem::path& path,
             SyncLogPtr syncLog, const std::string& sharedFolder, const std::string& appName,
             OnFileAddedOrChangedCallback onFileAddedOrChanged, OnFileRemovedCallback onFileRemoved);
 
@@ -152,7 +152,7 @@ private:
   SyncLogPtr m_syncLog;
   FileStatePtr m_fileState;
 
-  shared_ptr<Face> m_face;
+  // Face& m_face;
   std::string m_sharedFolderName;
   std::string m_appName;
 

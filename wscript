@@ -72,13 +72,22 @@ def build(bld):
         includes='core',
         export_includes='. core',
         )
+
+    contrib = bld(
+        name='contrib',
+        target='contrib',
+        features=['qt4', 'cxx'],
+        source=bld.path.ant_glob('contrib/**/*.cpp'),
+        defines='WAF=1',
+        use=['QTCORE'],
+        )
     
     adhoc = bld(
         name='adhoc',
         target='adhoc',
         features=['cxx'],
         use=['core-objects'],
-    )
+        )
 
     if Utils.unversioned_sys_platform() == "darwin":
         adhoc.mac_app = True
@@ -101,6 +110,7 @@ def build(bld):
         source=bld.path.ant_glob('fs-watcher/*.cpp'),
         use=['chronoshare', 'QTCORE'],
         includes="fs-watcher",
+        export_includes="fs-watcher",
         )
 
 #     http_server = bld(
@@ -173,21 +183,19 @@ def build(bld):
 #         bld.install_files ("${DATADIR}/applications", "ChronoShare.desktop")
 #         bld.install_files ("${DATADIR}/ChronoShare", "gui/images/chronoshare-big.png")
 
-#     cmdline = bld (
-#         target = "csd",
-#         features = "qt4 cxx cxxprogram",
-#         defines = "WAF",
-#         source = "cmd/csd.cpp",
-#         includes = "scheduler executor gui fs-watcher src . ",
-#         use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX chronoshare TINYXML"
-#         )
+    cmdline = bld (
+        target = "csd",
+        features = "qt4 cxx cxxprogram",
+        defines = "WAF=1",
+        source = "cmd/csd.cpp",
+        use = "chronoshare fs-watcher contrib"
+        )
 
     dump_db = bld (
         target = "dump-db",
         features = "cxx cxxprogram",
         source = "cmd/dump-db.cpp",
-        includes = "scheduler executor gui fs-watcher src . ",
-        use = "chronoshare fs-watcher QTQORE"
+        use = "chronoshare fs-watcher"
         )
 
 #    bld.recurse('tests');

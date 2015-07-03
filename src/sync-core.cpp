@@ -36,12 +36,12 @@ const std::string SyncCore::RECOVER = "RECOVER";
 const double SyncCore::WAIT = 0.05;
 const double SyncCore::RANDOM_PERCENT = 0.5;
 
-SyncCore::SyncCore(shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userName,
+SyncCore::SyncCore(Face& face, SyncLogPtr syncLog, const Name& userName,
                    const Name& localPrefix, const Name& syncPrefix,
                    const StateMsgCallback& callback, long syncInterestInterval /*= -1.0*/)
   : m_face(face)
   , m_log(syncLog)
-  , m_scheduler(face->getIoService())
+  , m_scheduler(m_face.getIoService())
   , m_syncInterestEvent(m_scheduler)
   , m_periodicInterestEvent(m_scheduler)
   , m_localStateDelayedEvent(m_scheduler)
@@ -52,11 +52,11 @@ SyncCore::SyncCore(shared_ptr<Face> face, SyncLogPtr syncLog, const Name& userNa
 {
   m_rootDigest = m_log->RememberStateInStateLog();
 
-  //  m_face->setInterestFilter(m_syncPrefix, bind(&SyncCore::handleInterest, this, _1));
+  //  m_face.setInterestFilter(m_syncPrefix, bind(&SyncCore::handleInterest, this, _1));
   m_registeredPrefixId =
-    m_face->setInterestFilter(m_syncPrefix, bind(&SyncCore::handleInterest, this, _1, _2),
-                              RegisterPrefixSuccessCallback(),
-                              bind(&SyncCore::onRegisterFailed, this, _1, _2));
+    m_face.setInterestFilter(m_syncPrefix, bind(&SyncCore::handleInterest, this, _1, _2),
+                             RegisterPrefixSuccessCallback(),
+                             bind(&SyncCore::onRegisterFailed, this, _1, _2));
 
   m_log->UpdateLocalLocator(localPrefix);
 
@@ -83,7 +83,7 @@ SyncCore::sendPeriodicSyncInterest(const time::seconds& interval)
 SyncCore::~SyncCore()
 {
   // need to "deregister" closures
-  m_face->unsetInterestFilter(m_registeredPrefixId);
+  m_face.unsetInterestFilter(m_registeredPrefixId);
 }
 
 void
@@ -119,7 +119,7 @@ SyncCore::localStateChanged()
   data->setFreshnessPeriod(time::seconds(FRESHNESS));
   data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
   m_keyChain.sign(*data);
-  m_face->put(*data);
+  m_face.put(*data);
 
   _LOG_TRACE(msg);
 
@@ -161,8 +161,8 @@ SyncCore::sendSyncInterest()
     interest.setInterestLifetime(time::seconds(m_syncInterestInterval));
   }
 
-  m_face->expressInterest(interest, bind(&SyncCore::handleSyncData, this, _1, _2),
-                          bind(&SyncCore::handleSyncInterestTimeout, this, _1));
+  m_face.expressInterest(interest, bind(&SyncCore::handleSyncData, this, _1, _2),
+                         bind(&SyncCore::handleSyncInterestTimeout, this, _1));
 
   // // if there is a pending syncSyncInterest task, reschedule it to be m_syncInterestInterval seconds
   // // from now
@@ -184,9 +184,9 @@ SyncCore::recover(ConstBufferPtr digest)
     _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send RECOVER Interests for "
                    << toHex(*digest));
 
-    m_face->expressInterest(recoverInterest,
-                            bind(&SyncCore::handleRecoverData, this, _1, _2),
-                            bind(&SyncCore::handleRecoverInterestTimeout, this, _1));
+    m_face.expressInterest(recoverInterest,
+                           bind(&SyncCore::handleRecoverData, this, _1, _2),
+                           bind(&SyncCore::handleRecoverInterestTimeout, this, _1));
   }
   else {
     // we already learned the digest; cheers!
@@ -233,7 +233,7 @@ SyncCore::handleSyncInterest(const Name& name)
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     _LOG_TRACE(m_log->GetLocalName()
                << " publishes: " << toHex(*digest)
@@ -279,7 +279,7 @@ SyncCore::handleRecoverInterest(const Name& name)
     data->setFreshnessPeriod(time::seconds(FRESHNESS));
     data->setContent(reinterpret_cast<const uint8_t*>(syncData->buf()), syncData->size());
     m_keyChain.sign(*data);
-    m_face->put(*data);
+    m_face.put(*data);
 
     _LOG_TRACE("[" << m_log->GetLocalName() << "] publishes "
                    << toHex(*digest)

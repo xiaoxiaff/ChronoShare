@@ -330,7 +330,7 @@ FsWatcher::getFilesInDir(const fs::path& dir, std::vector<std::string>& files)
 } // chronoshare
 } // ndn
 
-#if WAF
+#ifdef WAF
 #include "fs-watcher.moc"
 // #include "fs-watcher.cpp.moc"
 #endif

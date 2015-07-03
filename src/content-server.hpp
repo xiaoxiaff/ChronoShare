@@ -42,8 +42,8 @@ namespace chronoshare {
 
 class ContentServer {
 public:
-  ContentServer(shared_ptr<ndn::Face> face, ActionLogPtr actionLog,
-                const boost::filesystem::path& rootDir, const ndn::Name& userName,
+  ContentServer(Face& face, ActionLogPtr actionLog,
+                const boost::filesystem::path& rootDir, const Name& userName,
                 const std::string& sharedFolderName, const std::string& appName,
                 int freshness = -1);
   ~ContentServer();
@@ -53,51 +53,45 @@ public:
   // currently /topology-independent-name must begin with /action or /file
   // so that ContentServer knows where to look for the content object
   void
-  registerPrefix(const ndn::Name& prefix);
+  registerPrefix(const Name& prefix);
   void
-  deregisterPrefix(const ndn::Name& prefix);
+  deregisterPrefix(const Name& prefix);
 
 private:
   void
-  listen()
-  {
-    m_face->processEvents(ndn::time::milliseconds::zero(), true);
-  }
+  filterAndServe(const InterestFilter& forwardingHint, const Interest& interest);
 
   void
-  filterAndServe(const ndn::InterestFilter& forwardingHint, const ndn::Interest& interest);
+  filterAndServeImpl(const Name& forwardingHint, const Name& name,
+                     const Name& interest);
 
   void
-  filterAndServeImpl(const ndn::Name& forwardingHint, const ndn::Name& name,
-                     const ndn::Name& interest);
+  serve_Action(const Name& forwardingHint, const Name& name, const Name& interest);
 
   void
-  serve_Action(const ndn::Name& forwardingHint, const ndn::Name& name, const ndn::Name& interest);
+  serve_File(const Name& forwardingHint, const Name& name, const Name& interest);
 
   void
-  serve_File(const ndn::Name& forwardingHint, const ndn::Name& name, const ndn::Name& interest);
+  serve_Action_Execute(const Name& forwardingHint, const Name& name,
+                       const Name& interest);
 
   void
-  serve_Action_Execute(const ndn::Name& forwardingHint, const ndn::Name& name,
-                       const ndn::Name& interest);
-
-  void
-  serve_File_Execute(const ndn::Name& forwardingHint, const ndn::Name& name,
-                     const ndn::Name& interest);
+  serve_File_Execute(const Name& forwardingHint, const Name& name,
+                     const Name& interest);
 
   void
   flushStaleDbCache();
 
 private:
-  shared_ptr<ndn::Face> m_face;
+  Face& m_face;
   ActionLogPtr m_actionLog;
   typedef boost::shared_mutex Mutex;
 
   typedef boost::unique_lock<Mutex> ScopedLock;
-  // typedef std::set<ndn::Name>::iterator PrefixIt;
-  // std::set<ndn::Name> m_prefixes;
-  typedef std::map<ndn::Name, const ndn::RegisteredPrefixId*>::iterator FilterIdIt;
-  std::map<ndn::Name, const ndn::RegisteredPrefixId*> m_interestFilterIds;
+  // typedef std::set<Name>::iterator PrefixIt;
+  // std::set<Name> m_prefixes;
+  typedef std::map<Name, const RegisteredPrefixId*>::iterator FilterIdIt;
+  std::map<Name, const RegisteredPrefixId*> m_interestFilterIds;
 
   Mutex m_mutex;
   boost::filesystem::path m_dbFolder;
@@ -105,14 +99,14 @@ private:
 
   Scheduler m_scheduler;
   util::scheduler::ScopedEventId m_flushStateDbCacheEvent;
-  typedef std::map<ndn::Buffer, ObjectDbPtr> DbCache;
+  typedef std::map<Buffer, ObjectDbPtr> DbCache;
   DbCache m_dbCache;
   Mutex m_dbCacheMutex;
 
-  ndn::Name m_userName;
+  Name m_userName;
   std::string m_sharedFolderName;
   std::string m_appName;
-  ndn::KeyChain m_keyChain;
+  KeyChain m_keyChain;
   boost::thread m_listeningThread;
 };
 

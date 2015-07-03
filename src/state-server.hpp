@@ -158,7 +158,7 @@ namespace chronoshare {
  */
 class StateServer {
 public:
-  StateServer(shared_ptr<Face> face, ActionLogPtr actionLog,
+  StateServer(Face& face, ActionLogPtr actionLog,
               const boost::filesystem::path& rootDir, const Name& userName,
               const std::string& sharedFolderName, const std::string& appName,
               ObjectManager& objectManager, time::milliseconds freshness = time::seconds(60));
@@ -201,7 +201,7 @@ private:
   formatFilestateJson(json_spirit::Array& files, const FileItem& file);
 
 private:
-  shared_ptr<Face> m_face;
+  Face& m_face;
   ActionLogPtr m_actionLog;
   ObjectManager& m_objectManager;
 
