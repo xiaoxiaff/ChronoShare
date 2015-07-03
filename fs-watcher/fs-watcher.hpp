@@ -17,24 +17,44 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
- */
-#ifndef FS_WATCHER_H
-#define FS_WATCHER_H
+
+#ifndef CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP
+#define CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP
+
+#include "core/chronoshare-common.hpp"
 
 #include <vector>
 #include <QFileSystemWatcher>
 #include <sqlite3.h>
-#include "scheduler.hpp"
+
+#include <ndn-cxx/util/scheduler.hpp>
+#include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
+
 #include <boost/filesystem.hpp>
+#include <boost/asio/io_service.hpp>
+
+namespace ndn {
+namespace chronoshare {
 
 class FsWatcher : public QObject {
   Q_OBJECT
 
 public:
-  typedef boost::function<void(const boost::filesystem::path&)> LocalFile_Change_Callback;
+  class Error : public DbHelper::Error
+  {
+  public:
+    explicit
+    Error(const std::string& what)
+      : DbHelper::Error(what)
+    {
+    }
+  };
+
+  typedef std::function<void(const boost::filesystem::path&)> LocalFile_Change_Callback;
 
   // constructor
-  FsWatcher(QString dirPath, LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
+  FsWatcher(boost::asio::io_service& io,
+            QString dirPath, LocalFile_Change_Callback onChange, LocalFile_Change_Callback onDelete,
             QObject* parent = 0);
 
   // destructor
@@ -76,9 +96,15 @@ private:
   void
   getFilesInDir(const boost::filesystem::path& dir, std::vector<std::string>& files);
 
+
+  void
+  rescheduleEvent(const std::string& eventType, const std::string& dirPath,
+                  const time::milliseconds& period,
+                  const Scheduler::Event& callback);
+
 private:
   QFileSystemWatcher* m_watcher; // filesystem watcher
-  SchedulerPtr m_scheduler;
+  Scheduler m_scheduler;
 
   QString m_dirPath; // monitored path
 
@@ -86,6 +112,11 @@ private:
   LocalFile_Change_Callback m_onDelete;
 
   sqlite3* m_db;
+
+  std::map<std::string, util::scheduler::ScopedEventId> m_events;
 };
 
-#endif // FILESYSTEMWATCHER_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP

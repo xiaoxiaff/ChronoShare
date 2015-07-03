@@ -92,20 +92,20 @@ def build (bld):
     chornoshare = bld(
         target="chronoshare",
         features=['cxx'],
-        source = bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.cc', 'src/**/*.proto']),
-        use = "core adhoc NDN_CXX TINYXML",
-        includes = "src",
-        export_includes = "src",
+        source=bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.cc', 'src/**/*.proto']),
+        use="core adhoc NDN_CXX TINYXML",
+        includes="src",
+        export_includes="src",
         )
 
-#     fs_watcher = bld (
-#         target = "fs_watcher",
-#         features = "qt4 cxx",
-#         defines = "WAF=1",
-#         source = bld.path.ant_glob(['fs-watcher/*.cpp']),
-#         use = "SQLITE3 LOG4CXX scheduler executor QTCORE",
-#         includes = "fs-watcher scheduler executor src",
-#         )
+    fs_watcher = bld (
+        features=['qt4', 'cxx'],
+        target='fs_watcher',
+        defines='WAF=1',
+        source=bld.path.ant_glob(['fs-watcher/*.cpp']),
+        use="chronoshare QTCORE",
+        includes="fs-watcher",
+        )
 
 #     http_server = bld(
 #           target="http_server",
