@@ -20,8 +20,6 @@
 
 #include "logging.hpp"
 
-#ifdef HAVE_LOG4CXX
-
 #include <log4cxx/logger.h>
 #include <log4cxx/basicconfigurator.h>
 #include <log4cxx/consoleappender.h>
@@ -30,6 +28,8 @@
 #include <log4cxx/propertyconfigurator.h>
 #include <log4cxx/defaultconfigurator.h>
 #include <log4cxx/helpers/exception.h>
+
+#include <unistd.h>
 
 namespace ndn {
 namespace chronoshare {
@@ -61,5 +61,3 @@ INIT_LOGGERS()
 
 } // chronoshare
 } // ndn
-
-#endif // HAVE_LOG4CXX

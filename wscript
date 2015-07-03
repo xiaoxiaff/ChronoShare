@@ -15,8 +15,6 @@ def options(opt):
 
     opt.add_option('--with-tests', action='store_true', default=False, dest='with_tests',
                    help='''build unit tests''')
-    opt.add_option('--with-log4cxx', action='store_true', default=False, dest='log4cxx',
-                   help='''Compile with log4cxx logging support''')
 
     opt.add_option('--without-sqlite-locking', action='store_false', default=True,
                    dest='with_sqlite_locking',
@@ -46,9 +44,7 @@ def configure(conf):
     if Utils.unversioned_sys_platform() == "linux":
         conf.define("TRAY_ICON", "chronoshare-ubuntu.png")
 
-    if conf.options.log4cxx:
-        conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
-        conf.define ("HAVE_LOG4CXX", 1)
+    conf.check_cfg(package='liblog4cxx', args=['--cflags', '--libs'], uselib_store='LOG4CXX', mandatory=True)
 
     boost_libs = 'system random thread filesystem'
     if conf.options.with_tests:
@@ -65,13 +61,13 @@ def configure(conf):
 
     conf.define('SYSCONFDIR', conf.env['SYSCONFDIR'])
 
-    conf.write_config_header('chronoshare-config.hpp')
+    conf.write_config_header('core/chronoshare-config.hpp')
 
-def build (bld):
+def build(bld):
     bld(name='core-objects',
         target='core-objects',
         features=['cxx'],
-        src='core/*.cpp',
+        source=bld.path.ant_glob('core/**/*.cpp'),
         use=['LOG4CXX', 'BOOST'],
         includes='core',
         export_includes='. core',
@@ -93,24 +89,24 @@ def build (bld):
         target="chronoshare",
         features=['cxx'],
         source=bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.cc', 'src/**/*.proto']),
-        use="core adhoc NDN_CXX TINYXML",
+        use=['adhoc', 'NDN_CXX', 'TINYXML'],
         includes="src",
         export_includes="src",
         )
 
     fs_watcher = bld (
         features=['qt4', 'cxx'],
-        target='fs_watcher',
+        target='fs-watcher',
         defines='WAF=1',
-        source=bld.path.ant_glob(['fs-watcher/*.cpp']),
-        use="chronoshare QTCORE",
+        source=bld.path.ant_glob('fs-watcher/*.cpp'),
+        use=['chronoshare', 'QTCORE'],
         includes="fs-watcher",
         )
 
 #     http_server = bld(
 #           target="http_server",
 #           features="qt4 cxx",
-#           source=bld.path.ant_glob(['server/*.cpp']),
+#           source=bld.path.ant_glob('server/*.cpp'),
 #           includes="server src .",
 #           use="BOOST QTCORE")
 
@@ -120,7 +116,7 @@ def build (bld):
 #         defines="WAF=1",
 #         source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cpp', 'gui/images.qrc']),
 #         includes="scheduler executor fs-watcher gui src adhoc server . ",
-#         use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX database chronoshare http_server TINYXML",
+#         use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX database chronoshare http_server TINYXML",
 
 #         html_resources = bld.path.find_dir("gui/html").ant_glob([
 #                 '**/*.js', '**/*.png', '**/*.css',
@@ -183,16 +179,16 @@ def build (bld):
 #         defines = "WAF",
 #         source = "cmd/csd.cpp",
 #         includes = "scheduler executor gui fs-watcher src . ",
-#         use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
+#         use = "BOOSTSQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX chronoshare TINYXML"
 #         )
 
-#     dump_db = bld (
-#         target = "dump-db",
-#         features = "cxx cxxprogram",
-#         source = "cmd/dump-db.cpp",
-#         includes = "scheduler executor gui fs-watcher src . ",
-#         use = "BOOST SQLITE3 QTCORE LOG4CXX fs_watcher NDN_CXX chronoshare TINYXML"
-#         )
+    dump_db = bld (
+        target = "dump-db",
+        features = "cxx cxxprogram",
+        source = "cmd/dump-db.cpp",
+        includes = "scheduler executor gui fs-watcher src . ",
+        use = "chronoshare fs-watcher QTQORE"
+        )
 
 #    bld.recurse('tests');
 

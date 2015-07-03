@@ -23,9 +23,10 @@
 
 #include "chronoshare-config.hpp"
 
-#ifdef HAVE_LOG4CXX
-
 #include <log4cxx/logger.h>
+
+namespace ndn {
+namespace chronoshare {
 
 #define MEMBER_LOGGER static log4cxx::LoggerPtr staticModuleLogger;
 
@@ -58,34 +59,7 @@
 void
 INIT_LOGGERS();
 
-#else // else HAVE_LOG4CXX
-
-#define INIT_LOGGER(name)
-#define _LOG_FUNCTION(x)
-#define _LOG_FUNCTION_NOARGS
-#define _LOG_TRACE(x)
-#define INIT_LOGGERS(x)
-#define _LOG_ERROR(x)
-#define _LOG_ERROR_COND(cond, x)
-#define _LOG_DEBUG_COND(cond, x)
-
-#define MEMBER_LOGGER
-#define INIT_MEMBER_LOGGER(className, name)
-
-#ifdef _DEBUG
-
-#include <boost/thread/thread.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <iostream>
-
-#define _LOG_DEBUG(x)                                                                              \
-  std::clog << boost::get_system_time() << " " << boost::this_thread::get_id() << " " << x         \
-            << std::endl;
-
-#else
-#define _LOG_DEBUG(x)
-#endif
-
-#endif // HAVE_LOG4CXX
+} // chronoshare
+} // ndn
 
 #endif // LOGGING_H
