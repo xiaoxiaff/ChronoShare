@@ -19,9 +19,10 @@
  */
 
 #include "dispatcher.hpp"
-#include "logging.hpp"
 #include "fs-watcher.hpp"
 #include "sync-core.hpp"
+
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/string-helper.hpp>
 

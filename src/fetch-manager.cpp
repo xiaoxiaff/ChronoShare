@@ -19,7 +19,7 @@
  */
 
 #include "fetch-manager.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/face.hpp>
 

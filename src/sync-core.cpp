@@ -20,7 +20,7 @@
 
 #include "sync-core.hpp"
 #include "sync-state-helper.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/string-helper.hpp>
 

@@ -20,7 +20,7 @@
 
 #include "object-manager.hpp"
 #include "object-db.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <sys/stat.h>
 

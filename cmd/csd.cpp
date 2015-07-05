@@ -24,8 +24,8 @@
 
 #ifndef Q_MOC_RUN
 #include "dispatcher.hpp"
-#include "logging.hpp"
 #include "fs-watcher.hpp"
+#include "core/logging.hpp"
 
 #include <boost/asio/io_service.hpp>
 #endif

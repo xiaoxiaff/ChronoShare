@@ -19,7 +19,7 @@
  */
 
 #include "sync-log.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/sqlite3-statement.hpp>
 #include <ndn-cxx/util/string-helper.hpp>

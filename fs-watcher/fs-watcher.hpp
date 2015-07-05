@@ -22,6 +22,7 @@
 #define CHRONOSHARE_FS_WATCHER_FS_WATCHER_HPP
 
 #include "core/chronoshare-common.hpp"
+#include "db-helper.hpp"
 
 #include <vector>
 #include <QFileSystemWatcher>

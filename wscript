@@ -69,8 +69,8 @@ def build(bld):
         features=['cxx'],
         source=bld.path.ant_glob('core/**/*.cpp'),
         use=['LOG4CXX', 'BOOST'],
-        includes='core',
-        export_includes='. core',
+        includes='.',
+        export_includes='.',
         )
 
     contrib = bld(
@@ -113,12 +113,12 @@ def build(bld):
         export_includes="fs-watcher",
         )
 
-#     http_server = bld(
-#           target="http_server",
-#           features="qt4 cxx",
-#           source=bld.path.ant_glob('server/*.cpp'),
-#           includes="server src .",
-#           use="BOOST QTCORE")
+    http_server = bld(
+          target="http_server",
+          features="qt4 cxx",
+          source=bld.path.ant_glob('server/*.cpp'),
+          includes="server src .",
+          use="BOOST QTCORE")
 
 #     qt = bld(
 #         target="ChronoShare",

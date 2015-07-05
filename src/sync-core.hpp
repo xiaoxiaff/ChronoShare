@@ -23,7 +23,7 @@
 
 #include "core/chronoshare-common.hpp"
 #include "sync-log.hpp"
-#include "random-interval-generator.hpp"
+#include "core/random-interval-generator.hpp"
 
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>

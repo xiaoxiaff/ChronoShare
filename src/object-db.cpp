@@ -19,11 +19,11 @@
  */
 
 #include "object-db.hpp"
-#include <iostream>
-#include <boost/make_shared.hpp>
 #include "db-helper.hpp"
+#include "core/logging.hpp"
+
+#include <iostream>
 #include <sys/stat.h>
-#include "logging.hpp"
 
 namespace ndn {
 namespace chronoshare {

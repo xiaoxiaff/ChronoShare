@@ -18,10 +18,8 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "db-helper.hpp"
-#include "logging.hpp"
-
 #include "fs-watcher.hpp"
+#include "core/logging.hpp"
 
 #include <QDirIterator>
 #include <QRegExp>

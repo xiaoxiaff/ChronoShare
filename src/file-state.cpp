@@ -19,8 +19,7 @@
  */
 
 #include "file-state.hpp"
-#include "logging.hpp"
-#include <boost/bind.hpp>
+#include "core/logging.hpp"
 
 INIT_LOGGER("FileState");
 

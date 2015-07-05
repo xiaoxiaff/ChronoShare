@@ -19,7 +19,7 @@
  */
 
 #include "db-helper.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/digest.hpp>
 

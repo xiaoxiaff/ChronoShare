@@ -19,8 +19,8 @@
  */
 
 #include "dispatcher.hpp"
-#include "logging.hpp"
 #include "fetch-task-db.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/string-helper.hpp>
 #include <ndn-cxx/util/digest.hpp>

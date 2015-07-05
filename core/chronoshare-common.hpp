@@ -21,7 +21,7 @@
 #ifndef CHRONOSHARE_CORE_COMMON_HPP
 #define CHRONOSHARE_CORE_COMMON_HPP
 
-#include "chronoshare-config.hpp"
+#include "core/chronoshare-config.hpp"
 
 #include <cstddef>
 #include <cstdint>

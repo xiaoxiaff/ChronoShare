@@ -20,7 +20,7 @@
 
 #include "fetcher.hpp"
 #include "fetch-manager.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <boost/asio/io_service.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>

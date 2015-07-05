@@ -9,23 +9,29 @@
 //
 
 #include "request_handler.hpp"
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <boost/lexical_cast.hpp>
 #include "mime_types.hpp"
 #include "reply.hpp"
 #include "request.hpp"
+#include "core/logging.hpp"
+
+#include <fstream>
+#include <sstream>
+#include <string>
+
+#include <boost/lexical_cast.hpp>
+
 #include <QIODevice>
 #include <QFile>
 #include <QDataStream>
 #include <QString>
-#include "logging.hpp"
 
-INIT_LOGGER("HttpServer")
 
 namespace http {
 namespace server {
+
+using namespace ndn::chronoshare;
+
+INIT_LOGGER("HttpServer")
 
 request_handler::request_handler(const std::string& doc_root)
   : doc_root_(doc_root.c_str())

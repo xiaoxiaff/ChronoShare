@@ -19,7 +19,7 @@
  */
 
 #include "content-server.hpp"
-#include "logging.hpp"
+#include "core/logging.hpp"
 
 #include <ndn-cxx/util/string-helper.hpp>
 
