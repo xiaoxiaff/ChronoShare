@@ -184,11 +184,12 @@ def build(bld):
 #         bld.install_files ("${DATADIR}/ChronoShare", "gui/images/chronoshare-big.png")
 
     cmdline = bld (
-        target = "csd",
-        features = "qt4 cxx cxxprogram",
-        defines = "WAF=1",
-        source = "cmd/csd.cpp",
-        use = "chronoshare fs-watcher contrib"
+        target="csd",
+        features="qt4 cxx cxxprogram",
+        defines="WAF=1",
+        source="cmd/csd.cpp",
+        use="chronoshare fs-watcher contrib",
+        includes="cmd"
         )
 
     dump_db = bld (
