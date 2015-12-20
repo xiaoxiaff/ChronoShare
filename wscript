@@ -120,19 +120,18 @@ def build(bld):
           includes="server src .",
           use="BOOST QTCORE")
 
-#     qt = bld(
-#         target="ChronoShare",
-#         features="qt4 cxx cxxprogram html_resources",
-#         defines="WAF=1",
-#         source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cpp', 'gui/images.qrc']),
-#         includes="scheduler executor fs-watcher gui src adhoc server . ",
-#         use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX database chronoshare http_server TINYXML",
+    qt = bld(
+        target="ChronoShare",
+        features="qt4 cxx cxxprogram html_resources",
+        source=bld.path.ant_glob(['gui/*.cpp', 'gui/*.cpp', 'gui/images.qrc']),
+        includes="scheduler executor fs-watcher gui src adhoc server . ",
+        use="BOOST SQLITE3 QTCORE QTGUI LOG4CXX fs-watcher NDN_CXX database chronoshare http_server TINYXML",
 
-#         html_resources = bld.path.find_dir("gui/html").ant_glob([
-#                 '**/*.js', '**/*.png', '**/*.css',
-#                 '**/*.html', '**/*.gif', '**/*.ico'
-#                 ]),
-#         )
+        html_resources = bld.path.find_dir("gui/html").ant_glob([
+                '**/*.js', '**/*.png', '**/*.css',
+                '**/*.html', '**/*.gif', '**/*.ico'
+                ]),
+        )
 
 #     if Utils.unversioned_sys_platform() == "darwin":
 #         app_plist = '''<?xml version="1.0" encoding="UTF-8"?>

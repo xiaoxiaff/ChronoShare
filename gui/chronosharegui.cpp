@@ -19,25 +19,26 @@
  */
 
 #include "chronosharegui.hpp"
-#include "config.hpp"
+#include "core/logging.hpp"
 
-#include "logging.hpp"
 #include <QValidator>
 #include <QDir>
 #include <QFileInfo>
 #include <QDesktopServices>
 
-#include <boost/make_shared.hpp>
+#include <thread>
 
-using namespace boost;
-using namespace ndn;
+namespace ndn {
+namespace chronoshare {
 
-static const string HTTP_SERVER_ADDRESS = "localhost";
-static const string HTTP_SERVER_PORT = "9001";
+namespace fs = boost::filesystem;
+
+static const std::string HTTP_SERVER_ADDRESS = "localhost";
+static const std::string HTTP_SERVER_PORT = "9001";
 #ifdef _DEBUG
-static const string DOC_ROOT = "gui/html";
+static const std::string DOC_ROOT = "gui/html";
 #else
-static const string DOC_ROOT = ":/html";
+static const std::string DOC_ROOT = ":/html";
 #endif
 static const QString ICON_BIG_FILE(":/images/chronoshare-big.png");
 static const QString ICON_TRAY_FILE(":/images/" TRAY_ICON);
@@ -46,8 +47,6 @@ INIT_LOGGER("Gui");
 
 ChronoShareGui::ChronoShareGui(QWidget* parent)
   : QDialog(parent)
-  , m_watcher(0)
-  , m_dispatcher(0)
   , m_httpServer(0)
 #ifdef ADHOC_SUPPORTED
   , m_executor(1)
@@ -152,25 +151,27 @@ ChronoShareGui::startBackend(bool restart /*=false*/)
     }
 
     _LOG_DEBUG("Restarting Dispatcher and FileWatcher for the new location or new username");
-    delete m_watcher;    // stop filewatching ASAP
-    delete m_dispatcher; // stop dispatcher ASAP, but after watcher(to prevent triggering callbacks
-                         // on deleted object)
+    m_watcher.reset();    // stop filewatching ASAP
+    m_dispatcher.reset(); // stop dispatcher ASAP, but after watcher(to prevent triggering callbacks
+                          // on deleted object)
   }
 
-  filesystem::path realPathToFolder(m_dirPath.toStdString());
+  fs::path realPathToFolder(m_dirPath.toStdString());
   realPathToFolder /= m_sharedFolderName.toStdString();
 
   std::cout << "m_dispatcher username:" << m_username.toStdString()
             << " m_sharedFolderName:" << m_sharedFolderName.toStdString()
             << " realPathToFolder: " << realPathToFolder << std::endl;
 
-  m_dispatcher = new Dispatcher(m_username.toStdString(), m_sharedFolderName.toStdString(),
-                                realPathToFolder, make_shared<Face>());
+  m_ioService.reset(new boost::asio::io_service());
+  m_face.reset(new Face(*m_ioService));
+  m_dispatcher.reset(new Dispatcher(m_username.toStdString(), m_sharedFolderName.toStdString(),
+                                    realPathToFolder, *m_face));
 
   // Alex: this **must** be here, otherwise m_dirPath will be uninitialized
-  m_watcher = new FsWatcher(realPathToFolder.string().c_str(),
-                            bind(&Dispatcher::Did_LocalFile_AddOrModify, m_dispatcher, _1),
-                            bind(&Dispatcher::Did_LocalFile_Delete, m_dispatcher, _1));
+  m_watcher.reset(new FsWatcher(*m_ioService, realPathToFolder.string().c_str(),
+                                bind(&Dispatcher::Did_LocalFile_AddOrModify, m_dispatcher.get(), _1),
+                                bind(&Dispatcher::Did_LocalFile_Delete, m_dispatcher.get(), _1)));
 
   if (m_httpServer != 0) {
     // no need to restart webserver if it already exists
@@ -181,7 +182,7 @@ ChronoShareGui::startBackend(bool restart /*=false*/)
   if (indexHtmlInfo.exists()) {
     try {
       m_httpServer = new http::server::server(HTTP_SERVER_ADDRESS, HTTP_SERVER_PORT, DOC_ROOT);
-      m_httpServerThread = boost::thread(&http::server::server::run, m_httpServer);
+      m_httpServerThread = std::thread(&http::server::server::run, m_httpServer);
     }
     catch (std::exception& e) {
       _LOG_ERROR("Start http server failed");
@@ -207,9 +208,12 @@ ChronoShareGui::~ChronoShareGui()
   m_executor.shutdown();
 #endif
 
-  delete m_watcher;    // stop filewatching ASAP
-  delete m_dispatcher; // stop dispatcher ASAP, but after watcher(to prevent triggering callbacks on
-                       // deleted object)
+  // stop filewatching ASAP
+  m_watcher.reset();
+
+  // stop dispatcher ASAP, but after watcher to prevent triggering callbacks on the deleted object
+  m_dispatcher.reset();
+
   if (m_httpServer != 0) {
     m_httpServer->handle_stop();
     m_httpServerThread.join();
@@ -238,6 +242,10 @@ ChronoShareGui::~ChronoShareGui()
   delete button;
   delete label;
   delete mainLayout;
+
+  // to avoid `private field 'm_checkForUpdates' is not used` warning/error
+  (void)(m_checkForUpdates);
+  (void)(m_wifiAction);
 }
 
 void
@@ -406,7 +414,7 @@ ChronoShareGui::setIcon()
 void
 ChronoShareGui::openSharedFolder()
 {
-  filesystem::path realPathToFolder(m_dirPath.toStdString());
+  fs::path realPathToFolder(m_dirPath.toStdString());
   realPathToFolder /= m_sharedFolderName.toStdString();
   QString path = QDir::toNativeSeparators(realPathToFolder.string().c_str());
   QDesktopServices::openUrl(QUrl("file:///" + path));
@@ -457,15 +465,15 @@ ChronoShareGui::updateRecentFilesMenu()
   for (int i = 0; i < 5; i++) {
     m_fileActions[i]->setVisible(false);
   }
-  m_dispatcher->LookupRecentFileActions(boost::bind(&ChronoShareGui::checkFileAction, this, _1, _2,
-                                                    _3),
+  m_dispatcher->LookupRecentFileActions(std::bind(&ChronoShareGui::checkFileAction, this, _1, _2,
+                                                  _3),
                                         5);
 }
 
 void
 ChronoShareGui::checkFileAction(const std::string& filename, int action, int index)
 {
-  filesystem::path realPathToFolder(m_dirPath.toStdString());
+  fs::path realPathToFolder(m_dirPath.toStdString());
   realPathToFolder /= m_sharedFolderName.toStdString();
   realPathToFolder /= filename;
   QString fullPath = realPathToFolder.string().c_str();
@@ -678,7 +686,7 @@ ChronoShareGui::closeEvent(QCloseEvent* event)
   event->ignore(); // don't let the event propagate to the base class
 }
 
-#if WAF
+} // chronoshare
+} // ndn
+
 #include "chronosharegui.moc"
-#include "chronosharegui.cpp.moc"
-#endif

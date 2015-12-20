@@ -28,7 +28,7 @@
 #include "core/logging.hpp"
 
 #include <boost/asio/io_service.hpp>
-#endif
+#endif // Q_MOC_RUN
 
 #include <thread>
 

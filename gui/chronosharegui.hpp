@@ -18,8 +18,10 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef CHRONOSHAREGUI_H
-#define CHRONOSHAREGUI_H
+#ifndef CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
+#define CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
+
+#include "core/chronoshare-common.hpp"
 
 #include <QtGui>
 #include <QWidget>
@@ -34,20 +36,25 @@
 #include <QMessageBox>
 #include <QApplication>
 
+#ifndef Q_MOC_RUN
 #include "dispatcher.hpp"
 #include "fs-watcher.hpp"
 #include "server.hpp"
 #include "adhoc.hpp"
+#endif // Q_MOC_RUN
 
 #if __APPLE__ && HAVE_SPARKLE
 #define SPARKLE_SUPPORTED 1
 #include "sparkle-auto-update.hpp"
 #endif
 
+#include <thread>
 
-#include <boost/thread/thread.hpp>
+namespace ndn {
+namespace chronoshare {
 
-class ChronoShareGui : public QDialog {
+class ChronoShareGui : public QDialog
+{
   Q_OBJECT
 
 public:
@@ -153,10 +160,8 @@ private:
   QString m_username;         // username
   QString m_sharedFolderName; // shared folder name
 
-  FsWatcher* m_watcher;
-  Dispatcher* m_dispatcher;
   http::server::server* m_httpServer;
-  boost::thread m_httpServerThread;
+  std::thread m_httpServerThread;
 
   QLabel* labelUsername;
   QPushButton* button;
@@ -177,6 +182,15 @@ private:
 #endif
   // QString m_settingsFilePath; // settings file path
   // QString m_settings;
+
+  std::thread m_chronoshareThread;
+  std::unique_ptr<boost::asio::io_service> m_ioService;
+  std::unique_ptr<Face> m_face;
+  std::unique_ptr<FsWatcher> m_watcher;
+  std::unique_ptr<Dispatcher> m_dispatcher;
 };
 
-#endif // CHRONOSHAREGUI_HPP
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_GUI_CHRONOSHAREGUI_HPP
