@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS                                     \n\
     filename      TEXT NOT NULL,                               \n\
     PRIMARY KEY(filename)                                      \n\
 );                                                             \n\
-CREATE INDEX filename_index ON Files(filename);                \n\
+CREATE INDEX IF NOT EXISTS filename_index ON Files(filename);  \n\
 ";
 
 void
