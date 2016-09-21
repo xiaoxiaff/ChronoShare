@@ -99,16 +99,17 @@ SyncLog::SyncLog(const boost::filesystem::path& path, const Name& localName)
 
   UpdateDeviceSeqNo(localName, 0);
 
-  Sqlite3Statement stmt(m_db, "SELECT device_id, seq_no FROM SyncNodes WHERE device_name=?");
-  stmt.bind(1, m_localName.wireEncode(), SQLITE_STATIC);
+  Sqlite3Statement * stmt = new Sqlite3Statement(m_db, "SELECT device_id, seq_no FROM SyncNodes WHERE device_name=?");
+  stmt->bind(1, m_localName.wireEncode(), SQLITE_STATIC);
 
-  if (sqlite3_step(stmt) == SQLITE_ROW) {
-    m_localDeviceId = stmt.getInt(0);
+  if (sqlite3_step(*stmt) == SQLITE_ROW) {
+    m_localDeviceId = stmt->getInt(0);
   }
   else {
     BOOST_THROW_EXCEPTION(Error("Impossible thing in SyncLog::SyncLog"));
   }
-  sqlite3_finalize(stmt);
+
+  sqlite3_finalize(*stmt);
 }
 
 sqlite3_int64
