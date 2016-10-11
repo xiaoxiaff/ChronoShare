@@ -31,7 +31,7 @@ using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
 
-INIT_LOGGER("Test.Dispatcher");
+INIT_LOGGER("Test.Dispatcher")
 
 BOOST_AUTO_TEST_SUITE(TestDispatcher)
 

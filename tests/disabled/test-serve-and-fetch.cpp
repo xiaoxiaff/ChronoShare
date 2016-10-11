@@ -35,7 +35,7 @@
 
 #include "logging.hpp"
 
-INIT_LOGGER("Test.ServerAndFetch");
+INIT_LOGGER("Test.ServerAndFetch")
 
 using namespace ndn;
 using namespace std;

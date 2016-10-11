@@ -36,7 +36,7 @@ namespace fs = boost::filesystem;
 // namespace chronochat {
 // namespace tests {
 
-INIT_LOGGER("Test.SyncLog");
+INIT_LOGGER("Test.SyncLog")
 
 BOOST_AUTO_TEST_SUITE(TestSyncLog)
 

@@ -25,7 +25,7 @@
 #include "logging.hpp"
 #include <ndn-cxx/security/key-chain.hpp>
 
-INIT_LOGGER("Test.FetchManager");
+INIT_LOGGER("Test.FetchManager")
 
 using namespace ndn;
 using namespace std;

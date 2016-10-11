@@ -11,7 +11,7 @@
  * ChronoShare is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
  * PARTICULAR PURPOSE.  See the GNU General Public License for more details.
- *
+ * 
  * You should have received copies of the GNU General Public License along with
  * ChronoShare, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  *
@@ -27,7 +27,7 @@
 namespace ndn {
 namespace chronoshare {
 
-INIT_LOGGER("FsWatcher");
+INIT_LOGGER("FsWatcher")
 
 namespace fs = boost::filesystem;
 
@@ -70,7 +70,7 @@ FsWatcher::rescheduleEvent(const std::string& eventType, const std::string& path
                            const Scheduler::Event& callback)
 {
   util::scheduler::ScopedEventId event(m_scheduler);
-  event = m_scheduler.scheduleEvent(time::milliseconds(500), callback);
+  event = m_scheduler.scheduleEvent(period, callback);
 
   // only one task per directory/file
   std::string key = eventType + ":" + path;
@@ -170,7 +170,9 @@ FsWatcher::ScanDirectory_NotifyUpdates_Execute(QString dirPath)
       // _LOG_DEBUG("Attempt to add path to watcher: " << absFilePath.toStdString());
       m_watcher->removePath(absFilePath);
       m_watcher->addPath(absFilePath);
-
+      QStringList l = m_watcher->files();
+      for (int i = 0; i < l.size(); ++i)
+         std::cout << l.at(i).toStdString() << std::endl;
       if (fileInfo.isFile()) {
         QString relFile = absFilePath;
         relFile.remove(0, m_dirPath.size());

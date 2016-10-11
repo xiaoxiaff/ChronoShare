@@ -31,7 +31,7 @@
 #include <iterator>
 #include <thread>
 
-INIT_LOGGER("Test.ObjectManager");
+INIT_LOGGER("Test.ObjectManager")
 
 using namespace ndn;
 using namespace std;

@@ -25,7 +25,7 @@
 #include "logging.hpp"
 #include <sstream>
 
-INIT_LOGGER("Adhoc.OSX");
+INIT_LOGGER("Adhoc.OSX")
 
 #import <CoreWLAN/CoreWLAN.h>
 #import <CoreWLAN/CoreWLANConstants.h>

@@ -34,7 +34,7 @@
 #include <map>
 #include <utility>
 
-INIT_LOGGER("Test.FetchTaskDb");
+INIT_LOGGER("Test.FetchTaskDb")
 
 using namespace ndn;
 using namespace std;

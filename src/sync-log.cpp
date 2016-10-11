@@ -29,7 +29,7 @@ namespace chronoshare {
 
 using util::Sqlite3Statement;
 
-INIT_LOGGER("Sync.Log");
+INIT_LOGGER("Sync.Log")
 
 const std::string INIT_DATABASE = "\
 CREATE TABLE                                                    \n\

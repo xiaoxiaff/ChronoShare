@@ -198,7 +198,7 @@ def build(bld):
         use = "chronoshare fs-watcher"
         )
 
-#    bld.recurse('tests');
+    bld.recurse('tests');
 
 from waflib import TaskGen
 @TaskGen.extension('.mm')
