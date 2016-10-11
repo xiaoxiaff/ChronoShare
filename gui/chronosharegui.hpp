@@ -185,6 +185,7 @@ private:
 
   std::thread m_chronoshareThread;
   std::unique_ptr<boost::asio::io_service> m_ioService;
+  
   std::unique_ptr<Face> m_face;
   std::unique_ptr<FsWatcher> m_watcher;
   std::unique_ptr<Dispatcher> m_dispatcher;

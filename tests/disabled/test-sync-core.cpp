@@ -31,7 +31,7 @@ using namespace ndn;
 using namespace boost;
 using namespace boost::filesystem;
 
-INIT_LOGGER("Test.SyncCore");
+INIT_LOGGER("Test.SyncCore")
 
 BOOST_AUTO_TEST_SUITE(SyncCoreTests)
 

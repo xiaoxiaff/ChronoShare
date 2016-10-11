@@ -43,7 +43,7 @@ static const std::string DOC_ROOT = ":/html";
 static const QString ICON_BIG_FILE(":/images/chronoshare-big.png");
 static const QString ICON_TRAY_FILE(":/images/" TRAY_ICON);
 
-INIT_LOGGER("Gui");
+INIT_LOGGER("Gui")
 
 ChronoShareGui::ChronoShareGui(QWidget* parent)
   : QDialog(parent)
@@ -172,6 +172,24 @@ ChronoShareGui::startBackend(bool restart /*=false*/)
   m_watcher.reset(new FsWatcher(*m_ioService, realPathToFolder.string().c_str(),
                                 bind(&Dispatcher::Did_LocalFile_AddOrModify, m_dispatcher.get(), _1),
                                 bind(&Dispatcher::Did_LocalFile_Delete, m_dispatcher.get(), _1)));
+  //m_ioService->run();
+  try {
+    m_chronoshareThread = std::thread(boost::bind(&boost::asio::io_service::run, boost::ref(m_ioService)));
+  }
+    catch (std::exception& e) {
+      _LOG_ERROR("Start IO service failed");
+      QMessageBox msgBox;
+      msgBox.setText("WARNING: Cannot start IO service!");
+      msgBox.setIcon(QMessageBox::Warning);
+      msgBox.setInformativeText(
+        QString("Starting IO service failed. Exception caused: %1").arg(e.what()));
+      msgBox.setStandardButtons(QMessageBox::Ok);
+      msgBox.exec();
+      // stop filewatching ASAP
+      m_watcher.reset();
+      m_dispatcher.reset();
+      return;
+    }
 
   if (m_httpServer != 0) {
     // no need to restart webserver if it already exists

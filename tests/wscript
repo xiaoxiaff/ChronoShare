@@ -5,16 +5,17 @@ from waflib import Utils
 top = '..'
 
 def build(bld):
-    # unit test objects
-    unit_tests = bld(
-        target='unit-test-objects',
-        name='unit-test-objects',
-        features='cxx',
-        source = bld.path.ant_glob('**/*.cpp',
-                                   excl=['main.cpp', 'disabled/**/*.cpp']),
-        use = 'fs_watcher chronoshare BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX TINYXML',
-        defines='UNIT_TEST_CONFIG_PATH=\"%s/tmp-files/\"' % (bld.bldnode),
-        install_path=None)
+    if bld.env['TESTS']:
+        # unit test objects
+        unit_tests = bld(
+            target='unit-test-objects',
+            name='unit-test-objects',
+            features='cxx',
+            source = bld.path.ant_glob('**/*.cpp',
+                                       excl=['main.cpp', 'disabled/**/*.cpp']),
+            use = 'fs_watcher chronoshare BOOST LOG4CXX SQLITE3 QTCORE QTGUI NDN_CXX TINYXML',
+            defines='UNIT_TEST_CONFIG_PATH=\"%s/tmp-files/\"' % (bld.bldnode),
+            install_path=None)
 
     # unit test app
     bld(features='cxx cxxprogram',

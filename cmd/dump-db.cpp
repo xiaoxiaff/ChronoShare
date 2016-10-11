@@ -31,7 +31,7 @@
 namespace ndn {
 namespace chronoshare {
 
-INIT_LOGGER("DumpDb");
+INIT_LOGGER("DumpDb")
 
 using std::cout;
 using std::cerr;

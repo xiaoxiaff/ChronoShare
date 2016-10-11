@@ -27,7 +27,7 @@
 namespace ndn {
 namespace chronoshare {
 
-INIT_LOGGER("ActionLog");
+INIT_LOGGER("ActionLog")
 
 const std::string INIT_DATABASE = "\
 CREATE TABLE ActionLog(                                                \n\
@@ -232,6 +232,8 @@ ActionLog::AddLocalActionUpdate(const std::string& filename, const Buffer& hash,
 
   std::string item_msg;
   item->SerializeToString(&item_msg);
+  _LOG_DEBUG("Update Serialize Result " << item_msg);
+
 
   // action name: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
 
@@ -354,9 +356,9 @@ ActionLog::AddLocalActionDelete(const std::string& filename)
   item->set_parent_device_name(parent_device_name->buf(), parent_device_name->size());
   item->set_parent_seq_no(parent_seq_no);
 
-  std::string item_msg;
-  item->SerializeToString(&item_msg);
-
+  std::string msg;
+  item->SerializeToString(&msg);
+  _LOG_DEBUG("Delete Serialize Result " << msg);
   // action name: /<device_name>/<appname>/action/<shared-folder>/<action-seq>
   Name actionName = Name("/");
   actionName.append(m_syncLog->GetLocalName()).append(m_appName).append("action");
@@ -366,7 +368,7 @@ ActionLog::AddLocalActionDelete(const std::string& filename)
   shared_ptr<Data> actionData = make_shared<Data>();
   actionData->setName(actionName);
   actionData->setFreshnessPeriod(time::seconds(60));
-  actionData->setContent(reinterpret_cast<const uint8_t*>(&item_msg), item_msg.size());
+  actionData->setContent(reinterpret_cast<const uint8_t*>(msg.c_str()), msg.size());
   m_keyChain.sign(*actionData);
 
   sqlite3_bind_blob(stmt, 9, actionName.wireEncode().wire(), actionName.wireEncode().size(),
@@ -406,6 +408,7 @@ ActionLog::AddLocalActionDelete(const std::string& filename)
 shared_ptr<Data>
 ActionLog::LookupActionData(const Name& deviceName, sqlite3_int64 seqno)
 {
+  _LOG_TRACE("Looking Action for deviceName [" << deviceName << "] and seqno:" << seqno);
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db,
                      "SELECT action_content_object FROM ActionLog WHERE device_name=? AND seq_no=?",
@@ -418,7 +421,7 @@ ActionLog::LookupActionData(const Name& deviceName, sqlite3_int64 seqno)
   shared_ptr<Data> retval;
 
   if (sqlite3_step(stmt) == SQLITE_ROW) {
-    // _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
+    _LOG_DEBUG(sqlite3_column_blob(stmt, 0) << ", " << sqlite3_column_bytes(stmt, 0));
     retval = make_shared<Data>();
     retval->wireDecode(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
                                   sqlite3_column_bytes(stmt, 0)));
@@ -546,7 +549,7 @@ ActionLog::AddRemoteAction(const Name& deviceName, sqlite3_int64 seqno,
     return ActionItemPtr();
   }
 
-  _LOG_DEBUG("AddRemoteAction: [" << deviceName.toUri() << "] seqno: " << seqno);
+  _LOG_DEBUG("AddRemoteAction: [" << action->action() <<"], from ["<< deviceName.toUri() << "] seqno: " << seqno);
 
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(
