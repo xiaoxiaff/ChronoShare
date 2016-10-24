@@ -19,6 +19,7 @@
  */
 
 #include "sync-core.hpp"
+#include "logging.hpp"
 #include <boost/make_shared.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -27,9 +28,13 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/make_shared.hpp>
 
-using namespace ndn;
+INIT_LOGGER("Test.protobuf")
+
 using namespace std;
 using namespace boost;
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(ProtobufTests)
 
@@ -63,3 +68,6 @@ BOOST_AUTO_TEST_CASE(TestGzipProtobuf)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

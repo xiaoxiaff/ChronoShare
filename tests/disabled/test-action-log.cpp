@@ -17,29 +17,31 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-
 #include <boost/test/unit_test.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "logging.hpp"
-#include "action-log.hpp"
+#include "dispatcher.hpp"
+#include "sync-log.hpp"
+#include "test-common.hpp"
 
 #include <unistd.h>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
 #include <thread>
+ 
+INIT_LOGGER("ActionLogTes")
 
-using namespace std;
-using namespace boost;
-using namespace ndn;
 namespace fs = boost::filesystem;
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestActionLog)
 
 BOOST_AUTO_TEST_CASE(UpdateAction)
 {
-  INIT_LOGGERS();
 
   Name localName("/lijing");
 
@@ -54,7 +56,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
   SyncLogPtr syncLog = make_shared<SyncLog>(tmpdir, localName);
 
   ActionLogPtr actionLog =
-    make_shared<ActionLog>(face, tmpdir, syncLog, "top-secret", "test-chronoshare",
+    std::make_shared<ActionLog>(*face, tmpdir, syncLog, "top-secret", "test-chronoshare",
                                   ActionLog::OnFileAddedOrChangedCallback(),
                                   ActionLog::OnFileRemovedCallback());
 
@@ -65,7 +67,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
 
   actionLog
     ->AddLocalActionUpdate("file.txt",
-                           DigestComputer::digestFromString(
+                           digestFromString(
                              "2ff304769cdb0125ac039e6fe7575f8576dceffc62618a431715aaf6eea2bf1c"),
                            std::time(NULL), 0755, 10);
 
@@ -75,7 +77,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
 
   ndn::ConstBufferPtr hash = syncLog->RememberStateInStateLog();
   BOOST_CHECK_EQUAL(syncLog->LogSize(), 1);
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "91a849eede75acd56ae1bcb99e92d8fb28757683bc387dbb0e59c3108fcf4f18");
 
   ndn::shared_ptr<ndn::Data> data = actionLog->LookupActionData(localName, 0);
@@ -98,7 +100,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
 
   if (action) {
     BOOST_CHECK_EQUAL(action->version(), 0);
-    BOOST_CHECK_EQUAL(action->action(), 0);
+    BOOST_CHECK_EQUAL(action->action(), ActionItem::UPDATE);
 
     BOOST_CHECK_EQUAL(action->filename(), "file.txt");
     BOOST_CHECK_EQUAL(action->seg_num(), 10);
@@ -111,7 +113,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
 
   actionLog
     ->AddLocalActionUpdate("file.txt",
-                           DigestComputer::digestFromString(
+                           digestFromString(
                              "2ff304769cdb0125ac039e6fe7575f8576dceffc62618a431715aaf6eea2bf1c"),
                            std::time(NULL), 0755, 10);
   BOOST_CHECK_EQUAL(syncLog->SeqNo(localName), 2);
@@ -139,7 +141,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
   item->set_version(2);
   item->set_timestamp(std::time(NULL));
 
-  string item_msg;
+  std::string item_msg;
   item->SerializeToString(&item_msg);
 
   Name actionName = Name("/zhenkai/test/test-chronoshare/action/top-secret").appendNumber(1);
@@ -155,6 +157,7 @@ BOOST_AUTO_TEST_CASE(UpdateAction)
 
   if (exists(tmpdir)) {
     std::cout << "Clear ALL from test-action-log" << std::endl;
+    remove_all(tmpdir);
     face->shutdown();
   }
 }
@@ -176,9 +179,9 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
   SyncLogPtr syncLog = make_shared<SyncLog>(tmpdir, localName);
 
   ActionLogPtr actionLog =
-    make_shared<ActionLog>(face, tmpdir, syncLog, "top-secret", "test-chronoshare",
+    std::make_shared<ActionLog>(*face, tmpdir, syncLog, "top-secret", "test-chronoshare",
                                   ActionLog::OnFileAddedOrChangedCallback(),
-                                  ActionLog::OnFileRemovedCallback());
+                                  bind([] {std::cout<<"file delete"<<std::endl;}));
 
   BOOST_CHECK_EQUAL(syncLog->SeqNo(localName), 0);
 
@@ -187,7 +190,7 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
 
   actionLog
     ->AddLocalActionUpdate("file.txt",
-                           DigestComputer::digestFromString(
+                           digestFromString(
                              "2ff304769cdb0125ac039e6fe7575f8576dceffc62618a431715aaf6eea2bf1c"),
                            std::time(NULL), 0755, 10);
 
@@ -195,60 +198,39 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
   BOOST_CHECK_EQUAL(syncLog->LogSize(), 0);
   BOOST_CHECK_EQUAL(actionLog->LogSize(), 1);
 
-  ndn::ConstBufferPtr hash = syncLog->RememberStateInStateLog();
-  BOOST_CHECK_EQUAL(syncLog->LogSize(), 1);
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
-                    "91a849eede75acd56ae1bcb99e92d8fb28757683bc387dbb0e59c3108fcf4f18");
+  syncLog->RememberStateInStateLog();
 
-  ndn::shared_ptr<ndn::Data> data = actionLog->LookupActionData(localName, 0);
 
-  BOOST_CHECK_EQUAL(bool(data), false);
 
-  data = actionLog->LookupActionData(localName, 1);
 
-  BOOST_CHECK_EQUAL(bool(data), true);
-
-  BOOST_CHECK_EQUAL(data->getName(), "/lijing/test-chronoshare/action/top-secret/%01");
-
-  ActionItemPtr action =
-    actionLog->LookupAction(Name("/lijing/test-chronoshare/action/top-secret").appendNumber(0));
-  BOOST_CHECK_EQUAL((bool)action, false);
-
-  action =
-    actionLog->LookupAction(Name("/lijing/test-chronoshare/action/top-secret").appendNumber(1));
-  BOOST_CHECK_EQUAL((bool)action, true);
-
-  if (action) {
-    BOOST_CHECK_EQUAL(action->version(), 0);
-    BOOST_CHECK_EQUAL(action->action(), 0);
-
-    BOOST_CHECK_EQUAL(action->filename(), "file.txt");
-    BOOST_CHECK_EQUAL(action->seg_num(), 10);
-    BOOST_CHECK_EQUAL(action->file_hash().size(), 32);
-    BOOST_CHECK_EQUAL(action->mode(), 0755);
-
-    BOOST_CHECK_EQUAL(action->has_parent_device_name(), false);
-    BOOST_CHECK_EQUAL(action->has_parent_seq_no(), false);
-  }
-
-  actionLog
-    ->AddLocalActionUpdate("file.txt",
-                           DigestComputer::digestFromString(
-                             "2ff304769cdb0125ac039e6fe7575f8576dceffc62618a431715aaf6eea2bf1c"),
-                           std::time(NULL), 0755, 10);
+  actionLog->AddLocalActionDelete("file.txt");
   BOOST_CHECK_EQUAL(syncLog->SeqNo(localName), 2);
   BOOST_CHECK_EQUAL(syncLog->LogSize(), 1);
   BOOST_CHECK_EQUAL(actionLog->LogSize(), 2);
 
-  action = actionLog->LookupAction(Name("/lijing"), 2);
+  ndn::ConstBufferPtr hash = syncLog->RememberStateInStateLog();
+  BOOST_CHECK_EQUAL(syncLog->LogSize(), 2);
+  BOOST_CHECK_EQUAL(digestToString(*hash),
+                    "d2dfeda56ed98c0e17d455a859bc8c3b9e31c85c138c280a8badab4fc551f282");
+
+  ndn::shared_ptr<ndn::Data> data = actionLog->LookupActionData(localName, 2);
+  BOOST_CHECK_EQUAL(bool(data), true);
+
+  BOOST_CHECK_EQUAL(data->getName(), "/lijing/test-chronoshare/action/top-secret/%02");
+
+  ActionItemPtr action =
+  actionLog->LookupAction(Name("/lijing/test-chronoshare/action/top-secret").appendNumber(2));
   BOOST_CHECK_EQUAL((bool)action, true);
 
   if (action) {
-    BOOST_CHECK_EQUAL(action->has_parent_device_name(), true);
-    BOOST_CHECK_EQUAL(action->has_parent_seq_no(), true);
-
-    BOOST_CHECK_EQUAL(action->parent_seq_no(), 1);
     BOOST_CHECK_EQUAL(action->version(), 1);
+    BOOST_CHECK_EQUAL(action->action(), ActionItem::DELETE);
+
+    BOOST_CHECK_EQUAL(action->filename(), "file.txt");
+    BOOST_CHECK_EQUAL(action->mode(), 0755);
+
+    BOOST_CHECK_EQUAL(action->parent_device_name(), "lijing");
+    BOOST_CHECK_EQUAL(action->parent_seq_no(), 1);
   }
 
   BOOST_CHECK_EQUAL((bool)actionLog->AddRemoteAction(data), true);
@@ -256,15 +238,20 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
 
   // create a real remote action
   ActionItemPtr item = make_shared<ActionItem>();
-  item->set_action(ActionItem::UPDATE);
+  item->set_action(ActionItem::DELETE);
   item->set_filename("file.txt");
   item->set_version(2);
-  item->set_timestamp(std::time(NULL));
+  item->set_timestamp(std::time(0));
 
-  string item_msg;
+  std::string filename = "file.txt";
+  BufferPtr parent_device_name = std::make_shared<Buffer>(filename.c_str(), filename.size());
+  item->set_parent_device_name(parent_device_name->buf(), parent_device_name->size());
+  item->set_parent_seq_no(0);
+
+  std::string item_msg;
   item->SerializeToString(&item_msg);
 
-  Name actionName = Name("/zhenkai/test/test-chronoshare/action/top-secret").appendNumber(1);
+  Name actionName = Name("/yukai/test/test-chronoshare/action/top-secret").appendNumber(1);
 
   ndn::shared_ptr<Data> actionData = ndn::make_shared<Data>();
   actionData->setName(actionName);
@@ -272,16 +259,23 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
   ndn::KeyChain m_keyChain;
   m_keyChain.sign(*actionData);
 
-  BOOST_CHECK_EQUAL((bool)actionLog->AddRemoteAction(actionData), true);
+  ActionItemPtr actionItem = actionLog->AddRemoteAction(actionData);
+  BOOST_CHECK_EQUAL((bool)actionItem, true);
   BOOST_CHECK_EQUAL(actionLog->LogSize(), 3);
+  BOOST_CHECK_EQUAL(syncLog->LogSize(), 3);
+
+  BOOST_CHECK_EQUAL(action->action(), ActionItem::DELETE);
 
   if (exists(tmpdir)) {
     std::cout << "Clear ALL from test-action-log" << std::endl;
+    remove_all(tmpdir);
     face->shutdown();
   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+} // chronoshare
+} // ndn
 
 // catch(boost::exception &err)
 //   {

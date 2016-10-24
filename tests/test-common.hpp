@@ -17,10 +17,34 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-#define BOOST_TEST_MAIN 1
-#define BOOST_TEST_DYN_LINK 1
-#include "test-common.hpp"
 
+#ifndef CHRONOSHARE_TESTS_TEST_COMMON_HPP
+#define CHRONOSHARE_TESTS_TEST_COMMON_HPP
 
-#include <boost/test/unit_test.hpp>
+#include "logging.hpp"
+#include "dispatcher.hpp"
+#include "sync-log.hpp"
+#include <ndn-cxx/util/digest.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
+namespace ndn {
+namespace chronoshare {
+
+/** \brief convert string to digest
+ */
+ndn::Buffer 
+digestFromString(std::string hash);
+
+/** \brief convert digest to string
+ */
+std::string
+digestToString(const ndn::Buffer &digest);
+
+ndn::ConstBufferPtr
+digestFromFile(const boost::filesystem::path& filename);
+
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_TESTS_TEST_COMMON_HPP

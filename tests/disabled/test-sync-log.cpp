@@ -21,22 +21,20 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "digest-computer.hpp"
+#include "test-common.hpp"
 #include "logging.hpp"
 #include <unistd.h>
 #include "action-log.hpp"
 #include <iostream>
 #include <boost/filesystem.hpp>
 
+INIT_LOGGER("Test.SyncLog")
+
 using namespace std;
-using namespace boost;
-using namespace ndn;
 namespace fs = boost::filesystem;
 
-// namespace chronochat {
-// namespace tests {
-
-INIT_LOGGER("Test.SyncLog")
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestSyncLog)
 
@@ -57,29 +55,29 @@ BOOST_AUTO_TEST_CASE(BasicDatabaseTest)
   ndn::ConstBufferPtr hash = db.RememberStateInStateLog();
   // should be empty
 
-  _LOG_DEBUG("hashToString " << DigestComputer::digestToString(*hash));
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  _LOG_DEBUG("hashToString " << digestToString(*hash));
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "94d988a90c6a3d0f74624368be65e5369ddddb3444841fad4ef41f674b937f26");
 
   db.UpdateDeviceSeqNo(Name("/lijing"), 1);
   hash = db.RememberStateInStateLog();
 
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "91a849eede75acd56ae1bcb99e92d8fb28757683bc387dbb0e59c3108fcf4f18");
 
   db.UpdateDeviceSeqNo(Name("/lijing"), 2);
   hash = db.RememberStateInStateLog();
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "d2dfeda56ed98c0e17d455a859bc8c3b9e31c85c138c280a8badab4fc551f282");
 
   db.UpdateDeviceSeqNo(Name("/lijing"), 2);
   hash = db.RememberStateInStateLog();
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "d2dfeda56ed98c0e17d455a859bc8c3b9e31c85c138c280a8badab4fc551f282");
 
   db.UpdateDeviceSeqNo(Name("/lijing"), 1);
   hash = db.RememberStateInStateLog();
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "d2dfeda56ed98c0e17d455a859bc8c3b9e31c85c138c280a8badab4fc551f282");
 
   db.UpdateLocator(Name("/lijing"), Name("/hawaii"));
@@ -116,7 +114,7 @@ BOOST_AUTO_TEST_CASE(BasicDatabaseTest)
 
   db.UpdateDeviceSeqNo(Name("/shuai"), 1);
   hash = db.RememberStateInStateLog();
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*hash),
+  BOOST_CHECK_EQUAL(digestToString(*hash),
                     "602ff1878fc394b90e4a0e90c7409ea4b8ee8aa40169801d62f838470551db7c");
 
   msg = db.FindStateDifferences("00",
@@ -130,5 +128,6 @@ BOOST_AUTO_TEST_CASE(BasicDatabaseTest)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-//} // namespace tests
-//} // namespace chronochat
+
+} // chronoshare
+} // ndn
