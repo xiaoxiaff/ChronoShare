@@ -26,13 +26,18 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
+#include <thread>
 #include <set>
 #include <QtGui>
 // TODO Segmentation Fault and Other Error Exits No time Fix yet
 
+
 using namespace std;
-using namespace boost;
 namespace fs = boost::filesystem;
+
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestFsWatchers)
 
@@ -61,11 +66,13 @@ create_file(const fs::path& ph, const std::string& contents)
 }
 
 void
-run(fs::path dir, FsWatcher::LocalFile_Change_Callback c, FsWatcher::LocalFile_Change_Callback d)
+run(fs::path dir, ndn::chronoshare::FsWatcher::LocalFile_Change_Callback c, ndn::chronoshare::FsWatcher::LocalFile_Change_Callback d)
 {
   int x = 0;
   QCoreApplication app(x, 0);
-  FsWatcher watcher(dir.string().c_str(), c, d);
+  std::unique_ptr<boost::asio::io_service> ioService;
+  ioService.reset(new boost::asio::io_service());
+  FsWatcher watcher(*ioService,dir.string().c_str(), c, d);
   app.exec();
   sleep(100);
 }
@@ -81,10 +88,10 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
 
   set<string> files;
 
-  FsWatcher::LocalFile_Change_Callback fileChange = boost::bind(onChange, std::ref(files), _1);
-  FsWatcher::LocalFile_Change_Callback fileDelete = boost::bind(onDelete, std::ref(files), _1);
+  ndn::chronoshare::FsWatcher::LocalFile_Change_Callback fileChange = boost::bind(onChange, std::ref(files), _1);
+  ndn::chronoshare::FsWatcher::LocalFile_Change_Callback fileDelete = boost::bind(onDelete, std::ref(files), _1);
 
-  thread workThread(run, dir, fileChange, fileDelete);
+  std::thread workThread(run, dir, fileChange, fileDelete);
   // FsWatcher watcher(dir.string().c_str(), fileChange, fileDelete);
 
   // ============ check create file detection ================
@@ -216,3 +223,6 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

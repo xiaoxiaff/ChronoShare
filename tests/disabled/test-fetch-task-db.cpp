@@ -36,10 +36,11 @@
 
 INIT_LOGGER("Test.FetchTaskDb")
 
-using namespace ndn;
 using namespace std;
-using namespace boost;
 namespace fs = boost::filesystem;
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestFetchTaskDb)
 
@@ -179,3 +180,6 @@ BOOST_AUTO_TEST_CASE(FetchTaskDbTest)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

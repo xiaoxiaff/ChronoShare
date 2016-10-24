@@ -17,7 +17,6 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-
 #include "fetch-manager.hpp"
 #include "fetcher.hpp"
 #include <boost/test/unit_test.hpp>
@@ -27,9 +26,10 @@
 
 INIT_LOGGER("Test.FetchManager")
 
-using namespace ndn;
 using namespace std;
-using namespace boost;
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestFetchManager)
 
@@ -195,14 +195,12 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
                         boost::bind(&FetcherTestData::on_Timeout, &ftData, _1));
 
   std::cout << "Express Interest " << interest << std::endl;
-  ExecutorPtr executor = make_shared<Executor>(1);
-  executor->start();
 
-  Fetcher fetcher(face, executor, bind(&FetcherTestData::onData, &ftData, _1, _2, _3, _4),
+  Fetcher fetcher(*face, bind(&FetcherTestData::onData, &ftData, _1, _2, _3, _4),
                   bind(&FetcherTestData::finish, &ftData, _1, _2),
                   bind(&FetcherTestData::onComplete, &ftData, _1),
                   bind(&FetcherTestData::onFail, &ftData, _1), deviceName, Name("/base"), 0, 26,
-                  boost::posix_time::seconds(5)); // this time is not precise
+                  boost::posix_time::seconds(5), Name()); // this time is not precise
 
   BOOST_CHECK_EQUAL(fetcher.IsActive(), false);
   fetcher.RestartPipeline();
@@ -268,7 +266,6 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
     BOOST_CHECK_EQUAL(recvData.str(), recvContent.str());
   }
 
-  executor->shutdown();
   face->shutdown();
 }
 
@@ -303,3 +300,6 @@ BOOST_AUTO_TEST_CASE(TestFetcher)
 // }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

@@ -33,10 +33,13 @@
 
 INIT_LOGGER("Test.ObjectManager")
 
-using namespace ndn;
 using namespace std;
 using namespace boost;
 namespace fs = boost::filesystem;
+
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestObjectManager)
 
@@ -50,14 +53,13 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
 
   shared_ptr<Face> face = make_shared<Face>();
 
-  ObjectManager manager(face, tmpdir, "test-chronoshare");
+  ObjectManager manager(*face, tmpdir, "test-chronoshare");
 
-  boost::tuple<ndn::ConstBufferPtr, int> hash_segments =
-    manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
+  auto hash_segments = manager.localFileToObjects(fs::path("test") / "test-object-manager.cc", deviceName);
 
-  BOOST_CHECK_EQUAL(hash_segments.get<1>(), 3);
+  BOOST_CHECK_EQUAL(std::get<1>(hash_segments), 3);
 
-  bool ok = manager.objectsToLocalFile(deviceName, *hash_segments.get<0>(), tmpdir / "test.cc");
+  bool ok = manager.objectsToLocalFile(deviceName, *std::get<0>(hash_segments), tmpdir / "test.cc");
   BOOST_CHECK_EQUAL(ok, true);
 
   {
@@ -78,3 +80,6 @@ BOOST_AUTO_TEST_CASE(ObjectManagerTest)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

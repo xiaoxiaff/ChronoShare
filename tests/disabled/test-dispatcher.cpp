@@ -17,21 +17,24 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-
 #include "logging.hpp"
 #include "dispatcher.hpp"
+#include "test-common.hpp"
+
 #include <boost/test/unit_test.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <cassert>
 
-using namespace ndn;
+INIT_LOGGER("Test.Dispatcher")
+
 using namespace std;
-using namespace boost;
 namespace fs = boost::filesystem;
 
-INIT_LOGGER("Test.Dispatcher")
+namespace ndn {
+namespace chronoshare {
+
 
 BOOST_AUTO_TEST_SUITE(TestDispatcher)
 
@@ -46,7 +49,7 @@ cleanDir(fs::path dir)
 void
 checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 {
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
+  BOOST_CHECK_EQUAL(digestToString(*root1), digestToString(*root2));
 }
 
 BOOST_AUTO_TEST_CASE(DispatcherTest)
@@ -69,9 +72,9 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
   cleanDir(dir1);
   cleanDir(dir2);
 
-  Dispatcher d1(user1, folder, dir1, face1, false);
+  Dispatcher d1(user1, folder, dir1, *face1, false);
   usleep(100);
-  Dispatcher d2(user2, folder, dir2, face2, false);
+  Dispatcher d2(user2, folder, dir2, *face2, false);
 
   usleep(14900000);
 
@@ -98,10 +101,9 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
   BOOST_REQUIRE_MESSAGE(fs::exists(ef), user1 << " failed to notify " << user2 << " about "
                                               << filename.string());
   BOOST_CHECK_EQUAL(fs::file_size(abf), fs::file_size(ef));
-  DigestComputer digestComputer1;
-  DigestComputer digestComputer2;
-  ConstBufferPtr fileHash1 = digestComputer1.digestFromFile(abf);
-  ConstBufferPtr fileHash2 = digestComputer2.digestFromFile(ef);
+
+  ConstBufferPtr fileHash1 = digestFromFile(abf);
+  ConstBufferPtr fileHash2 = digestFromFile(ef);
 
   checkRoots(fileHash1, fileHash2);
 
@@ -110,3 +112,6 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

@@ -19,7 +19,6 @@
  */
 
 #include "fetch-manager.hpp"
-#include "scheduler.hpp"
 #include "object-db.hpp"
 #include "object-manager.hpp"
 #include "content-server.hpp"
@@ -37,10 +36,13 @@
 
 INIT_LOGGER("Test.ServerAndFetch")
 
-using namespace ndn;
 using namespace std;
 using namespace boost;
 using namespace boost::filesystem;
+
+
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(TestServeAndFetch)
 
@@ -149,24 +151,24 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
   time_t start = std::time(NULL);
   _LOG_DEBUG("At time " << start << ", publish local file to database, this is extremely slow ...");
   // publish file to db
-  ObjectManager om(face_serve, root, APPNAME);
-  boost::tuple<ConstBufferPtr, size_t> pub = om.localFileToObjects(filePath, deviceName);
+  ObjectManager om(*face_serve, root, APPNAME);
+  auto pub = om.localFileToObjects(filePath, deviceName);
   time_t end = std::time(NULL);
   _LOG_DEBUG("At time " << end << ", publish finally finished, used " << end - start
                         << " seconds ...");
 
   ActionLogPtr dummyLog;
-  ContentServer server(face_serve, dummyLog, root, deviceName, "pentagon's secrets", APPNAME, 5);
+  ContentServer server(*face_serve, dummyLog, root, deviceName, "pentagon's secrets", APPNAME, 5);
   server.registerPrefix(localPrefix);
   server.registerPrefix(broadcastPrefix);
 
-  FetchManager fm(face_fetch, bind(simpleMap, _1), Name("/local/broadcast"));
-  ConstBufferPtr hash = pub.get<0>();
+  FetchManager fm(*face_fetch, bind(simpleMap, _1), Name("/local/broadcast"));
+  ConstBufferPtr hash = std::get<0>(pub);
   Name baseName = Name(deviceName);
   baseName.append(APPNAME).append("file").appendImplicitSha256Digest(hash);
 
   fm.Enqueue(deviceName, baseName, bind(segmentCallback, _1, _2, _3, _4),
-             bind(finishCallback, _1, _2), 0, pub.get<1>() - 1);
+             bind(finishCallback, _1, _2), 0, std::get<1>(pub) - 1);
 
   boost::unique_lock<boost::mutex> lock(mut);
   system_time timeout = get_system_time() + posix_time::milliseconds(5000);
@@ -187,3 +189,6 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

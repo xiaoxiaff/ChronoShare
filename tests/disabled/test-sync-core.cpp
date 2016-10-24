@@ -20,18 +20,21 @@
 
 #include "sync-core.hpp"
 #include "logging.hpp"
+#include "test-common.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
 #include <thread>
 
+INIT_LOGGER("Test.SyncCore")
+
 using namespace std;
-using namespace ndn;
 using namespace boost;
 using namespace boost::filesystem;
 
-INIT_LOGGER("Test.SyncCore")
+namespace ndn {
+namespace chronoshare {
 
 BOOST_AUTO_TEST_SUITE(SyncCoreTests)
 
@@ -45,7 +48,6 @@ callback(const SyncStateMsgPtr& msg)
   while (index < size) {
     SyncState state = msg->state(index);
     BOOST_CHECK(state.has_old_seq());
-    BOOST_CHECK(state.old_seq() >= 0);
     if (state.seq() != 0) {
       BOOST_CHECK(state.old_seq() != state.seq());
     }
@@ -59,7 +61,7 @@ checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
   //  std::cout << "I'm checking rootDigest!!" << std::endl;
   //  std::cout << "root1 " << DigestComputer::shortDigest(*root1) << std::endl;
   //  std::cout << "root2 " << DigestComputer::shortDigest(*root2) << std::endl;
-  BOOST_CHECK_EQUAL(DigestComputer::digestToString(*root1), DigestComputer::digestToString(*root2));
+  BOOST_CHECK_EQUAL(digestToString(*root1), digestToString(*root2));
   //  std::cout << "checking rootDigest Over!!" << std::endl;
 }
 
@@ -99,9 +101,9 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
   SyncLogPtr log1(new SyncLog(dir1, user1));
   SyncLogPtr log2(new SyncLog(dir2, user2));
 
-  SyncCore* core1 = new SyncCore(c1, log1, user1, loc1, syncPrefix, bind(callback, _1));
+  SyncCore* core1 = new SyncCore(*c1, log1, user1, loc1, syncPrefix, bind(callback, _1));
   usleep(10000);
-  SyncCore* core2 = new SyncCore(c2, log2, user2, loc2, syncPrefix, bind(callback, _1));
+  SyncCore* core2 = new SyncCore(*c2, log2, user2, loc2, syncPrefix, bind(callback, _1));
 
   sleep(2);
 
@@ -150,3 +152,6 @@ BOOST_AUTO_TEST_CASE(SyncCoreTest)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // chronoshare
+} // ndn

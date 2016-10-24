@@ -70,7 +70,7 @@ def build(bld):
         source=bld.path.ant_glob('core/**/*.cpp'),
         use=['LOG4CXX', 'BOOST'],
         includes='.',
-        export_includes='.',
+        export_includes='. core',
         )
 
     contrib = bld(
@@ -100,7 +100,7 @@ def build(bld):
         source=bld.path.ant_glob(['src/**/*.cpp', 'src/**/*.cc', 'src/**/*.proto']),
         use=['adhoc', 'NDN_CXX', 'TINYXML'],
         includes="src",
-        export_includes="src",
+        export_includes="src"
         )
 
     fs_watcher = bld (
@@ -110,7 +110,7 @@ def build(bld):
         source=bld.path.ant_glob('fs-watcher/*.cpp'),
         use=['chronoshare', 'QTCORE'],
         includes="fs-watcher",
-        export_includes="fs-watcher",
+        export_includes="fs-watcher"
         )
 
     http_server = bld(
