@@ -30,7 +30,7 @@
 namespace ndn {
 namespace chronoshare {
 
-INIT_LOGGER("Dispatcher");
+INIT_LOGGER("Dispatcher")
 
 namespace fs = boost::filesystem;
 
@@ -66,12 +66,12 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   syncPrefix.append(sharedFolder);
 
   m_server = new ContentServer(m_face, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
-                               CHRONOSHARE_APP, CONTENT_FRESHNESS);
+                               CHRONOSHARE_APP, keyChain, CONTENT_FRESHNESS);
   m_server->registerPrefix(Name("/"));
   m_server->registerPrefix(Name(BROADCAST_DOMAIN));
 
   m_stateServer = new StateServer(m_face, m_actionLog, rootDir, m_localUserName, m_sharedFolder,
-                                  CHRONOSHARE_APP, m_objectManager, time::seconds(CONTENT_FRESHNESS));
+                                  CHRONOSHARE_APP, m_objectManager, keyChain, time::seconds(CONTENT_FRESHNESS));
   // no need to register, right now only listening on localhop prefix
 
   m_core = new SyncCore(face, m_syncLog, localUserName, Name("/"), syncPrefix,

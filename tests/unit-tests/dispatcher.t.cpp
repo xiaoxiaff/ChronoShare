@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2013-2016, Regents of the University of California.
+ * Copyright (c) 2013-2017, Regents of the University of California.
  *
  * This file is part of ChronoShare, a decentralized file sharing application over NDN.
  *
@@ -17,25 +17,38 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
-
-#include "ccnx-wrapper.hpp"
 #include "dispatcher.hpp"
-#include "logging.hpp"
+#include "test-common.hpp"
+
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cassert>
 #include <fstream>
 
-using namespace Ndnx;
 using namespace std;
-using namespace boost;
 namespace fs = boost::filesystem;
 
-INIT_LOGGER("Test.Dispatcher");
+namespace ndn {
+namespace chronoshare {
+namespace tests {
 
-BOOST_AUTO_TEST_SUITE(TestDispatcher)
+INIT_LOGGER("Test.Dispatcher")
 
+class TestDispatcherFixture : public IdentityManagementTimeFixture
+{
+public:
+  void
+  advanceClocks()
+  {
+    for (int i = 0; i < 100; ++i) {
+      usleep(10000);
+      IdentityManagementTimeFixture::advanceClocks(time::milliseconds(10), 1);
+    }
+  }
+};
+
+BOOST_FIXTURE_TEST_SUITE(TestDispatcher, TestDispatcherFixture)
 
 void
 cleanDir(fs::path dir)
@@ -46,9 +59,12 @@ cleanDir(fs::path dir)
 }
 
 void
-checkRoots(const HashPtr& root1, const HashPtr& root2)
+checkRoots(ndn::ConstBufferPtr root1, ndn::ConstBufferPtr root2)
 {
-  BOOST_CHECK_EQUAL(*root1, *root2);
+  BOOST_CHECK_EQUAL_COLLECTIONS(root1->buf(),
+                                root1->buf() + root1->size(),
+                                root2->buf(),
+                                root2->buf() + root2->size());
 }
 
 BOOST_AUTO_TEST_CASE(DispatcherTest)
@@ -63,19 +79,16 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   string folder = "who-is-president";
 
-  NdnxWrapperPtr ndnx1 = make_shared<NdnxWrapper>();
-  usleep(100);
-  NdnxWrapperPtr ndnx2 = make_shared<NdnxWrapper>();
-  usleep(100);
+  shared_ptr<Face> face1 = make_shared<Face>(this->m_io);
+  shared_ptr<Face> face2 = make_shared<Face>(this->m_io);
 
   cleanDir(dir1);
   cleanDir(dir2);
 
-  Dispatcher d1(user1, folder, dir1, ndnx1, false);
-  usleep(100);
-  Dispatcher d2(user2, folder, dir2, ndnx2, false);
+  Dispatcher d1(user1, folder, dir1, *face1, false);
+  Dispatcher d2(user2, folder, dir2, *face2, false);
 
-  usleep(14900000);
+  this->advanceClocks();
 
   _LOG_DEBUG("checking obama vs romney");
   checkRoots(d1.SyncRoot(), d2.SyncRoot());
@@ -94,18 +107,21 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
 
   d1.Did_LocalFile_AddOrModify(filename);
 
-  sleep(5);
+  this->advanceClocks();
 
   fs::path ef = dir2 / filename;
   BOOST_REQUIRE_MESSAGE(fs::exists(ef), user1 << " failed to notify " << user2 << " about "
                                               << filename.string());
   BOOST_CHECK_EQUAL(fs::file_size(abf), fs::file_size(ef));
-  HashPtr fileHash1 = Hash::FromFileContent(abf);
-  HashPtr fileHash2 = Hash::FromFileContent(ef);
-  BOOST_CHECK_EQUAL(*fileHash1, *fileHash2);
 
-  cleanDir(dir1);
-  cleanDir(dir2);
+  ConstBufferPtr fileHash1 = digestFromFile(abf);
+  ConstBufferPtr fileHash2 = digestFromFile(ef);
+
+  checkRoots(fileHash1, fileHash2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace tests
+} // namespace chronoshare
+} // namespace ndn

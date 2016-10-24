@@ -113,7 +113,7 @@ def build(bld):
                                   'src/fetch*.cpp',
                                   'src/content-server.cpp',
                                   'src/state-server.cpp',
-                                  'src/dispatch.cpp'
+                                  'src/dispatcher.cpp',
                                   ]),
         use='core-objects adhoc BOOST LOG4CXX NDN_CXX TINYXML SQLITE3',
         includes="src",
