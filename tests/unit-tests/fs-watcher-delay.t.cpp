@@ -18,7 +18,9 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "fs-watcher.h"
+#include "fs-watcher.hpp"
+#include "test-common.hpp"
+
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -26,27 +28,32 @@
 #include <boost/make_shared.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread/thread.hpp>
-#include <QtGui>
+#include <QtWidgets>
 #include <fstream>
 #include <iostream>
+#include <thread>
 #include <set>
 
-using namespace std;
-using namespace boost;
+namespace ndn {
+namespace chronoshare {
+namespace tests {
+
 namespace fs = boost::filesystem;
+
+INIT_LOGGER("Test.FsWatcherDelay")
 
 BOOST_AUTO_TEST_SUITE(TestFsWatcherDelay)
 
 void
 onChange(const fs::path& file)
 {
-  cerr << "onChange called" << endl;
+  std::cerr << "onChange called" << std::endl;
 }
 
 void
 onDelete(const fs::path& file)
 {
-  cerr << "onDelete called" << endl;
+  std::cerr << "onDelete called" << std::endl;
 }
 
 void
@@ -54,18 +61,20 @@ run(fs::path dir, FsWatcher::LocalFile_Change_Callback c, FsWatcher::LocalFile_C
 {
   int x = 0;
   QCoreApplication app(x, 0);
-  FsWatcher watcher(dir.string().c_str(), c, d);
+  std::unique_ptr<boost::asio::io_service> ioService;
+  ioService.reset(new boost::asio::io_service());
+  FsWatcher watcher(*ioService, dir.string().c_str(), c, d);
   app.exec();
   sleep(100);
 }
 
 void
-SlowWrite(fs::path& file)
+SlowWrite(fs::path file)
 {
   fs::ofstream off(file, std::ios::out);
 
   for (int i = 0; i < 10; i++) {
-    off << i << endl;
+    off << i << std::endl;
     usleep(200000);
   }
 }
@@ -84,9 +93,9 @@ BOOST_AUTO_TEST_CASE(TestFsWatcherDelay)
 
   fs::path file = dir / "test.text";
 
-  thread watcherThread(run, dir, fileChange, fileDelete);
+  std::thread watcherThread(run, dir, fileChange, fileDelete);
 
-  thread writeThread(SlowWrite, file);
+  std::thread writeThread(SlowWrite, file);
 
 
   usleep(10000000);
@@ -100,3 +109,7 @@ BOOST_AUTO_TEST_CASE(TestFsWatcherDelay)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace tests
+} // namespace chronoshare
+} // namespace ndn

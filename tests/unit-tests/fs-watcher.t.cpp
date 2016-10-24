@@ -17,32 +17,41 @@
  *
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
+
 #include "fs-watcher.hpp"
+#include "test-common.hpp"
+
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread/thread.hpp>
-#include <QtGui>
+#include <QtWidgets>
 #include <fstream>
 #include <set>
+#include <thread>
+// TODO Segmentation Fault and Other Error Exits No time Fix yet
 
-using namespace std;
-using namespace boost;
+namespace ndn {
+namespace chronoshare {
+namespace tests {
+
 namespace fs = boost::filesystem;
 
-BOOST_AUTO_TEST_SUITE(TestFsWatcher)
+INIT_LOGGER("Test.FsWatcher")
+
+BOOST_AUTO_TEST_SUITE(TestFsWatchers)
 
 void
-onChange(set<string>& files, const fs::path& file)
+onChange(std::set<std::string>& files, const fs::path& file)
 {
-  cerr << "onChange called" << endl;
+  std::cerr << "onChange called" << std::endl;
   files.insert(file.string());
 }
 
 void
-onDelete(set<string>& files, const fs::path& file)
+onDelete(std::set<std::string>& files, const fs::path& file)
 {
   files.erase(file.string());
 }
@@ -60,11 +69,14 @@ create_file(const fs::path& ph, const std::string& contents)
 }
 
 void
-run(fs::path dir, FsWatcher::LocalFile_Change_Callback c, FsWatcher::LocalFile_Change_Callback d)
+run(fs::path dir, ndn::chronoshare::FsWatcher::LocalFile_Change_Callback c,
+    ndn::chronoshare::FsWatcher::LocalFile_Change_Callback d)
 {
   int x = 0;
   QCoreApplication app(x, 0);
-  FsWatcher watcher(dir.string().c_str(), c, d);
+  std::unique_ptr<boost::asio::io_service> ioService;
+  ioService.reset(new boost::asio::io_service());
+  FsWatcher watcher(*ioService, dir.string().c_str(), c, d);
   app.exec();
   sleep(100);
 }
@@ -78,13 +90,15 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
 
   fs::create_directory(dir);
 
-  set<string> files;
+  std::set<std::string> files;
 
-  FsWatcher::LocalFile_Change_Callback fileChange = boost::bind(onChange, ref(files), _1);
-  FsWatcher::LocalFile_Change_Callback fileDelete = boost::bind(onDelete, ref(files), _1);
+  ndn::chronoshare::FsWatcher::LocalFile_Change_Callback fileChange =
+    boost::bind(onChange, std::ref(files), _1);
+  ndn::chronoshare::FsWatcher::LocalFile_Change_Callback fileDelete =
+    boost::bind(onDelete, std::ref(files), _1);
 
-  thread workThread(run, dir, fileChange, fileDelete);
-  //FsWatcher watcher (dir.string().c_str(), fileChange, fileDelete);
+  std::thread workThread(run, dir, fileChange, fileDelete);
+  // FsWatcher watcher(dir.string().c_str(), fileChange, fileDelete);
 
   // ============ check create file detection ================
   create_file(dir / "test.txt", "hello");
@@ -98,8 +112,8 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   fs::path subdir = dir / "sub";
   fs::create_directory(subdir);
   for (int i = 0; i < 10; i++) {
-    string filename = boost::lexical_cast<string>(i);
-    create_file(subdir / filename.c_str(), boost::lexical_cast<string>(i));
+    std::string filename = boost::lexical_cast<std::string>(i);
+    create_file(subdir / filename.c_str(), boost::lexical_cast<std::string>(i));
   }
   // have to at least wait 0.5 * 2 seconds
   usleep(1100000);
@@ -107,7 +121,7 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   // sub/0..9
   BOOST_CHECK_EQUAL(files.size(), 11);
   for (int i = 0; i < 10; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     BOOST_CHECK(files.find("sub/" + filename) != files.end());
   }
 
@@ -116,8 +130,8 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   fs::path subdir1 = dir / "sub1" / "sub2";
   fs::copy_directory(subdir, subdir1);
   for (int i = 0; i < 5; i++) {
-    string filename = boost::lexical_cast<string>(i);
-    fs::copy_file(subdir / filename.c_str(), subdir1 / filename.c_str());
+    std::string filename = boost::lexical_cast<std::string>(i);
+    fs::copy(subdir / filename.c_str(), subdir1 / filename.c_str());
   }
   // have to at least wait 0.5 * 2 seconds
   usleep(1100000);
@@ -126,13 +140,13 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   // sub1/sub2/0..4
   BOOST_CHECK_EQUAL(files.size(), 16);
   for (int i = 0; i < 5; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     BOOST_CHECK(files.find("sub1/sub2/" + filename) != files.end());
   }
 
   // =============== check remove files =========================
   for (int i = 0; i < 7; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     fs::remove(subdir / filename.c_str());
   }
   usleep(1100000);
@@ -141,17 +155,18 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   // sub1/sub2/0..4
   BOOST_CHECK_EQUAL(files.size(), 9);
   for (int i = 0; i < 10; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     if (i < 7)
       BOOST_CHECK(files.find("sub/" + filename) == files.end());
     else
       BOOST_CHECK(files.find("sub/" + filename) != files.end());
   }
 
-  // =================== check remove files again, remove the whole dir this time ===================
+  // =================== check remove files again, remove the whole dir this time
+  // ===================
   // before remove check
   for (int i = 0; i < 5; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     BOOST_CHECK(files.find("sub1/sub2/" + filename) != files.end());
   }
   fs::remove_all(subdir1);
@@ -160,13 +175,13 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   // test.txt
   // sub/7..9
   for (int i = 0; i < 5; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     BOOST_CHECK(files.find("sub1/sub2/" + filename) == files.end());
   }
 
   // =================== check rename files =======================
   for (int i = 7; i < 10; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     fs::rename(subdir / filename.c_str(), dir / filename.c_str());
   }
   usleep(1100000);
@@ -177,7 +192,7 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
   // sub
   BOOST_CHECK_EQUAL(files.size(), 4);
   for (int i = 7; i < 10; i++) {
-    string filename = boost::lexical_cast<string>(i);
+    std::string filename = boost::lexical_cast<std::string>(i);
     BOOST_CHECK(files.find("sub/" + filename) == files.end());
     BOOST_CHECK(files.find(filename) != files.end());
   }
@@ -208,8 +223,13 @@ BOOST_AUTO_TEST_CASE(TestFsWatcher)
 
   // cleanup
   if (fs::exists(dir)) {
+    std::cout << "Cleaning all" << std::endl;
     fs::remove_all(dir);
   }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace tests
+} // namespace chronoshare
+} // namespace ndn

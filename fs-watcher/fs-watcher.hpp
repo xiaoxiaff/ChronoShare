@@ -39,7 +39,7 @@ namespace chronoshare {
 
 class FsWatcher : public QObject
 {
-  Q_OBJECT
+  //Q_OBJECT
 
 public:
   class Error : public DbHelper::Error
