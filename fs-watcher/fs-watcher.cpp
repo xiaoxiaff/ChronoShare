@@ -171,8 +171,6 @@ FsWatcher::ScanDirectory_NotifyUpdates_Execute(QString dirPath)
       m_watcher->removePath(absFilePath);
       m_watcher->addPath(absFilePath);
       QStringList l = m_watcher->files();
-      for (int i = 0; i < l.size(); ++i)
-         std::cout << l.at(i).toStdString() << std::endl;
       if (fileInfo.isFile()) {
         QString relFile = absFilePath;
         relFile.remove(0, m_dirPath.size());

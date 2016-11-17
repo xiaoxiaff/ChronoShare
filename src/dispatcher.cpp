@@ -41,12 +41,12 @@ static const int CONTENT_FRESHNESS = 1800;                 // seconds
 const static double DEFAULT_SYNC_INTEREST_INTERVAL = 10.0; // seconds;
 
 Dispatcher::Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-                       const fs::path& rootDir, Face& face,
+                       const fs::path& rootDir, Face& face, boost::asio::io_service& io,
                        bool enablePrefixDiscovery)
   : m_face(face)
   , m_core(NULL)
   , m_rootDir(rootDir)
-  , m_ioService(face.getIoService())
+  , m_ioService(io)
   , m_objectManager(face, rootDir, CHRONOSHARE_APP)
   , m_localUserName(localUserName)
   , m_sharedFolder(sharedFolder)
