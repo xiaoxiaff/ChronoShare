@@ -9,7 +9,7 @@ def configure(conf):
 
 def build(bld):
     
-    #if bld.env['TESTS']:
+    if bld.env['TESTS']:
 
         unit_test_base = bld(
             target='unit-tests-base',

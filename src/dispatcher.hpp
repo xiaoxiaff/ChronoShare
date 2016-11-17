@@ -48,7 +48,7 @@ public:
   // sharedFolder is the name to be used in NDN name;
   // rootDir is the shared folder dir in local file system;
   Dispatcher(const std::string& localUserName, const std::string& sharedFolder,
-             const boost::filesystem::path& rootDir, Face& face,
+             const boost::filesystem::path& rootDir, Face& face, 
              bool enablePrefixDiscovery = true);
   ~Dispatcher();
 

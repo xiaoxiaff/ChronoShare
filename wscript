@@ -48,8 +48,8 @@ def configure(conf):
 
     boost_libs = 'system random thread filesystem'
     if conf.options.with_tests:
-        conf.env['TEST'] = 1
-        conf.define('TEST', 1);
+        conf.env['TESTS'] = 1
+        conf.define('TESTS', 1);
         boost_libs += ' unit_test_framework'
 
     conf.check_boost(lib=boost_libs)

@@ -82,7 +82,7 @@ main(int argc, char* argv[])
        << "] at [" << path << "]" << std::endl;
 
   boost::asio::io_service ioService;
-  Face face(ioService);
+  Face face;
 
   Dispatcher dispatcher(username, sharedFolder, path, face);
 
