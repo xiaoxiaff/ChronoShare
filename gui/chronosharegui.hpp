@@ -39,7 +39,7 @@
 #ifndef Q_MOC_RUN
 #include "dispatcher.hpp"
 #include "fs-watcher.hpp"
-#include "face-service.hpp"
+#include "io-service-manager.hpp"
 #include "server.hpp"
 #include "adhoc.hpp"
 #endif // Q_MOC_RUN
@@ -165,7 +165,7 @@ private:
   QString m_sharedFolderName; // shared folder name
 
   http::server::server* m_httpServer;
-  FaceService* m_faceSercice;
+  IoServiceManager* m_ioSerciceManager;
   std::thread m_httpServerThread;
 
   QLabel* labelUsername;

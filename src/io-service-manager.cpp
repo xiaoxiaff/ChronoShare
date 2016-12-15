@@ -18,43 +18,52 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
+#include "io-service-manager.hpp"
+#include "core/logging.hpp"
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp> 
 
-#ifndef CHRONOSHARE_SRC_FACE_SERVICE_HPP
-#define CHRONOSHARE_SRC_FACE_SERVICE_HPP
-
-#include <boost/asio/io_service.hpp>
-#include <ndn-cxx/face.hpp>
-
-#define RECONNECTION_TIME 30000
 
 namespace ndn {
 namespace chronoshare {
 
-/// The class prevent face loss connection to NFD.
-class FaceService : private boost::noncopyable {
-public:
-  /// Construct the server to listen on the specified TCP address and port, and
-  /// serve up files from the given directory.
+using namespace ndn::chronoshare;
 
-  FaceService(Face& face);
+INIT_LOGGER("FaceService")
 
-  ~FaceService();
+IoServiceManager::IoServiceManager(boost::asio::io_service& io)
+  : m_ioService(io)
+  , m_connect(true)
+{
+}
 
-  /// Run the service's io_service loop.
-  void
-  run();
-
-  /// Handle a request to stop the service.
-  void
+IoServiceManager::~IoServiceManager()
+{
   handle_stop();
+}
 
-private:
-  /// the IO service used by NFD connection.
-  Face& m_face;
-  std::unique_ptr<boost::asio::io_service::work> m_ioServiceWork;
-};
+void
+IoServiceManager::run()
+{
+  while(m_connect)
+  {
+    try {
+      m_ioServiceWork.reset(new boost::asio::io_service::work(m_ioService));
+      m_ioService.reset();
+      m_ioService.run();
+    }
+    catch (...) {
+      _LOG_DEBUG("error while connecting to the forwarder");
+    }
+  }
+}
+
+void
+IoServiceManager::handle_stop()
+{
+  m_connect = false;
+  m_ioService.stop();
+}
 
 } // chronoshare
 } // ndn
-
-#endif // CHRONOSHARE_SRC_FACE_SERVICE_HPP

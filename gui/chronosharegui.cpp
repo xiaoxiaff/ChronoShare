@@ -164,9 +164,9 @@ ChronoShareGui::startBackend(bool restart /*=false*/)
             << " realPathToFolder: " << realPathToFolder << std::endl;
 
   m_ioService.reset(new boost::asio::io_service());
-  m_face.reset(new Face());
+  m_face.reset(new Face(*m_ioService));
   m_dispatcher.reset(new Dispatcher(m_username.toStdString(), m_sharedFolderName.toStdString(),
-                                    realPathToFolder, *m_face, *m_ioService));
+                                    realPathToFolder, *m_face));
 
   // Alex: this **must** be here, otherwise m_dirPath will be uninitialized
   m_watcher.reset(new FsWatcher(*m_ioService, realPathToFolder.string().c_str(),
@@ -174,10 +174,8 @@ ChronoShareGui::startBackend(bool restart /*=false*/)
                                 bind(&Dispatcher::Did_LocalFile_Delete, m_dispatcher.get(), _1)));
   //m_ioService->run();
   try {
-    m_faceSercice = new FaceService(*m_face);
-    m_NetworkThread = std::thread(&FaceService::run, m_faceSercice);
-    m_ioServiceWork.reset(new boost::asio::io_service::work(*m_ioService));
-    m_chronoshareThread = std::thread(boost::bind(&boost::asio::io_service::run, boost::ref(m_ioService)));
+    m_ioSerciceManager = new IoServiceManager(*m_ioService);
+    m_NetworkThread = std::thread(&IoServiceManager::run, m_ioSerciceManager);
   }
     catch (std::exception& e) {
       _LOG_ERROR("Start IO service or Face failed");
@@ -228,10 +226,10 @@ ChronoShareGui::~ChronoShareGui()
   m_dispatcher.reset();
 
   m_ioServiceWork.reset();
-  m_faceSercice->handle_stop();
+  m_ioSerciceManager->handle_stop();
   m_chronoshareThread.join();
   m_NetworkThread.join();
-  delete m_faceSercice;
+  delete m_ioSerciceManager;
 
   if (m_httpServer != 0) {
     m_httpServer->handle_stop();

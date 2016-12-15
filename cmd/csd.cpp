@@ -84,7 +84,7 @@ main(int argc, char* argv[])
   boost::asio::io_service ioService;
   Face face;
 
-  Dispatcher dispatcher(username, sharedFolder, path, face, ioService);
+  Dispatcher dispatcher(username, sharedFolder, path, face);
 
   std::thread ioThread([&ioService, &runner] {
       try {

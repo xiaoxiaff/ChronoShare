@@ -13,4 +13,5 @@ ui_*
 osx/Frameworks/Sparkle.framework
 Sparkle*
 *priv.pem
+sharefolder
 gui/html.qrc

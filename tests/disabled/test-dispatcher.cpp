@@ -69,15 +69,12 @@ BOOST_AUTO_TEST_CASE(DispatcherTest)
   shared_ptr<Face> face2 = make_shared<Face>();
   usleep(100);
 
-  std::unique_ptr<boost::asio::io_service> ioService;
-  ioService.reset(new boost::asio::io_service());
-
   cleanDir(dir1);
   cleanDir(dir2);
 
-  Dispatcher d1(user1, folder, dir1, *face1, *ioService, false);
+  Dispatcher d1(user1, folder, dir1, *face1, false);
   usleep(100);
-  Dispatcher d2(user2, folder, dir2, *face2, *ioService, false);
+  Dispatcher d2(user2, folder, dir2, *face2, false);
 
   usleep(14900000);
 
