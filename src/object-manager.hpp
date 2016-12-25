@@ -18,22 +18,26 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef OBJECT_MANAGER_H
-#define OBJECT_MANAGER_H
+#ifndef CHRONOSHARE_SRC_OBJECT_MANAGER_HPP
+#define CHRONOSHARE_SRC_OBJECT_MANAGER_HPP
+
+#include "core/chronoshare-common.hpp"
 
 #include <boost/filesystem.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <ccnx-wrapper.h>
-#include <hash-helper.h>
-#include <string>
+
+#include <ndn-cxx/face.hpp>
+#include <ndn-cxx/security/key-chain.hpp>
+#include <ndn-cxx/util/digest.hpp>
 
 // everything related to managing object files
+
+namespace ndn {
+namespace chronoshare {
 
 class ObjectManager
 {
 public:
-  ObjectManager(Ccnx::CcnxWrapperPtr ccnx, const boost::filesystem::path& folder,
-                const std::string& appName);
+  ObjectManager(Face& face, const boost::filesystem::path& folder, const std::string& appName);
   virtual ~ObjectManager();
 
   /**
@@ -41,20 +45,21 @@ public:
    *
    * Format: /<appname>/file/<hash>/<devicename>/<segment>
    */
-  boost::tuple<HashPtr /*object-db name*/, size_t /* number of segments*/>
-  localFileToObjects(const boost::filesystem::path& file, const Ccnx::Name& deviceName);
+  std::tuple<ConstBufferPtr /*object-db name*/, size_t /* number of segments*/>
+  localFileToObjects(const boost::filesystem::path& file, const Name& deviceName);
 
   bool
-  objectsToLocalFile(/*in*/ const Ccnx::Name& deviceName, /*in*/ const Hash& hash,
+  objectsToLocalFile(/*in*/ const Name& deviceName, /*in*/ const Buffer& hash,
                      /*out*/ const boost::filesystem::path& file);
 
 private:
-  Ndnx::NdnxWrapperPtr m_ndnx;
+  Face& m_face;
   boost::filesystem::path m_folder;
   std::string m_appName;
+  KeyChain m_keyChain;
 };
 
-typedef boost::shared_ptr<ObjectManager> ObjectManagerPtr;
+typedef shared_ptr<ObjectManager> ObjectManagerPtr;
 
 namespace Error {
 struct ObjectManager : virtual boost::exception, virtual std::exception
@@ -62,4 +67,7 @@ struct ObjectManager : virtual boost::exception, virtual std::exception
 };
 }
 
-#endif // OBJECT_MANAGER_H
+} // chronoshare
+} // ndn
+
+#endif // CHRONOSHARE_SRC_OBJECT_MANAGER_HPP
