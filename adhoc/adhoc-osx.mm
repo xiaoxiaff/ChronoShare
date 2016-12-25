@@ -19,14 +19,11 @@
  */
 
 #include "adhoc.hpp"
-#include "core/chronoshare-config.hpp"
 
 #if (__APPLE__ && HAVE_COREWLAN)
 
 #include "logging.hpp"
 #include <sstream>
-
-using namespace std;
 
 INIT_LOGGER("Adhoc.OSX");
 
@@ -34,6 +31,9 @@ INIT_LOGGER("Adhoc.OSX");
 #import <CoreWLAN/CoreWLAN.h>
 #import <CoreWLAN/CoreWLANConstants.h>
 #import <CoreWLAN/CoreWLANTypes.h>
+
+namespace ndn {
+namespace chronoshare {
 
 const NSUInteger g_channel = 11;
 static NSString* g_priorNetwork = 0;
@@ -122,5 +122,8 @@ Adhoc::DestroyAdhoc()
   // ok. this trick works.  if just disassociate, then it will stay OFF
   // setting power OFF/ON trick the system to reconnect to default WiFi
 }
+
+} // chronoshare
+} // ndn
 
 #endif // ADHOC_SUPPORTED
