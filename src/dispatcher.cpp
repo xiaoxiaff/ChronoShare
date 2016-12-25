@@ -71,7 +71,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 
   m_stateServer =
     new StateServer(make_shared<CcnxWrapper>(), m_actionLog, rootDir, m_localUserName,
-                    m_sharedFolder, CHRONOSHARE_APP, m_objectManager, CONTENT_FRESHNESS);
+                    m_sharedFolder, CHRONOSHARE_APP, m_objectManager, keyChain, CONTENT_FRESHNESS);
   // no need to register, right now only listening on localhost prefix
 
   m_core = new SyncCore(m_syncLog, localUserName, Name("/"), syncPrefix,
