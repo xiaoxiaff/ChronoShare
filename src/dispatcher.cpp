@@ -52,6 +52,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
   , m_server(NULL)
   , m_enablePrefixDiscovery(enablePrefixDiscovery)
 {
+  KeyChain keyChain;
   m_syncLog = make_shared<SyncLog>(m_rootDir, localUserName);
   m_actionLog =
     make_shared<ActionLog>(m_ccnx, m_rootDir, m_syncLog, sharedFolder, CHRONOSHARE_APP,
@@ -64,7 +65,7 @@ Dispatcher::Dispatcher(const std::string& localUserName, const std::string& shar
 
   // m_server needs a different ccnx face
   m_server = new ContentServer(make_shared<CcnxWrapper>(), m_actionLog, rootDir, m_localUserName,
-                               m_sharedFolder, CHRONOSHARE_APP, CONTENT_FRESHNESS);
+                               m_sharedFolder, CHRONOSHARE_APP, keyChain, CONTENT_FRESHNESS);
   m_server->registerPrefix(Name("/"));
   m_server->registerPrefix(Name(BROADCAST_DOMAIN));
 

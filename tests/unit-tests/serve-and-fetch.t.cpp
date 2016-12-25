@@ -139,7 +139,8 @@ BOOST_AUTO_TEST_CASE(TestServeAndFetch)
                         << " seconds ...");
 
   ActionLogPtr dummyLog;
-  ContentServer server(ndnx_serve, dummyLog, root, deviceName, "pentagon's secrets", APPNAME, 5);
+  KeyChain keyChain;
+  ContentServer server(ndnx_serve, dummyLog, root, deviceName, "pentagon's secrets", APPNAME, keyChain, 5);
   server.registerPrefix(localPrefix);
   server.registerPrefix(broadcastPrefix);
 
