@@ -18,14 +18,13 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#include "file-state.h"
-#include "logging.h"
-#include <boost/bind.hpp>
+#include "file-state.hpp"
+#include "core/logging.hpp"
 
 INIT_LOGGER("FileState");
 
-using namespace boost;
-using namespace std;
+namespace ndn {
+namespace chronoshare {
 
 const std::string INIT_DATABASE = "\
                                                                         \n\
@@ -63,9 +62,9 @@ FileState::~FileState()
 }
 
 void
-FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const Hash& hash,
-                      const Ccnx::CcnxCharbuf& device_name, sqlite3_int64 seq_no, time_t atime,
-                      time_t mtime, time_t ctime, int mode, int seg_num)
+FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const Buffer& hash,
+                      const Buffer& device_name, sqlite3_int64 seq_no, time_t atime, time_t mtime,
+                      time_t ctime, int mode, int seg_num)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "UPDATE FileState "
@@ -81,10 +80,10 @@ FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const 
                            "WHERE type=0 AND filename=?",
                      -1, &stmt, 0);
 
-  sqlite3_bind_blob(stmt, 1, device_name.buf(), device_name.length(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 1, device_name.buf(), device_name.size(), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 2, seq_no);
   sqlite3_bind_int64(stmt, 3, version);
-  sqlite3_bind_blob(stmt, 4, hash.GetHash(), hash.GetHashBytes(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 4, hash.buf(), hash.size(), SQLITE_STATIC);
   sqlite3_bind_int64(stmt, 5, atime);
   sqlite3_bind_int64(stmt, 6, mtime);
   sqlite3_bind_int64(stmt, 7, ctime);
@@ -114,9 +113,9 @@ FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const 
 
     sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, version);
-    sqlite3_bind_blob(stmt, 3, device_name.buf(), device_name.length(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 3, device_name.buf(), device_name.size(), SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 4, seq_no);
-    sqlite3_bind_blob(stmt, 5, hash.GetHash(), hash.GetHashBytes(), SQLITE_STATIC);
+    sqlite3_bind_blob(stmt, 5, hash.buf(), hash.size(), SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 6, atime);
     sqlite3_bind_int64(stmt, 7, mtime);
     sqlite3_bind_int64(stmt, 8, ctime);
@@ -139,7 +138,6 @@ FileState::UpdateFile(const std::string& filename, sqlite3_int64 version, const 
   }
 }
 
-
 void
 FileState::DeleteFile(const std::string& filename)
 {
@@ -153,7 +151,6 @@ FileState::DeleteFile(const std::string& filename)
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_DONE, sqlite3_errmsg(m_db));
   sqlite3_finalize(stmt);
 }
-
 
 void
 FileState::SetFileComplete(const std::string& filename)
@@ -169,7 +166,6 @@ FileState::SetFileComplete(const std::string& filename)
 
   sqlite3_finalize(stmt);
 }
-
 
 /**
  * @todo Implement checking modification time and permissions
@@ -207,7 +203,7 @@ FileState::LookupFile(const std::string& filename)
 }
 
 FileItemsPtr
-FileState::LookupFilesForHash(const Hash& hash)
+FileState::LookupFilesForHash(const Buffer& hash)
 {
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db,
@@ -216,7 +212,7 @@ FileState::LookupFilesForHash(const Hash& hash)
                      "   WHERE type = 0 AND file_hash = ?",
                      -1, &stmt, 0);
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
-  sqlite3_bind_blob(stmt, 1, hash.GetHash(), hash.GetHashBytes(), SQLITE_STATIC);
+  sqlite3_bind_blob(stmt, 1, hash.buf(), hash.size(), SQLITE_STATIC);
   _LOG_DEBUG_COND(sqlite3_errcode(m_db) != SQLITE_OK, sqlite3_errmsg(m_db));
 
   FileItemsPtr retval = make_shared<FileItems>();
@@ -243,7 +239,7 @@ FileState::LookupFilesForHash(const Hash& hash)
 }
 
 void
-FileState::LookupFilesInFolder(const boost::function<void(const FileItem&)>& visitor,
+FileState::LookupFilesInFolder(const function<void(const FileItem&)>& visitor,
                                const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
 {
   sqlite3_stmt* stmt;
@@ -286,13 +282,15 @@ FileItemsPtr
 FileState::LookupFilesInFolder(const std::string& folder, int offset /*=0*/, int limit /*=-1*/)
 {
   FileItemsPtr retval = make_shared<FileItems>();
-  LookupFilesInFolder(boost::bind(&FileItems::push_back, retval.get(), _1), folder, offset, limit);
+  LookupFilesInFolder(bind(static_cast<void (FileItems::*)(const FileItem&)>(&FileItems::push_back),
+                           retval.get(), _1),
+                      folder, offset, limit);
 
   return retval;
 }
 
 bool
-FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileItem&)>& visitor,
+FileState::LookupFilesInFolderRecursively(const function<void(const FileItem&)>& visitor,
                                           const std::string& folder, int offset /*=0*/,
                                           int limit /*=-1*/)
 {
@@ -308,7 +306,7 @@ FileState::LookupFilesInFolderRecursively(const boost::function<void(const FileI
     sqlite3_prepare_v2(m_db,
                        "SELECT filename,version,device_name,seq_no,file_hash,strftime('%s', file_mtime),file_chmod,file_seg_num,is_complete "
                        "   FROM FileState "
-                       "   WHERE type = 0 AND is_dir_prefix (?, directory)=1 "
+                       "   WHERE type = 0 AND is_dir_prefix(?, directory)=1 "
                        "   ORDER BY filename "
                        "   LIMIT ? OFFSET ?",
                        -1, &stmt,
@@ -367,7 +365,12 @@ FileState::LookupFilesInFolderRecursively(const std::string& folder, int offset 
                                           int limit /*=-1*/)
 {
   FileItemsPtr retval = make_shared<FileItems>();
-  LookupFilesInFolder(boost::bind(&FileItems::push_back, retval.get(), _1), folder, offset, limit);
+  LookupFilesInFolder(bind(static_cast<void (FileItems::*)(const FileItem&)>(&FileItems::push_back),
+                           retval.get(), _1),
+                      folder, offset, limit);
 
   return retval;
 }
+
+} // chronoshare
+} // ndn
