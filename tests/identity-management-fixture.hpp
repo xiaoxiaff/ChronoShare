@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014-2016, Regents of the University of California,
+ * Copyright (c) 2014-2017, Regents of the University of California,
  *                          Arizona Board of Regents,
  *                          Colorado State University,
  *                          University Pierre & Marie Curie, Sorbonne University,
@@ -47,28 +47,31 @@ public:
    */
   ~IdentityManagementFixture();
 
-  /** \brief add identity
-   *  \return whether successful
+  /**
+   * @brief Add identity @p identityName
+   * @return name of the created self-signed certificate
    */
-  bool
-  addIdentity(const Name& identity,
-              const ndn::KeyParams& params = ndn::KeyChain::DEFAULT_KEY_PARAMS);
+  security::Identity
+  addIdentity(const Name& identityName, const KeyParams& params = security::v2::KeyChain::getDefaultKeyParams());
 
-  /** \brief save identity certificate to a file
-   *  \param identity identity name
-   *  \param filename file name, should be writable
-   *  \param wantAdd if true, add new identity when necessary
-   *  \return whether successful
+  bool
+  saveCertToFile(const Data& obj, const std::string& filename);
+
+  /**
+   *  @brief Save identity certificate to a file
+   *  @param identity identity
+   *  @param filename file name, should be writable
+   *  @return whether successful
    */
   bool
-  saveIdentityCertificate(const Name& identity, const std::string& filename, bool wantAdd = false);
+  saveIdentityCertificate(const security::Identity& identity, const std::string& filename);
 
 protected:
-  ndn::KeyChain m_keyChain;
+  security::v2::KeyChain m_keyChain;
 
 private:
-  std::vector<ndn::Name> m_identities;
-  std::vector<std::string> m_certFiles;
+  std::set<Name> m_identities;
+  std::set<std::string> m_certFiles;
 };
 
 /** \brief convenience base class for inheriting from both UnitTestTimeFixture

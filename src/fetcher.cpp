@@ -124,6 +124,7 @@ Fetcher::FillPipeline()
     _LOG_DEBUG("interest: " << interest);
     m_face.expressInterest(interest,
                            bind(&Fetcher::OnData, this, m_minSendSeqNo + 1, _1, _2),
+                           [=](const Interest&, const lp::Nack){},
                            bind(&Fetcher::OnTimeout, this, m_minSendSeqNo + 1, _1));
 
     _LOG_TRACE(" >>> i ok");
@@ -132,7 +133,7 @@ Fetcher::FillPipeline()
   }
 }
 void
-Fetcher::OnData(uint64_t seqno, const Interest& interest, Data& data)
+Fetcher::OnData(uint64_t seqno, const Interest& interest, const Data& data)
 {
   const Name& name = data.getName();
   _LOG_DEBUG(" <<< d " << name.getSubName(0, name.size() - 1) << ", seq = " << seqno);
@@ -280,6 +281,7 @@ Fetcher::OnTimeout(uint64_t seqno, const Interest& interest)
     _LOG_DEBUG("Asking to reexpress seqno: " << seqno);
     m_face.expressInterest(interest,
                            bind(&Fetcher::OnData, this, seqno, _1, _2), // TODO: correct?
+                           [=](const Interest&, const lp::Nack){},
                            bind(&Fetcher::OnTimeout, this, seqno, _1)); // TODO: correct?
   }
 }

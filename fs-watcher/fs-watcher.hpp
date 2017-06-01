@@ -98,7 +98,7 @@ private:
 
   void
   rescheduleEvent(const std::string& eventType, const std::string& dirPath,
-                  const time::milliseconds& period, const Scheduler::Event& callback);
+                  const time::milliseconds& period, const util::scheduler::EventCallback& callback);
 
 private:
   QFileSystemWatcher* m_watcher; // filesystem watcher

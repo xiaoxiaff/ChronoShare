@@ -65,7 +65,7 @@ FsWatcher::~FsWatcher()
 
 void
 FsWatcher::rescheduleEvent(const std::string& eventType, const std::string& path,
-                           const time::milliseconds& period, const Scheduler::Event& callback)
+                           const time::milliseconds& period, const util::scheduler::EventCallback& callback)
 {
   util::scheduler::ScopedEventId event(m_scheduler);
   event = m_scheduler.scheduleEvent(period, callback);
@@ -249,7 +249,7 @@ FsWatcher::initFileStateDb()
   }
 
   char* errmsg = 0;
-  res = sqlite3_exec(m_db, INIT_DATABASE.c_str(), NULL, NULL, &errmsg);
+  res = sqlite3_exec(m_db, INIT_DATABASE.c_str(), nullptr, nullptr, &errmsg);
   if (res != SQLITE_OK && errmsg != 0) {
     // _LOG_TRACE("Init \"error\": " << errmsg);
     std::cout << "FS-Watcher DB error: " << errmsg << std::endl;

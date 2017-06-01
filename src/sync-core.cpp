@@ -162,6 +162,7 @@ SyncCore::sendSyncInterest()
   }
 
   m_face.expressInterest(interest, bind(&SyncCore::handleSyncData, this, _1, _2),
+                         bind(&SyncCore::handleSyncInterestNack, this, _1, _2),
                          bind(&SyncCore::handleSyncInterestTimeout, this, _1));
 
   // // if there is a pending syncSyncInterest task, reschedule it to be m_syncInterestInterval seconds
@@ -184,6 +185,7 @@ SyncCore::recover(ConstBufferPtr digest)
 
     m_face.expressInterest(recoverInterest,
                            bind(&SyncCore::handleRecoverData, this, _1, _2),
+                           bind(&SyncCore::handleRecoverInterestNack, this, _1, _2),
                            bind(&SyncCore::handleRecoverInterestTimeout, this, _1));
   }
   else {
@@ -289,9 +291,24 @@ SyncCore::handleRecoverInterest(const Name& name)
 }
 
 void
+SyncCore::handleSyncInterestNack(const Interest& interest, const lp::Nack& nack)
+{
+  // sync interest will be resent by scheduler
+}
+
+void
 SyncCore::handleSyncInterestTimeout(const Interest& interest)
 {
   // sync interest will be resent by scheduler
+}
+
+void
+SyncCore::handleRecoverInterestNack(const Interest& interest, const lp::Nack& nack)
+{
+  // We do not re-express recovery interest for now
+  // if difference is not resolved, the sync interest will trigger
+  // recovery anyway; so it's not so important to have recovery interest
+  // re-expressed
 }
 
 void
@@ -304,7 +321,7 @@ SyncCore::handleRecoverInterestTimeout(const Interest& interest)
 }
 
 void
-SyncCore::handleSyncData(const Interest& interest, Data& data)
+SyncCore::handleSyncData(const Interest& interest, const Data& data)
 {
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< receive SYNC DATA with interest: "
                  << interest.toUri());
@@ -324,7 +341,7 @@ SyncCore::handleSyncData(const Interest& interest, Data& data)
 }
 
 void
-SyncCore::handleRecoverData(const Interest& interest, Data& data)
+SyncCore::handleRecoverData(const Interest& interest, const Data& data)
 {
   _LOG_DEBUG("[" << m_log->GetLocalName() << "] <<<<< receive RECOVER DATA with interest: "
                  << interest.toUri());

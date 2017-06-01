@@ -18,8 +18,8 @@
  * See AUTHORS.md for complete list of ChronoShare authors and contributors.
  */
 
-#ifndef SYNC_CORE_H
-#define SYNC_CORE_H
+#ifndef _SYNC_CORE_HPP
+#define _SYNC_CORE_HPP
 
 #include "sync-log.hpp"
 #include "core/chronoshare-common.hpp"
@@ -158,7 +158,7 @@ private:
   {
     std::cerr << "ERROR: Failed to register prefix \"" << prefix << "\" in local hub's daemon ("
               << reason << ")" << std::endl;
-    throw Error("ERROR: Failed to register prefix (" + reason + ")");
+    BOOST_THROW_EXCEPTION(Error("ERROR: Failed to register prefix (" + reason + ")"));
   }
 
   void
@@ -180,16 +180,22 @@ private:
   handleRecoverInterest(const Name& name);
 
   void
+  handleSyncInterestNack(const Interest& interest, const lp::Nack& nack);
+
+  void
   handleSyncInterestTimeout(const Interest& interest);
+
+  void
+  handleRecoverInterestNack(const Interest& interest, const lp::Nack& nack);
 
   void
   handleRecoverInterestTimeout(const Interest& interest);
 
   void
-  handleSyncData(const Interest& interest, Data& data);
+  handleSyncData(const Interest& interest, const Data& data);
 
   void
-  handleRecoverData(const Interest& interest, Data& data);
+  handleRecoverData(const Interest& interest, const Data& data);
 
   void
   handleStateData(const Buffer& content);
@@ -222,4 +228,4 @@ private:
 } // namespace chronoshare
 } // namespace ndn
 
-#endif // SYNC_CORE_H
+#endif // SYNC_CORE_HPP

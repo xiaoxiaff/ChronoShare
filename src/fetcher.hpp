@@ -117,7 +117,7 @@ private:
   FillPipeline();
 
   void
-  OnData(uint64_t seqno, const Interest& interest, Data& data);
+  OnData(uint64_t seqno, const Interest& interest, const Data& data);
 
   void
   OnTimeout(uint64_t seqno, const Interest& interest);
