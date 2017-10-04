@@ -200,7 +200,8 @@ BOOST_AUTO_TEST_CASE(DeleteAction)
 
     BOOST_CHECK_EQUAL(action->filename(), "file.txt");
 
-    BOOST_CHECK_EQUAL(Name(Block(action->parent_device_name().data(), action->parent_device_name().size())),
+    BOOST_CHECK_EQUAL(Name(Block(reinterpret_cast<const uint8_t*>(action->parent_device_name().data()),
+                           action->parent_device_name().size())),
                       Name("/lijing"));
     BOOST_CHECK_EQUAL(action->parent_seq_no(), 1);
   }

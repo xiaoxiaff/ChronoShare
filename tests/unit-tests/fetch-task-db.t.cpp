@@ -91,7 +91,7 @@ getChecker(const Name& deviceName, const Name& baseName, uint64_t minSeqNo, uint
     BOOST_FAIL("duplicated checkers");
   }
 
-  checkers.insert(make_pair(whole, checker));
+  checkers.insert(std::make_pair(whole, checker));
 }
 
 BOOST_AUTO_TEST_CASE(FetchTaskDbTest)
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(FetchTaskDbTest)
     Name d = deviceNamePrefix;
     Name b = baseNamePrefix;
     Checker c(d.appendNumber(i), b.appendNumber(i), i, 11, 1);
-    m1.insert(make_pair(d.append(b), c));
+    m1.insert(std::make_pair(d.append(b), c));
     db->addTask(c.m_deviceName, c.m_baseName, c.m_minSeqNo, c.m_maxSeqNo, c.m_priority);
   }
 

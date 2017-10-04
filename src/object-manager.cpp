@@ -27,6 +27,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <ndn-cxx/util/sha256.hpp>
 #include <ndn-cxx/util/string-helper.hpp>
 
 namespace ndn {

@@ -21,7 +21,7 @@
 #include "state-server.hpp"
 #include "core/logging.hpp"
 
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 #include <ndn-cxx/util/string-helper.hpp>
 
 #include <boost/asio/io_service.hpp>
@@ -321,7 +321,8 @@ StateServer::formatFilestateJson(json_spirit::Array& files, const FileItem& file
   json.push_back(Pair("version", file.version()));
   {
     Object owner;
-    Name device_name(Block(file.device_name().data(), file.device_name().size()));
+    Name device_name(Block(reinterpret_cast<const uint8_t*>(file.device_name().data()),
+                           file.device_name().size()));
     owner.push_back(Pair("userName", device_name.toUri()));
     owner.push_back(Pair("seqNo", file.seq_no()));
 

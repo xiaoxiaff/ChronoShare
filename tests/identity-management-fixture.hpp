@@ -47,15 +47,12 @@ public:
    */
   ~IdentityManagementFixture();
 
-  /**
-   * @brief Add identity @p identityName
-   * @return name of the created self-signed certificate
+  /** \brief add identity
+   *  \return whether successful
    */
-  security::Identity
-  addIdentity(const Name& identityName, const KeyParams& params = security::v2::KeyChain::getDefaultKeyParams());
-
   bool
-  saveCertToFile(const Data& obj, const std::string& filename);
+  addIdentity(const Name& identity,
+              const ndn::KeyParams& params = ndn::KeyChain::getDefaultKeyParams());
 
   /**
    *  @brief Save identity certificate to a file
@@ -64,14 +61,13 @@ public:
    *  @return whether successful
    */
   bool
-  saveIdentityCertificate(const security::Identity& identity, const std::string& filename);
+  saveIdentityCertificate(const Name& identity, const std::string& filename, bool wantAdd = false);
 
 protected:
   security::v2::KeyChain m_keyChain;
 
 private:
-  std::set<Name> m_identities;
-  std::set<std::string> m_certFiles;
+  std::vector<std::string> m_certFiles;
 };
 
 /** \brief convenience base class for inheriting from both UnitTestTimeFixture

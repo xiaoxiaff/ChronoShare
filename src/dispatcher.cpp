@@ -22,7 +22,7 @@
 #include "fetch-task-db.hpp"
 #include "core/logging.hpp"
 
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 #include <ndn-cxx/util/string-helper.hpp>
 
 #include <boost/lexical_cast.hpp>

@@ -27,6 +27,10 @@
 
 #include "identity-management-fixture.hpp"
 
+#include <ndn-cxx/security/pib/identity.hpp>
+#include <ndn-cxx/security/pib/key.hpp>
+#include <ndn-cxx/security/pib/pib.hpp>
+#include <ndn-cxx/security/v2/certificate.hpp>
 #include <ndn-cxx/util/io.hpp>
 #include <boost/filesystem.hpp>
 
@@ -35,8 +39,9 @@ namespace chronoshare {
 namespace tests {
 
 IdentityManagementFixture::IdentityManagementFixture()
-  : m_keyChain("pib-memory", "tmp-memory:")
+  : m_keyChain("pib-memory:", "tpm-memory:")
 {
+  m_keyChain.createIdentity("/DEFAULT");
 }
 
 IdentityManagementFixture::~IdentityManagementFixture()
@@ -47,39 +52,44 @@ IdentityManagementFixture::~IdentityManagementFixture()
   }
 }
 
-security::Identity
-IdentityManagementFixture::addIdentity(const Name& identityName, const KeyParams& params)
-{
-  auto identity = m_keyChain.createIdentity(identityName, params);
-  m_identities.insert(identityName);
-  return identity;
-}
-
 bool
-IdentityManagementFixture::saveCertToFile(const Data& obj, const std::string& filename)
+IdentityManagementFixture::addIdentity(const Name& identity, const ndn::KeyParams& params)
 {
-  m_certFiles.insert(filename);
   try {
-    io::save(obj, filename);
+    m_keyChain.createIdentity(identity, params);
     return true;
   }
-  catch (const io::Error&) {
+  catch (const std::runtime_error&) {
     return false;
   }
 }
 
 bool
-IdentityManagementFixture::saveIdentityCertificate(const security::Identity& identity,
-                                                   const std::string& filename)
+IdentityManagementFixture::saveIdentityCertificate(const Name& identity,
+                                                   const std::string& filename,
+                                                   bool wantAdd)
 {
+  ndn::security::v2::Certificate cert;
   try {
-    auto cert = identity.getDefaultKey().getDefaultCertificate();
-    return saveCertToFile(cert, filename);
+    cert = m_keyChain.getPib().getIdentity(identity).getDefaultKey().getDefaultCertificate();
   }
-  catch (const security::Pib::Error&) {
+  catch (const ndn::security::Pib::Error&) {
+    if (wantAdd && this->addIdentity(identity)) {
+      return this->saveIdentityCertificate(identity, filename, false);
+    }
+    return false;
+  }
+
+  m_certFiles.push_back(filename);
+  try {
+    ndn::io::save(cert, filename);
+    return true;
+  }
+  catch (const ndn::io::Error&) {
     return false;
   }
 }
+
 
 } // namespace tests
 } // namespace chronoshare

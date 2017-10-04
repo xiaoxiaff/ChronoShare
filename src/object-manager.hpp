@@ -27,7 +27,6 @@
 
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
-#include <ndn-cxx/util/digest.hpp>
 
 // everything related to managing object files
 

@@ -75,12 +75,14 @@ public:
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
       cout << setw(30)
-           << (Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0))))).toUri()
+           << (Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
+                          (sqlite3_column_bytes(stmt, 0))))).toUri()
            << " | ";                                             // device_name
       cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
       cout << setw(20);
       if (sqlite3_column_bytes(stmt, 2) > 0) {
-        cout << (Name(Block(sqlite3_column_blob(stmt, 2), (sqlite3_column_bytes(stmt, 2))))).toUri();
+        cout << (Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 2)),
+                            (sqlite3_column_bytes(stmt, 2))))).toUri();
       }
       else {
         cout << "NULL";
@@ -133,7 +135,8 @@ public:
       sqlite3_bind_int64(stmt2, 1, sqlite3_column_int64(stmt, 2));
 
       while (sqlite3_step(stmt2) == SQLITE_ROW) {
-        cout << (Name(Block(sqlite3_column_blob(stmt2, 0), (sqlite3_column_bytes(stmt2, 0))))).toUri()
+        cout << (Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt2, 0)),
+                            (sqlite3_column_bytes(stmt2, 0))))).toUri()
              << "(" << sqlite3_column_int64(stmt2, 1) << "); ";
       }
 
@@ -176,7 +179,8 @@ public:
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
       cout << setw(30)
-           << (Name(Block(sqlite3_column_blob(stmt, 0), (sqlite3_column_bytes(stmt, 0))))).toUri()
+           << (Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
+                          (sqlite3_column_bytes(stmt, 0))))).toUri()
            << " | ";                                             // device_name
       cout << setw(6) << sqlite3_column_int64(stmt, 1) << " | "; // seq_no
       cout << setw(6) << (sqlite3_column_int(stmt, 2) == 0 ? "UPDATE" : "DELETE") << " | "; // action
@@ -196,7 +200,8 @@ public:
 
       if (sqlite3_column_bytes(stmt, 7) > 0) {
         cout << setw(30)
-             << (Name(Block(sqlite3_column_blob(stmt, 7), (sqlite3_column_bytes(stmt, 7))))).toUri()
+             << (Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 7)),
+                            (sqlite3_column_bytes(stmt, 7))))).toUri()
              << " | ";                                    // parent_device_name
         cout << setw(5) << sqlite3_column_int64(stmt, 8); // seq_no
       }
@@ -225,7 +230,8 @@ public:
         ndn::Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
                    sqlite3_column_bytes(stmt, 0)));
       ndn::Name actionName =
-        Name(Block(sqlite3_column_blob(stmt, 1), (sqlite3_column_bytes(stmt, 1))));
+        Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 1)),
+                   (sqlite3_column_bytes(stmt, 1))));
       if (data) {
         ActionItemPtr action = deserializeMsg<ActionItem>(
           ndn::Buffer(data->getContent().value(), data->getContent().value_size()));
@@ -293,7 +299,8 @@ public:
     while (sqlite3_step(stmt) == SQLITE_ROW) {
       cout << setw(40) << sqlite3_column_text(stmt, 0) << " | ";
       cout << setw(30)
-           << Name(Block(sqlite3_column_blob(stmt, 1), (sqlite3_column_bytes(stmt, 1)))).toUri()
+           << Name(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 1)),
+                         (sqlite3_column_bytes(stmt, 1)))).toUri()
            << " | ";
       cout << setw(6) << sqlite3_column_int64(stmt, 2) << " | ";
       cout << setw(10)

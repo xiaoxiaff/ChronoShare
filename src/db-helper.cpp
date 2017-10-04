@@ -21,7 +21,7 @@
 #include "db-helper.hpp"
 #include "core/logging.hpp"
 
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 
 namespace ndn {
 namespace chronoshare {

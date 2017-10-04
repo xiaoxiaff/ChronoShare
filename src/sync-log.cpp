@@ -302,7 +302,8 @@ SyncLog::LookupLocator(const Name& deviceName)
   Name locator;
   switch (res) {
     case SQLITE_ROW: {
-      locator = Name(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
+      locator = Name(Block((uint8_t*)sqlite3_column_blob(stmt, 0),
+                           sqlite3_column_bytes(stmt, 0)));
     }
     case SQLITE_DONE:
       break;

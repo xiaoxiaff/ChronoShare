@@ -26,7 +26,7 @@
 
 #include "file-item.pb.h"
 
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 
 #include <list>
 

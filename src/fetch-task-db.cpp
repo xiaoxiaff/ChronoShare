@@ -112,8 +112,10 @@ FetchTaskDb::foreachTask(const FetchTaskCallback& callback)
   sqlite3_stmt* stmt;
   sqlite3_prepare_v2(m_db, "SELECT * FROM Task;", -1, &stmt, 0);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    Name deviceName(Block(sqlite3_column_blob(stmt, 0), sqlite3_column_bytes(stmt, 0)));
-    Name baseName(Block(sqlite3_column_blob(stmt, 1), sqlite3_column_bytes(stmt, 1)));
+    Name deviceName(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 0)),
+                          sqlite3_column_bytes(stmt, 0)));
+    Name baseName(Block(reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, 1)),
+                        sqlite3_column_bytes(stmt, 1)));
 
     std::cout << "deviceName: " << deviceName << " baseName: " << baseName << std::endl;
     uint64_t minSeqNo = sqlite3_column_int64(stmt, 2);

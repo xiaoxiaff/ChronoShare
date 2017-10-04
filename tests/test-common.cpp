@@ -27,7 +27,7 @@
 
 #include "test-common.hpp"
 
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 #include <ndn-cxx/security/signature-sha256-with-rsa.hpp>
 
 namespace ndn {
@@ -105,12 +105,12 @@ signData(Data& data)
   return data;
 }
 
-shared_ptr<Link>
-makeLink(const Name& name, std::initializer_list<std::pair<uint32_t, Name>> delegations)
+lp::Nack
+makeNack(Interest interest, lp::NackReason reason)
 {
-  auto link = make_shared<Link>(name, delegations);
-  signData(link);
-  return link;
+  lp::Nack nack(std::move(interest));
+  nack.setReason(reason);
+  return nack;
 }
 
 lp::Nack
@@ -118,9 +118,7 @@ makeNack(const Name& name, uint32_t nonce, lp::NackReason reason)
 {
   Interest interest(name);
   interest.setNonce(nonce);
-  lp::Nack nack(std::move(interest));
-  nack.setReason(reason);
-  return nack;
+  return makeNack(std::move(interest), reason);
 }
 
 ConstBufferPtr

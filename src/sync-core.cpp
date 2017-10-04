@@ -183,7 +183,7 @@ SyncCore::recover(ConstBufferPtr digest)
 
     _LOG_DEBUG("[" << m_log->GetLocalName() << "] >>> send RECOVER Interests for " << toHex(*digest));
 
-    m_face.expressInterest(recoverInterest,
+    m_face.expressInterest(Interest(recoverInterest),
                            bind(&SyncCore::handleRecoverData, this, _1, _2),
                            bind(&SyncCore::handleRecoverInterestNack, this, _1, _2),
                            bind(&SyncCore::handleRecoverInterestTimeout, this, _1));
